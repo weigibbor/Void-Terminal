@@ -7,15 +7,24 @@ export function StatusBar() {
   const activeTabId = useAppStore((s) => s.activeTabId);
   const sessionStartTime = useAppStore((s) => s.sessionStartTime);
   const isPro = useAppStore((s) => s.isPro);
+  const splitLayout = useAppStore((s) => s.splitLayout);
   const [elapsed, setElapsed] = useState(0);
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const connectedCount = tabs.filter((t) => t.connected).length;
+  const pausedTabs = tabs.filter((t) => !t.connected && t.disconnectedAt);
+  const pausedCount = pausedTabs.length;
 
   useEffect(() => {
     const interval = setInterval(() => setElapsed(Date.now() - sessionStartTime), 1000);
     return () => clearInterval(interval);
   }, [sessionStartTime]);
+
+  const splitLabel = splitLayout === '2-col' ? '2-col'
+    : splitLayout === '3-col' ? '3-col'
+    : splitLayout === '2+1-grid' ? '2+1 grid'
+    : splitLayout === '1+2-grid' ? '1+2 grid'
+    : null;
 
   return (
     <div
@@ -23,21 +32,28 @@ export function StatusBar() {
       style={{ borderTop: '0.5px solid rgba(42,42,48,0.5)', fontSize: '10px', color: '#444' }}
     >
       <div className="flex items-center gap-[14px]">
+        {/* Connected count */}
         <span className="flex items-center gap-[6px]">
           <span className={`inline-block w-1 h-1 rounded-full ${
             connectedCount > 0 ? 'bg-status-online' : 'bg-void-text-ghost'
           }`} />
-          {connectedCount > 0 ? `${connectedCount} active` : 'No connections'}
+          {connectedCount > 0 ? `${connectedCount} connected` : 'No connections'}
         </span>
 
-        {activeTab?.connected && activeTab.connectionConfig?.keepAlive && (
-          <span>Keep-alive: 30s</span>
+        {/* Paused count */}
+        {pausedCount > 0 && (
+          <span className="flex items-center gap-[6px]">
+            <span className="inline-block w-1 h-1 rounded-full bg-void-text-ghost" />
+            {pausedCount === 1 ? `1 paused (${pausedTabs[0].title})` : `${pausedCount} paused`}
+          </span>
         )}
 
+        {/* Active connection */}
         {activeTab?.connected && activeTab.connectionConfig && (
           <span>{activeTab.connectionConfig.username}@{activeTab.connectionConfig.host}</span>
         )}
 
+        {/* AI watching (Pro) */}
         {isPro && (
           <span className="flex items-center gap-[5px] text-accent">
             <span className="inline-block w-[5px] h-[5px] rounded-full bg-accent animate-ai-pulse" />
@@ -47,10 +63,12 @@ export function StatusBar() {
       </div>
 
       <div className="flex items-center gap-[14px]">
+        {/* Split layout indicator */}
+        {splitLabel && <span>Split: {splitLabel}</span>}
+
         <span>&#8984;K palette</span>
         <span>&#8984;D split</span>
-        {isPro && <span className="text-void-text-ghost">&#8984;L chat</span>}
-        {isPro && <span className="text-void-text-ghost">&#8984;&#8679;M timeline</span>}
+        {isPro && <span>&#8984;L chat</span>}
         <span>Session: {formatDuration(elapsed)}</span>
         <button
           onClick={() => useAppStore.getState().openSettings()}

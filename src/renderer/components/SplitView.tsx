@@ -98,15 +98,36 @@ function Divider({
     [direction, onDrag],
   );
 
+  const isV = direction === 'vertical';
+  const [hovered, setHovered] = useState(false);
+  const active = dragging || hovered;
+
   return (
     <div
-      className={`shrink-0 transition-colors ${
-        direction === 'vertical'
-          ? `w-px hover:w-0.5 cursor-col-resize ${dragging ? 'bg-accent w-0.5' : 'bg-void-border hover:bg-accent'}`
-          : `h-px hover:h-0.5 cursor-row-resize ${dragging ? 'bg-accent h-0.5' : 'bg-void-border hover:bg-accent'}`
-      }`}
+      className={`shrink-0 relative ${isV ? 'cursor-col-resize' : 'cursor-row-resize'}`}
+      style={{
+        [isV ? 'width' : 'height']: '9px',
+        [isV ? 'marginLeft' : 'marginTop']: '-4px',
+        [isV ? 'marginRight' : 'marginBottom']: '-4px',
+        zIndex: 5,
+      }}
       onMouseDown={handleMouseDown}
-    />
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          [isV ? 'width' : 'height']: active ? '2px' : '1px',
+          [isV ? 'left' : 'top']: '50%',
+          transform: isV ? 'translateX(-50%)' : 'translateY(-50%)',
+          [isV ? 'top' : 'left']: 0,
+          [isV ? 'bottom' : 'right']: 0,
+          background: active ? '#F97316' : '#2A2A30',
+          transition: 'background 150ms ease, width 150ms ease, height 150ms ease',
+        }}
+      />
+    </div>
   );
 }
 

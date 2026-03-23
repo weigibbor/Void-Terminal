@@ -57,6 +57,21 @@ export function useKeyboard() {
         return;
       }
 
+      // Cmd+Shift+X — Disconnect/Reconnect focused pane
+      if (meta && shift && e.key === 'X') {
+        e.preventDefault();
+        const tabId = store.paneTabIds[store.focusedPaneIndex];
+        if (tabId) {
+          const tab = store.tabs.find((t) => t.id === tabId);
+          if (tab?.connected) {
+            store.disconnectTab(tabId);
+          } else if (tab?.disconnectedAt) {
+            store.reconnectTab(tabId);
+          }
+        }
+        return;
+      }
+
       // Cmd+Shift+M — Memory timeline
       if (meta && shift && e.key === 'M') {
         e.preventDefault();

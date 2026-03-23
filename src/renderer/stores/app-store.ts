@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Tab, TabType, SplitLayout, SavedConnection } from '../types';
+import type { Tab, TabType, SplitLayout, SavedConnection, PanePosition } from '../types';
 
 function generateId(): string {
   return Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
@@ -18,6 +18,29 @@ function reorderTabsByPanes(tabs: Tab[], paneTabIds: (string | null)[]): Tab[] {
     ...paneOrder.map((id) => tabs.find((t) => t.id === id)!).filter(Boolean),
     ...tabs.filter((t) => !inPanes.has(t.id)),
   ];
+}
+
+const PANE_POSITIONS: Record<SplitLayout, PanePosition[]> = {
+  'single': ['L'],
+  '2-col': ['L', 'R'],
+  '3-col': ['L', 'C', 'R'],
+  '2+1-grid': ['TL', 'TR', 'B'],
+  '1+2-grid': ['T', 'BL', 'BR'],
+};
+
+const PANE_LABELS: Record<PanePosition, string> = {
+  'L': 'LEFT', 'R': 'RIGHT', 'C': 'MID',
+  'TL': 'TL', 'TR': 'TR', 'B': 'BTM',
+  'T': 'TOP', 'BL': 'BL', 'BR': 'BR',
+};
+
+export function getPaneLabel(layout: SplitLayout, paneIndex: number): string {
+  const pos = PANE_POSITIONS[layout]?.[paneIndex] || 'L';
+  return PANE_LABELS[pos] || pos;
+}
+
+export function getPanePosition(layout: SplitLayout, paneIndex: number): PanePosition {
+  return PANE_POSITIONS[layout]?.[paneIndex] || 'L';
 }
 
 interface AppState {
@@ -44,6 +67,8 @@ interface AppState {
   closeTab: (id: string) => void;
   setActiveTab: (id: string) => void;
   updateTab: (id: string, data: Partial<Tab>) => void;
+  disconnectTab: (id: string) => void;
+  reconnectTab: (id: string) => void;
 
   cycleSplitHorizontal: () => void;
   cycleSplitVertical: () => void;
@@ -130,7 +155,25 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
       }
 
-      return { tabs, activeTabId, paneTabIds };
+      // Auto-collapse split if not enough tabs to fill panes
+      const filledPanes = paneTabIds.filter(Boolean).length;
+      let splitLayout = state.splitLayout;
+      let paneSizes = state.paneSizes;
+
+      if (filledPanes <= 1 && splitLayout !== 'single') {
+        // Collapse to single
+        splitLayout = 'single';
+        const firstFilled = paneTabIds.find(Boolean) || null;
+        paneTabIds = [firstFilled];
+        paneSizes = [1];
+      } else if (filledPanes === 2 && (splitLayout === '3-col' || splitLayout === '2+1-grid' || splitLayout === '1+2-grid')) {
+        // Collapse to 2-col
+        splitLayout = '2-col';
+        paneTabIds = paneTabIds.filter(Boolean).slice(0, 2) as (string | null)[];
+        paneSizes = [0.5, 0.5];
+      }
+
+      return { tabs, activeTabId, paneTabIds, splitLayout, paneSizes };
     });
   },
 
@@ -152,6 +195,39 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((state) => ({
       tabs: state.tabs.map((t) => (t.id === id ? { ...t, ...data } : t)),
     }));
+  },
+
+  disconnectTab: (id) => {
+    const tab = get().tabs.find((t) => t.id === id);
+    if (!tab?.sessionId || !tab.connected) return;
+    // Disconnect SSH/PTY
+    if (tab.type === 'ssh') {
+      window.void.ssh.disconnect(tab.sessionId);
+    } else if (tab.type === 'local') {
+      window.void.pty.destroy(tab.sessionId);
+    }
+    set((state) => ({
+      tabs: state.tabs.map((t) =>
+        t.id === id ? { ...t, connected: false, disconnectedAt: Date.now(), scrollbackPreserved: true } : t,
+      ),
+    }));
+  },
+
+  reconnectTab: async (id) => {
+    const tab = get().tabs.find((t) => t.id === id);
+    if (!tab?.connectionConfig) return;
+    set((state) => ({
+      tabs: state.tabs.map((t) => (t.id === id ? { ...t, disconnectedAt: undefined, scrollbackPreserved: false } : t)),
+    }));
+    // Re-connect using saved config
+    const result = await window.void.ssh.connect(tab.connectionConfig);
+    if (result.success && result.sessionId) {
+      set((state) => ({
+        tabs: state.tabs.map((t) =>
+          t.id === id ? { ...t, sessionId: result.sessionId, connected: true } : t,
+        ),
+      }));
+    }
   },
 
   cycleSplitHorizontal: () => {

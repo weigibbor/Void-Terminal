@@ -42,5 +42,5 @@ export const DEFAULT_SSH_PORT = 22;
 export const DEFAULT_KEEPALIVE_INTERVAL = 30;
 export const MAX_RECONNECT_ATTEMPTS = 10;
 
-export const SPLIT_MIN_WIDTH = 200;
+export const SPLIT_MIN_WIDTH = 150;
 export const SPLIT_MIN_HEIGHT = 100;

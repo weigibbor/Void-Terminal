@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTerminal } from '../hooks/useTerminal';
-import { useAppStore } from '../stores/app-store';
+import { useAppStore, getPaneLabel } from '../stores/app-store';
 import type { Tab } from '../types';
 
 interface TerminalPaneProps {
@@ -13,17 +13,22 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
   const focusedPaneIndex = useAppStore((s) => s.focusedPaneIndex);
   const setFocusedPane = useAppStore((s) => s.setFocusedPane);
   const swapPanes = useAppStore((s) => s.swapPanes);
+  const splitLayout = useAppStore((s) => s.splitLayout);
+  const disconnectTab = useAppStore((s) => s.disconnectTab);
+  const reconnectTab = useAppStore((s) => s.reconnectTab);
   const activeTabId = useAppStore((s) => s.activeTabId);
-  const [dragOver, setDragOver] = useState(false);
   const isFocused = focusedPaneIndex === paneIndex;
   const [isScrolledUp, setIsScrolledUp] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+
+  const isDisconnected = !tab.connected && !!tab.disconnectedAt;
+  const position = getPaneLabel(splitLayout, paneIndex);
 
   const { containerRef, terminalRef } = useTerminal({
     sessionId: tab.sessionId,
     sessionType: tab.type === 'ssh' ? 'ssh' : 'local',
   });
 
-  // Auto-focus terminal when this tab becomes active
   useEffect(() => {
     if (activeTabId === tab.id && terminalRef.current) {
       setTimeout(() => terminalRef.current?.focus(), 50);
@@ -51,7 +56,6 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
 
   const handleClick = useCallback(() => {
     setFocusedPane(paneIndex);
-    // Explicitly focus xterm so it receives keyboard input
     terminalRef.current?.focus();
   }, [paneIndex, setFocusedPane]);
 
@@ -67,41 +71,156 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
         e.preventDefault();
         setDragOver(false);
         const from = parseInt(e.dataTransfer.getData('text/pane-index'));
-        if (!isNaN(from) && from !== paneIndex) {
-          swapPanes(from, paneIndex);
-        }
+        if (!isNaN(from) && from !== paneIndex) swapPanes(from, paneIndex);
       }}
     >
+      {/* Pane header */}
       {showHeader && (
         <div
-          className="flex items-center gap-[6px] px-3 py-[6px] border-b-[0.5px] border-void-border/50 bg-void-surface/50 shrink-0 cursor-grab active:cursor-grabbing"
-          style={{ fontSize: '10px' }}
+          className="flex items-center gap-[6px] px-3 shrink-0 cursor-grab active:cursor-grabbing"
+          style={{ height: '28px', fontSize: '9px', borderBottom: '0.5px solid rgba(42,42,48,0.5)', background: 'rgba(17,17,21,0.5)' }}
           draggable
           onDragStart={(e) => {
             e.dataTransfer.setData('text/pane-index', String(paneIndex));
             e.dataTransfer.effectAllowed = 'move';
           }}
         >
-          <span className={`w-[5px] h-[5px] rounded-full shrink-0 ${
-            tab.connected ? 'bg-status-online' : 'bg-void-text-dim'
-          }`} />
-          <span className="text-void-text-muted font-mono flex-1 truncate">{tab.title}</span>
-          {tab.connectionConfig && (
-            <span className="text-void-text-faint font-mono">
-              {tab.connectionConfig.username}@{tab.connectionConfig.host}
-            </span>
-          )}
-          {isFocused && (
-            <span className="text-[9px] text-accent border-[0.5px] border-accent-dim px-[5px] py-[1px] rounded-[3px] ml-1 font-mono">
-              {paneIndex + 1} · FOCUS
-            </span>
-          )}
+          {/* Status dot */}
+          <span
+            className={`w-[5px] h-[5px] rounded-full shrink-0 ${
+              tab.connected ? 'bg-status-online' : 'bg-void-text-ghost'
+            }`}
+            style={{ transition: 'background-color 300ms ease' }}
+          />
+
+          {/* Server name */}
+          <span className={`font-mono truncate ${tab.connected ? 'text-[#888]' : 'text-[#666]'}`}>
+            {tab.title}
+          </span>
+
+          {/* Position badge */}
+          <span
+            className="text-[8px] px-[5px] py-[1px] rounded-[3px] font-mono"
+            style={{
+              color: isFocused ? '#F97316' : '#5B9BD5',
+              border: `0.5px solid ${isFocused ? 'rgba(249,115,22,0.25)' : 'rgba(91,155,213,0.25)'}`,
+            }}
+          >
+            {position}{isFocused ? ' · FOCUS' : ''}
+          </span>
+
+          {/* Spacer */}
+          <span className="flex-1" />
+
+          {/* Latency or offline status */}
+          {tab.connected ? (
+            <span className="text-[8px] text-status-online font-mono">connected</span>
+          ) : isDisconnected ? (
+            <span className="text-[8px] text-status-error font-mono">offline</span>
+          ) : null}
+
+          {/* Divider */}
+          <span style={{ width: '0.5px', height: '10px', background: '#2A2A30', margin: '0 3px' }} />
+
+          {/* Disconnect / Reconnect button */}
+          {tab.connected ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); disconnectTab(tab.id); }}
+              className="flex items-center gap-[3px] px-[7px] py-[2px] rounded-[3px] transition-colors"
+              style={{
+                background: 'rgba(255,95,87,0.05)',
+                border: '0.5px solid rgba(255,95,87,0.15)',
+              }}
+              onMouseEnter={(e) => { (e.target as HTMLElement).style.background = 'rgba(255,95,87,0.1)'; }}
+              onMouseLeave={(e) => { (e.target as HTMLElement).style.background = 'rgba(255,95,87,0.05)'; }}
+            >
+              <svg width="8" height="8" viewBox="0 0 12 12" fill="none">
+                <circle cx="6" cy="6" r="4.5" stroke="#FF5F57" strokeWidth="1" />
+                <path d="M4 4l4 4M8 4l-4 4" stroke="#FF5F57" strokeWidth="1" strokeLinecap="round" />
+              </svg>
+              <span className="text-[8px] text-status-error">Disconnect</span>
+            </button>
+          ) : isDisconnected ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); reconnectTab(tab.id); }}
+              className="flex items-center gap-[3px] px-[7px] py-[2px] rounded-[3px] transition-colors"
+              style={{
+                background: 'rgba(40,200,64,0.05)',
+                border: '0.5px solid rgba(40,200,64,0.15)',
+              }}
+              onMouseEnter={(e) => { (e.target as HTMLElement).style.background = 'rgba(40,200,64,0.1)'; }}
+              onMouseLeave={(e) => { (e.target as HTMLElement).style.background = 'rgba(40,200,64,0.05)'; }}
+            >
+              <svg width="8" height="8" viewBox="0 0 12 12" fill="none">
+                <path d="M4 2l5 4-5 4" stroke="#28C840" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span className="text-[8px] text-status-online">Reconnect</span>
+            </button>
+          ) : null}
         </div>
       )}
 
-      <div ref={containerRef} className="flex-1 min-h-0" />
+      {/* Terminal container — dims when disconnected */}
+      <div
+        ref={containerRef}
+        className="flex-1 min-h-0"
+        style={{
+          opacity: isDisconnected ? 0.25 : 1,
+          transition: 'opacity 300ms ease',
+        }}
+      />
 
-      {isScrolledUp && (
+      {/* Disconnect overlay */}
+      {isDisconnected && (
+        <div
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          style={{ top: showHeader ? '28px' : 0 }}
+        >
+          <div
+            className="pointer-events-auto text-center"
+            style={{
+              background: 'rgba(10,10,13,0.9)',
+              border: '0.5px solid #2A2A30',
+              borderRadius: '8px',
+              padding: '16px 24px',
+              maxWidth: '280px',
+              width: '80%',
+              animation: 'paletteIn 200ms cubic-bezier(0,0,0.2,1)',
+            }}
+          >
+            {/* Icon */}
+            <div className="w-7 h-7 rounded-[6px] mx-auto mb-3 flex items-center justify-center"
+              style={{ background: 'rgba(255,95,87,0.06)', border: '0.5px solid rgba(255,95,87,0.12)' }}>
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="8" r="6" stroke="#FF5F57" strokeWidth="1.2" />
+                <path d="M5.5 8h5" stroke="#FF5F57" strokeWidth="1.2" strokeLinecap="round" />
+              </svg>
+            </div>
+
+            <div className="text-[11px] text-void-text font-medium font-sans mb-[2px]">Session paused</div>
+            <div className="text-[9px] text-void-text-dim mb-[10px]">{tab.title} disconnected</div>
+
+            {/* Action buttons */}
+            <div className="flex items-center justify-center gap-[6px]">
+              <button
+                onClick={() => reconnectTab(tab.id)}
+                className="flex items-center gap-[4px] px-[14px] py-[6px] rounded-[5px] transition-colors"
+                style={{ background: 'rgba(40,200,64,0.06)', border: '0.5px solid rgba(40,200,64,0.2)' }}
+              >
+                <svg width="8" height="8" viewBox="0 0 12 12" fill="none">
+                  <path d="M4 2l5 4-5 4" stroke="#28C840" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span className="text-[9px] text-status-online font-medium">Reconnect</span>
+              </button>
+            </div>
+
+            <div className="text-[8px] text-void-text-faint mt-2">Scrollback preserved · Tab still open</div>
+          </div>
+        </div>
+      )}
+
+      {/* Scroll to bottom */}
+      {isScrolledUp && !isDisconnected && (
         <button
           onClick={(e) => { e.stopPropagation(); scrollToBottom(); }}
           className="absolute bottom-3 right-4 w-7 h-7 flex items-center justify-center

@@ -1,6 +1,7 @@
 export type TabType = 'ssh' | 'local' | 'browser' | 'new-connection';
 export type SplitLayout = 'single' | '2-col' | '3-col' | '2+1-grid' | '1+2-grid';
 export type NoteType = 'pinned' | 'note' | 'warning' | 'quickref';
+export type PanePosition = 'L' | 'R' | 'C' | 'TL' | 'TR' | 'B' | 'T' | 'BL' | 'BR';
 
 export interface Tab {
   id: string;
@@ -11,6 +12,8 @@ export interface Tab {
   browserUrl?: string;
   connected: boolean;
   lastActivity: number;
+  disconnectedAt?: number;
+  scrollbackPreserved?: boolean;
 }
 
 export interface SSHConfig {

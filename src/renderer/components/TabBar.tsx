@@ -1,13 +1,17 @@
-import { useAppStore } from '../stores/app-store';
+import { useAppStore, getPaneLabel } from '../stores/app-store';
 import type { Tab } from '../types';
 
 function TabItem({ tab, isActive }: { tab: Tab; isActive: boolean }) {
   const setActiveTab = useAppStore((s) => s.setActiveTab);
   const closeTab = useAppStore((s) => s.closeTab);
   const paneTabIds = useAppStore((s) => s.paneTabIds);
+  const splitLayout = useAppStore((s) => s.splitLayout);
+  const focusedPaneIndex = useAppStore((s) => s.focusedPaneIndex);
 
-  const splitCount = paneTabIds.filter((id) => id !== null).length;
-  const inSplit = paneTabIds.includes(tab.id) && splitCount > 1;
+  const paneIndex = paneTabIds.indexOf(tab.id);
+  const inSplit = paneIndex >= 0 && splitLayout !== 'single';
+  const isFocusedPane = paneIndex === focusedPaneIndex;
+  const position = inSplit ? getPaneLabel(splitLayout, paneIndex) : null;
 
   const typeBadge =
     tab.type === 'ssh' ? 'SSH'
@@ -20,7 +24,9 @@ function TabItem({ tab, isActive }: { tab: Tab; isActive: boolean }) {
       className={`group flex items-center gap-2 px-4 py-2 cursor-pointer shrink-0 rounded-t-[8px] ${
         isActive
           ? 'bg-void-elevated border-[0.5px] border-void-border border-b-transparent'
-          : 'hover:bg-void-surface/30'
+          : inSplit
+            ? 'bg-void-surface border-[0.5px] border-void-border border-b-transparent'
+            : 'hover:bg-void-surface/30'
       }`}
       style={{ whiteSpace: 'nowrap', transition: 'background-color 150ms ease, border-color 150ms ease' }}
       onClick={() => setActiveTab(tab.id)}
@@ -28,30 +34,54 @@ function TabItem({ tab, isActive }: { tab: Tab; isActive: boolean }) {
         if (e.button === 1) { e.preventDefault(); closeTab(tab.id); }
       }}
     >
+      {/* Status dot */}
       {tab.type !== 'new-connection' && (
-        <span className={`w-[6px] h-[6px] rounded-full shrink-0 ${
-          tab.connected ? 'bg-status-online' : 'bg-void-text-dim'
-        }`} />
+        <span
+          className={`w-[6px] h-[6px] rounded-full shrink-0 ${
+            tab.connected ? 'bg-status-online'
+            : tab.disconnectedAt ? 'bg-void-text-ghost'
+            : 'bg-void-text-dim'
+          }`}
+          style={{ transition: 'background-color 300ms ease' }}
+        />
       )}
 
+      {/* Title */}
       <span className={`text-[12px] font-mono truncate max-w-[140px] ${
         isActive ? 'text-void-text' : 'text-[#666]'
       }`}>
         {tab.title}
       </span>
 
+      {/* Type badge */}
       {typeBadge && (
-        <span className="text-[10px] text-void-text-ghost ml-1">{typeBadge}</span>
+        <span className="text-[10px] text-void-text-ghost">{typeBadge}</span>
       )}
 
-      {inSplit && (
-        <span className="text-[9px] text-accent bg-accent-glow px-[5px] py-[1px] rounded-[3px] ml-1">
-          x{splitCount}
+      {/* Offline badge */}
+      {!tab.connected && tab.disconnectedAt && (
+        <span className="text-[9px] text-status-error px-[6px] py-[1px] rounded-[3px]"
+          style={{ background: 'rgba(255,95,87,0.08)' }}>
+          offline
         </span>
       )}
 
+      {/* Pane position badge */}
+      {position && (
+        <span
+          className="text-[8px] px-[5px] py-[1px] rounded-[3px] font-mono"
+          style={{
+            color: isFocusedPane ? '#F97316' : '#5B9BD5',
+            background: isFocusedPane ? 'rgba(249,115,22,0.08)' : 'rgba(91,155,213,0.08)',
+          }}
+        >
+          {position}
+        </span>
+      )}
+
+      {/* Close button */}
       <span
-        className={`text-[11px] text-void-text-ghost ml-1 transition-opacity ${
+        className={`text-[11px] text-void-text-ghost transition-opacity ${
           isActive ? 'opacity-60 hover:opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100'
         }`}
         onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }}
