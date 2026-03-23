@@ -463,9 +463,14 @@ function registerIPCHandlers(): void {
   });
 
   ipcMain.on('app:relaunch', async () => {
-    // Quit and relaunch the app properly
-    app.relaunch();
-    app.exit(0);
+    // Re-init pro bridge with new license state
+    await pro.initProBridge();
+    pro.initAIEngine();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      pro.initAIWatcher(memoryStore, mainWindow);
+      // Reload the renderer — works in both dev and packaged app
+      mainWindow.webContents.reload();
+    }
   });
 }
 
