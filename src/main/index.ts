@@ -1,5 +1,6 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import path from 'path';
+import fs from 'fs';
 import { SSHManager } from './ssh-manager';
 import { PTYManager } from './pty-manager';
 import { ConnectionStore } from './connection-store';
@@ -152,6 +153,29 @@ function registerIPCHandlers(): void {
         stream.on('data', (chunk: Buffer) => chunks.push(chunk));
         stream.on('end', () => { sftp.end(); resolve({ success: true, content: Buffer.concat(chunks).toString('utf-8') }); });
         stream.on('error', (e: any) => { sftp.end(); resolve({ success: false, error: e.message }); });
+      });
+    });
+  });
+
+  ipcMain.handle('sftp:download', async (_event, sessionId: string, remotePath: string) => {
+    if (!sshManager || !mainWindow) return { success: false, error: 'Not ready' };
+    const client = sshManager.getClient(sessionId);
+    if (!client) return { success: false, error: 'Session not found' };
+    const fileName = path.basename(remotePath);
+    const { canceled, filePath: localPath } = await dialog.showSaveDialog(mainWindow, {
+      defaultPath: fileName,
+      title: `Download ${fileName}`,
+    });
+    if (canceled || !localPath) return { success: false, error: 'Cancelled' };
+    return new Promise((resolve) => {
+      client.sftp((err: any, sftp: any) => {
+        if (err) { resolve({ success: false, error: err.message }); return; }
+        const readStream = sftp.createReadStream(remotePath);
+        const writeStream = fs.createWriteStream(localPath);
+        readStream.pipe(writeStream);
+        writeStream.on('finish', () => { sftp.end(); resolve({ success: true, localPath }); });
+        readStream.on('error', (e: any) => { sftp.end(); resolve({ success: false, error: e.message }); });
+        writeStream.on('error', (e: any) => { sftp.end(); resolve({ success: false, error: e.message }); });
       });
     });
   });

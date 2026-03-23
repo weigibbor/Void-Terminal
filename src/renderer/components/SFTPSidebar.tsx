@@ -37,6 +37,7 @@ export function SFTPSidebar() {
   const [dragOver, setDragOver] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; entry: SFTPEntry } | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ name: string; percent: number } | null>(null);
 
   const loadDir = useCallback(async (path: string) => {
     if (!sessionId) return;
@@ -68,6 +69,16 @@ export function SFTPSidebar() {
     }
   }, [isSSH, sessionId, loadDir]);
 
+  // Listen for upload progress
+  useEffect(() => {
+    const unsub = (window as any).void.sftp.onUploadProgress?.((data: any) => {
+      if (data.percent !== undefined) {
+        setUploadProgress((prev) => prev ? { ...prev, percent: Math.round(data.percent) } : null);
+      }
+    });
+    return unsub;
+  }, []);
+
   const pathSegments = currentPath.split('/').filter(Boolean);
   const toggleDir = (name: string) => setExpandedDirs(p => { const s = new Set(p); s.has(name) ? s.delete(name) : s.add(name); return s; });
 
@@ -81,6 +92,13 @@ export function SFTPSidebar() {
     const items: ContextMenuItem[] = [];
     if (entry.type === 'directory') {
       items.push({ label: 'Open', action: () => navigateTo(currentPath === '/' ? `/${entry.name}` : `${currentPath}/${entry.name}`) });
+    }
+    if (entry.type === 'file') {
+      items.push({ label: 'Download', action: () => {
+        if (!sessionId) return;
+        const fp = currentPath === '/' ? `/${entry.name}` : `${currentPath}/${entry.name}`;
+        (window as any).void.sftp.download(sessionId, fp);
+      }});
     }
     items.push({ label: 'Rename', action: () => {
       const newName = prompt('Rename to:', entry.name);
@@ -127,7 +145,17 @@ export function SFTPSidebar() {
       onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
       onDragEnter={(e) => { e.preventDefault(); setDragOver(true); }}
       onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(false); }}
-      onDrop={(e) => { e.preventDefault(); setDragOver(false); /* TODO: handle file upload */ }}>
+      onDrop={(e) => {
+        e.preventDefault(); setDragOver(false);
+        if (!sessionId || !e.dataTransfer.files.length) return;
+        const file = e.dataTransfer.files[0];
+        const remotePath = currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
+        setUploadProgress({ name: file.name, percent: 0 });
+        (window as any).void.sftp.upload(sessionId, file.path, remotePath).then((result: any) => {
+          setUploadProgress(null);
+          if (result.success) loadDir(currentPath);
+        });
+      }}>
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-[10px]" style={{ borderBottom: '0.5px solid rgba(42,42,48,0.5)' }}>
         <div className="flex items-center gap-[6px]">
@@ -211,7 +239,14 @@ export function SFTPSidebar() {
               {e.type === 'file' && <span className="text-[7px] text-void-text-ghost ml-auto">{formatSize(e.size)}</span>}
               {e.type === 'directory' && <span className="text-[7px] text-void-text-ghost ml-auto">→</span>}
               {['.env','.pem','.key'].includes(e.name) && <span className="text-[6px] text-status-warning px-1 rounded-[2px]" style={{ background: 'rgba(254,188,46,0.08)' }}>sensitive</span>}
-              {e.type === 'file' && <div className="hidden group-hover:flex gap-1 ml-1"><span className="text-[7px] text-void-text-dim">↓</span><span className="text-[7px] text-status-error">✕</span></div>}
+              {e.type === 'file' && (
+                <div className="hidden group-hover:flex gap-1 ml-1">
+                  <span className="text-[7px] text-void-text-dim cursor-pointer hover:text-status-info" title="Download"
+                    onClick={(ev) => { ev.stopPropagation(); const fp = currentPath === '/' ? `/${e.name}` : `${currentPath}/${e.name}`; (window as any).void.sftp.download(sessionId, fp); }}>↓</span>
+                  <span className="text-[7px] text-status-error cursor-pointer hover:text-[#ff8888]" title="Delete"
+                    onClick={(ev) => { ev.stopPropagation(); const fp = currentPath === '/' ? `/${e.name}` : `${currentPath}/${e.name}`; (window as any).void.sftp.delete(sessionId, fp).then(() => loadDir(currentPath)); }}>✕</span>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -232,6 +267,19 @@ export function SFTPSidebar() {
           ↑ Drop to upload
         </div>
       ) : null}
+
+      {/* Upload progress */}
+      {uploadProgress && (
+        <div className="px-3 py-[6px]" style={{ borderTop: '0.5px solid rgba(42,42,48,0.3)' }}>
+          <div className="flex items-center justify-between text-[7px] font-mono mb-1">
+            <span className="text-accent truncate">{uploadProgress.name}</span>
+            <span className="text-void-text-ghost">{uploadProgress.percent}%</span>
+          </div>
+          <div className="h-[2px] bg-void-surface rounded-full overflow-hidden">
+            <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${uploadProgress.percent}%` }} />
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="flex items-center justify-between px-3 py-[6px] text-[7px] text-void-text-ghost font-mono" style={{ borderTop: '0.5px solid rgba(42,42,48,0.5)' }}>

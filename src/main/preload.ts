@@ -69,6 +69,7 @@ contextBridge.exposeInMainWorld('void', {
     delete: (sessionId: string, path: string) => ipcRenderer.invoke("sftp:delete", sessionId, path),
     mkdir: (sessionId: string, path: string) => ipcRenderer.invoke("sftp:mkdir", sessionId, path),
     rename: (sessionId: string, oldPath: string, newPath: string) => ipcRenderer.invoke("sftp:rename", sessionId, oldPath, newPath),
+    download: (sessionId: string, remotePath: string) => ipcRenderer.invoke("sftp:download", sessionId, remotePath),
     upload: (sessionId: string, localPath: string, remotePath: string) => ipcRenderer.invoke("sftp:upload", sessionId, localPath, remotePath),
     uploadPause: () => ipcRenderer.invoke("sftp:upload-pause"),
     uploadResume: () => ipcRenderer.invoke("sftp:upload-resume"),

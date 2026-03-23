@@ -24,6 +24,10 @@ export function useTerminal({ sessionId, sessionType, onData }: UseTerminalOptio
   const onDataRef = useRef(onData);
   const commandBufferRef = useRef('');
   const pendingDangerRef = useRef<{ command: string; resolve: (send: boolean) => void } | null>(null);
+  const ghostTextRef = useRef('');
+  const ghostDecorRef = useRef<any>(null);
+  const autocompleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const commandHistoryRef = useRef<string[]>([]);
   sessionIdRef.current = sessionId;
   sessionTypeRef.current = sessionType;
   onDataRef.current = onData;
@@ -47,6 +51,46 @@ export function useTerminal({ sessionId, sessionType, onData }: UseTerminalOptio
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
     searchAddonRef.current = searchAddon;
+
+    // Ghost text helpers
+    const clearGhostText = () => {
+      if (ghostTextRef.current) {
+        // Erase the ghost text by writing backspaces + spaces
+        const len = ghostTextRef.current.length;
+        terminal.write('\x1b[0m' + '\b \b'.repeat(len));
+        ghostTextRef.current = '';
+      }
+    };
+
+    const showGhostText = (suggestion: string) => {
+      if (!suggestion || suggestion === 'null') return;
+      clearGhostText();
+      ghostTextRef.current = suggestion;
+      // Write in very dim color (gray)
+      terminal.write(`\x1b[90m${suggestion}\x1b[0m`);
+      // Move cursor back to where it was
+      terminal.write(`\x1b[${suggestion.length}D`);
+    };
+
+    const requestAutocomplete = () => {
+      if (autocompleteTimerRef.current) clearTimeout(autocompleteTimerRef.current);
+      autocompleteTimerRef.current = setTimeout(async () => {
+        const { isPro } = useAppStore.getState();
+        if (!isPro) return;
+        const cmd = commandBufferRef.current;
+        if (cmd.length < 2) return;
+        try {
+          const suggestion = await window.void.ai.autocomplete(cmd, commandHistoryRef.current);
+          if (suggestion && suggestion !== 'null' && suggestion.startsWith(cmd)) {
+            // Only show the part after what's already typed
+            const remaining = suggestion.substring(cmd.length);
+            if (remaining && commandBufferRef.current === cmd) {
+              showGhostText(remaining);
+            }
+          }
+        } catch { /* ignore */ }
+      }, 600);
+    };
 
     const sendData = (data: string) => {
       const sid = sessionIdRef.current;
@@ -73,13 +117,29 @@ export function useTerminal({ sessionId, sessionType, onData }: UseTerminalOptio
       }
     };
 
-    // Handle user input with danger detection and NLP ? prefix
+    // Handle user input with danger detection, NLP ? prefix, and ghost text
     terminal.onData((data) => {
       const { isPro } = useAppStore.getState();
+
+      // Tab — accept ghost text suggestion
+      if (data === '\t' && ghostTextRef.current) {
+        const ghost = ghostTextRef.current;
+        clearGhostText();
+        commandBufferRef.current += ghost;
+        sendData(ghost);
+        onDataRef.current?.(data);
+        return;
+      }
+
+      // Clear ghost text on any keypress
+      if (ghostTextRef.current) {
+        clearGhostText();
+      }
 
       // Buffer command chars (reset on Enter)
       if (data === '\r') {
         const command = commandBufferRef.current.trim();
+        if (command) commandHistoryRef.current.push(command);
         commandBufferRef.current = '';
 
         // NLP ? prefix — convert natural language to command
@@ -136,6 +196,8 @@ export function useTerminal({ sessionId, sessionType, onData }: UseTerminalOptio
         // Regular char — add to buffer
         if (data.length === 1 && data.charCodeAt(0) >= 32) {
           commandBufferRef.current += data;
+          // Request autocomplete after idle
+          if (isPro) requestAutocomplete();
         }
         sendData(data);
       }

@@ -29,6 +29,7 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
   const [multiLineOpen, setMultiLineOpen] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
   const [aiExplanation, setAiExplanation] = useState<{ explanation: string; suggestedCommand?: string } | null>(null);
+  const [detectedPort, setDetectedPort] = useState<number | null>(null);
   const isPro = useAppStore((s) => s.isPro);
 
   const updateTab = useAppStore((s) => s.updateTab);
@@ -65,6 +66,17 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
     if (!isPro) return;
     return window.void.ai.onErrorExplanation?.((data: any) => {
       setAiExplanation({ explanation: data.explanation, suggestedCommand: data.suggestedCommand });
+    });
+  }, [isPro]);
+
+  // Listen for port detection from watcher
+  useEffect(() => {
+    if (!isPro) return;
+    return window.void.ai.onWatcherEvent?.((event: any) => {
+      if (event.type === 'info' && event.detail?.includes('port')) {
+        const portMatch = event.detail.match(/port\s+(\d+)/i);
+        if (portMatch) setDetectedPort(parseInt(portMatch[1]));
+      }
     });
   }, [isPro]);
 
@@ -295,6 +307,21 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
           transition: 'opacity 300ms ease',
         }}
       />
+
+      {/* Port forward suggestion */}
+      {detectedPort && isPro && tab.type === 'ssh' && (
+        <div className="flex items-center gap-2 px-3 py-[6px] shrink-0"
+          style={{ background: 'rgba(91,155,213,0.05)', borderBottom: '0.5px solid rgba(91,155,213,0.15)' }}>
+          <span className="w-[5px] h-[5px] rounded-full bg-status-info" />
+          <span className="text-[9px] text-status-info font-mono flex-1">
+            Port {detectedPort} detected — <span className="underline cursor-pointer" onClick={() => {
+              window.open(`http://localhost:${detectedPort}`);
+              setDetectedPort(null);
+            }}>open localhost:{detectedPort}</span>
+          </span>
+          <button onClick={() => setDetectedPort(null)} className="text-[9px] text-void-text-ghost hover:text-void-text-dim">✕</button>
+        </div>
+      )}
 
       {/* AI error explainer */}
       {aiExplanation && isPro && (
