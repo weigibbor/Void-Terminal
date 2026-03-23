@@ -10,16 +10,19 @@ import { SFTPUploadManager } from './sftp-upload-manager';
 import { isMac } from './utils/platform';
 
 let mainWindow: BrowserWindow | null = null;
+const allWindows = new Set<BrowserWindow>();
 let sshManager: SSHManager;
 let ptyManager: PTYManager;
 let uploadManager: SFTPUploadManager;
 let connectionStore: ConnectionStore;
 let memoryStore: MemoryStore;
 
-function createWindow(): BrowserWindow {
+function createWindow(options?: { width?: number; height?: number; x?: number; y?: number; detachedTab?: any }): BrowserWindow {
   const win = new BrowserWindow({
-    width: 720,
-    height: 480,
+    width: options?.width || 720,
+    height: options?.height || 480,
+    x: options?.x,
+    y: options?.y,
     minWidth: 480,
     minHeight: 320,
     titleBarStyle: isMac() ? 'hiddenInset' : 'hidden',
@@ -35,8 +38,25 @@ function createWindow(): BrowserWindow {
     },
   });
 
+  allWindows.add(win);
+
   win.once('ready-to-show', () => {
     win.show();
+    // If this window was created for a detached tab, send the tab data
+    if (options?.detachedTab) {
+      setTimeout(() => {
+        try {
+          if (!win.isDestroyed()) {
+            win.webContents.send('window:receive-tab', options.detachedTab);
+          }
+        } catch { /* destroyed */ }
+      }, 500);
+    }
+  });
+
+  win.on('closed', () => {
+    allWindows.delete(win);
+    if (win === mainWindow) mainWindow = null;
   });
 
   if (process.env.VITE_DEV_SERVER_URL) {
@@ -46,6 +66,17 @@ function createWindow(): BrowserWindow {
   }
 
   return win;
+}
+
+// Broadcast SSH/PTY data to ALL windows (each window filters by its own tabs)
+function broadcastToWindows(channel: string, ...args: unknown[]): void {
+  for (const win of allWindows) {
+    try {
+      if (!win.isDestroyed()) {
+        win.webContents.send(channel, ...args);
+      }
+    } catch { /* destroyed */ }
+  }
 }
 
 function registerIPCHandlers(): void {
@@ -400,6 +431,17 @@ function registerIPCHandlers(): void {
     mainWindow?.webContents.setZoomFactor(factor);
   });
 
+  ipcMain.handle('app:detachTab', async (_event, tabData: any, screenX: number, screenY: number) => {
+    const win = createWindow({
+      width: 720,
+      height: 480,
+      x: Math.round(screenX),
+      y: Math.round(screenY),
+      detachedTab: tabData,
+    });
+    return { success: true, windowId: win.id };
+  });
+
   ipcMain.handle('app:checkUpdates', async (_event, currentVersion: string) => {
     try {
       const os = process.platform === 'darwin' ? 'mac' : 'win';
@@ -440,6 +482,7 @@ app.whenReady().then(async () => {
   ptyManager = new PTYManager(mainWindow);
   uploadManager = new SFTPUploadManager(mainWindow);
   (global as any).__sshManager = sshManager;
+  sshManager.setAllWindows(allWindows);
   pro.initAIWatcher(memoryStore, mainWindow);
 
   // Feed SSH output to AI Watcher for event detection

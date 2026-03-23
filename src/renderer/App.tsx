@@ -84,6 +84,23 @@ export function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Listen for detached tabs from other windows
+  useEffect(() => {
+    return window.void.app.onReceiveTab?.((tabData: any) => {
+      if (tabData) {
+        const store = useAppStore.getState();
+        const id = store.addTab(tabData.type, {
+          title: tabData.title,
+          sessionId: tabData.sessionId,
+          connectionConfig: tabData.connectionConfig,
+          connected: tabData.connected,
+          lastActivity: Date.now(),
+        });
+        store.setActiveTab(id);
+      }
+    });
+  }, []);
+
   if (showProWelcome) {
     return (
       <div className="h-screen w-screen flex flex-col bg-void-base select-none overflow-hidden">
@@ -138,7 +155,7 @@ export function App() {
           {sftpOpen && <SFTPSidebar />}
         </AnimatePresence>
 
-        <motion.div className="flex-1 flex min-h-0" layout transition={{ duration: duration.smooth, ease: easing.standard }}>
+        <motion.div className="flex-1 flex min-h-0 overflow-hidden" layout transition={{ duration: duration.smooth, ease: easing.standard }}>
           {settingsOpen ? (
             <SettingsPanel />
           ) : tabs.length === 0 ? (
@@ -157,6 +174,17 @@ export function App() {
               animate={{ width: 260, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+              onAnimationStart={() => {
+                // Trigger terminal re-fit during sidebar animation
+                const fire = () => window.dispatchEvent(new Event('resize'));
+                fire();
+                const t1 = setTimeout(fire, 50);
+                const t2 = setTimeout(fire, 100);
+                const t3 = setTimeout(fire, 150);
+                const t4 = setTimeout(fire, 200);
+                const t5 = setTimeout(fire, 280);
+                return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); clearTimeout(t5); };
+              }}
               className="shrink-0 flex flex-col overflow-hidden"
               style={{ height: '100%', maxHeight: '100%', borderLeft: '0.5px solid #2A2A30', background: 'var(--input)' }}
             >

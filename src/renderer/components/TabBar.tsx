@@ -1,15 +1,16 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAppStore, getPaneLabel } from '../stores/app-store';
 import { ContextMenu } from './ContextMenu';
 import type { ContextMenuItem } from './ContextMenu';
 import type { Tab } from '../types';
 
-function TabItem({ tab, isActive, onContextMenu }: { tab: Tab; isActive: boolean; onContextMenu: (e: React.MouseEvent, tab: Tab) => void }) {
+function TabItem({ tab, isActive, onContextMenu, onReorder }: { tab: Tab; isActive: boolean; onContextMenu: (e: React.MouseEvent, tab: Tab) => void; onReorder: (fromId: string, toId: string) => void }) {
   const setActiveTab = useAppStore((s) => s.setActiveTab);
   const closeTab = useAppStore((s) => s.closeTab);
   const paneTabIds = useAppStore((s) => s.paneTabIds);
   const splitLayout = useAppStore((s) => s.splitLayout);
   const focusedPaneIndex = useAppStore((s) => s.focusedPaneIndex);
+  const [dragOver, setDragOver] = useState(false);
 
   const paneIndex = paneTabIds.indexOf(tab.id);
   const inSplit = paneIndex >= 0 && splitLayout !== 'single';
@@ -31,7 +32,41 @@ function TabItem({ tab, isActive, onContextMenu }: { tab: Tab; isActive: boolean
             ? 'bg-void-surface border-[0.5px] border-void-border border-b-transparent'
             : 'hover:bg-void-surface/30'
       }`}
-      style={{ whiteSpace: 'nowrap', transition: 'background-color 150ms ease, border-color 150ms ease' }}
+      style={{ whiteSpace: 'nowrap', transition: 'background-color 150ms ease, border-color 150ms ease', borderLeft: dragOver ? '2px solid #F97316' : undefined }}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData('text/tab-id', tab.id);
+        e.dataTransfer.effectAllowed = 'move';
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        const fromId = e.dataTransfer.types.includes('text/tab-id') ? true : false;
+        if (fromId) setDragOver(true);
+      }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragOver(false);
+        const fromId = e.dataTransfer.getData('text/tab-id');
+        if (fromId && fromId !== tab.id) {
+          onReorder(fromId, tab.id);
+        }
+      }}
+      onDragEnd={(e) => {
+        // If dropped outside the tab bar (y > 60px from top), detach to new window
+        const tabBar = e.currentTarget.closest('[data-tabbar]');
+        if (tabBar) {
+          const rect = tabBar.getBoundingClientRect();
+          if (e.clientY > rect.bottom + 50 || e.clientY < rect.top - 50 || e.clientX < rect.left - 100 || e.clientX > rect.right + 100) {
+            // Detach this tab to a new window
+            const tabs = useAppStore.getState().tabs;
+            if (tabs.length <= 1) return; // don't detach the last tab
+            const tabData = { ...tab };
+            useAppStore.getState().closeTab(tab.id);
+            window.void.app.detachTab(tabData, e.screenX - 360, e.screenY - 50);
+          }
+        }
+      }}
       onClick={() => setActiveTab(tab.id)}
       onMouseDown={(e) => {
         if (e.button === 1) { e.preventDefault(); closeTab(tab.id); }
@@ -117,6 +152,18 @@ export function TabBar() {
   const tabs = useAppStore((s) => s.tabs);
   const activeTabId = useAppStore((s) => s.activeTabId);
   const addTab = useAppStore((s) => s.addTab);
+
+  const reorderTabs = (fromId: string, toId: string) => {
+    useAppStore.setState((state) => {
+      const newTabs = [...state.tabs];
+      const fromIdx = newTabs.findIndex(t => t.id === fromId);
+      const toIdx = newTabs.findIndex(t => t.id === toId);
+      if (fromIdx === -1 || toIdx === -1) return {};
+      const [moved] = newTabs.splice(fromIdx, 1);
+      newTabs.splice(toIdx, 0, moved);
+      return { tabs: newTabs };
+    });
+  };
   const closeTab = useAppStore((s) => s.closeTab);
   const disconnectTab = useAppStore((s) => s.disconnectTab);
   const reconnectTab = useAppStore((s) => s.reconnectTab);
@@ -156,14 +203,27 @@ export function TabBar() {
       },
     });
 
+    // Detach to new window
+    if (tabs.length > 1) {
+      items.push({ label: '', separator: true });
+      items.push({
+        label: 'Move to new window',
+        action: () => {
+          const tabData = { ...tab };
+          closeTab(tab.id);
+          window.void.app.detachTab(tabData, window.screenX + 50, window.screenY + 50);
+        },
+      });
+    }
+
     return items;
   };
 
   return (
-    <div className="flex items-end bg-void-base overflow-x-auto shrink-0 px-3 pt-[10px]">
+    <div data-tabbar className="flex items-end bg-void-base overflow-x-auto shrink-0 px-3 pt-[10px]">
       <div className="flex items-end min-w-0">
         {tabs.map((tab) => (
-          <TabItem key={tab.id} tab={tab} isActive={tab.id === activeTabId} onContextMenu={handleContextMenu} />
+          <TabItem key={tab.id} tab={tab} isActive={tab.id === activeTabId} onContextMenu={handleContextMenu} onReorder={reorderTabs} />
         ))}
       </div>
       <div

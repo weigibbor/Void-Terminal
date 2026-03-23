@@ -42,10 +42,15 @@ function expandTilde(filePath: string): string {
 export class SSHManager {
   private sessions = new Map<string, SSHSession>();
   private window: BrowserWindow;
+  private allWindows?: Set<BrowserWindow>;
   private outputCallback?: (sessionId: string, data: string, server: string) => void;
 
   constructor(window: BrowserWindow) {
     this.window = window;
+  }
+
+  setAllWindows(windows: Set<BrowserWindow>): void {
+    this.allWindows = windows;
   }
 
   onOutput(cb: (sessionId: string, data: string, server: string) => void): void {
@@ -53,12 +58,14 @@ export class SSHManager {
   }
 
   private send(channel: string, ...args: unknown[]): void {
-    try {
-      if (!this.window.isDestroyed()) {
-        this.window.webContents.send(channel, ...args);
-      }
-    } catch {
-      // Window already destroyed
+    // Broadcast to all windows so detached tabs receive data
+    const targets = this.allWindows || new Set([this.window]);
+    for (const win of targets) {
+      try {
+        if (!win.isDestroyed()) {
+          win.webContents.send(channel, ...args);
+        }
+      } catch { /* destroyed */ }
     }
   }
 

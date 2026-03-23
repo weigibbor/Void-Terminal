@@ -159,5 +159,11 @@ contextBridge.exposeInMainWorld('void', {
     restart: () => ipcRenderer.send("app:relaunch"),
     getFilePath: (file: File) => webUtils.getPathForFile(file),
     checkForUpdates: (currentVersion: string) => ipcRenderer.invoke('app:checkUpdates', currentVersion),
+    detachTab: (tabData: any, screenX: number, screenY: number) => ipcRenderer.invoke('app:detachTab', tabData, screenX, screenY),
+    onReceiveTab: (cb: (tabData: any) => void) => {
+      const handler = (_e: unknown, data: any) => cb(data);
+      ipcRenderer.on('window:receive-tab', handler);
+      return () => ipcRenderer.removeListener('window:receive-tab', handler);
+    },
   },
 });
