@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTerminal } from '../hooks/useTerminal';
 import { useAppStore, getPaneLabel } from '../stores/app-store';
 import { SearchBar } from './SearchBar';
+import { MultiLineInput } from './MultiLineInput';
+import { ContextMenu } from './ContextMenu';
+import { AIInlineSuggestion } from './pro/AIInlineSuggestion';
+import type { ContextMenuItem } from './ContextMenu';
 import type { Tab } from '../types';
 
 interface TerminalPaneProps {
@@ -22,7 +26,12 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
   const [isScrolledUp, setIsScrolledUp] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [multiLineOpen, setMultiLineOpen] = useState(false);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+  const [aiExplanation, setAiExplanation] = useState<{ explanation: string; suggestedCommand?: string } | null>(null);
+  const isPro = useAppStore((s) => s.isPro);
 
+  const updateTab = useAppStore((s) => s.updateTab);
   const isDisconnected = !tab.connected && !!tab.disconnectedAt;
   const position = getPaneLabel(splitLayout, paneIndex);
 
@@ -51,22 +60,113 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
     return () => { onScroll.dispose(); onWrite.dispose(); };
   }, [terminalRef.current]);
 
+  // Listen for AI error explanations
+  useEffect(() => {
+    if (!isPro) return;
+    return window.void.ai.onErrorExplanation?.((data: any) => {
+      setAiExplanation({ explanation: data.explanation, suggestedCommand: data.suggestedCommand });
+    });
+  }, [isPro]);
+
+  // Listen for SSH latency updates
+  useEffect(() => {
+    if (tab.type !== 'ssh' || !tab.sessionId || !tab.connected) return;
+    return window.void.ssh.onLatency(tab.sessionId, (ms) => {
+      updateTab(tab.id, { latency: ms });
+    });
+  }, [tab.sessionId, tab.connected, tab.type, tab.id, updateTab]);
+
   const scrollToBottom = useCallback(() => {
     terminalRef.current?.scrollToBottom();
     setIsScrolledUp(false);
   }, []);
 
-  // Cmd+F to open search (only for focused pane)
+  // Cmd+F to open search, Shift+Enter for multi-line (only for focused pane)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 'f' && isFocused) {
         e.preventDefault();
         setSearchOpen((prev) => !prev);
       }
+      // Shift+Enter to toggle multi-line input
+      if (e.shiftKey && e.key === 'Enter' && isFocused && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        setMultiLineOpen((prev) => !prev);
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [isFocused]);
+
+  const sendToSession = useCallback((text: string) => {
+    if (!tab.sessionId) return;
+    const data = text + '\n';
+    if (tab.type === 'ssh') {
+      window.void.ssh.write(tab.sessionId, data);
+    } else {
+      window.void.pty.write(tab.sessionId, data);
+    }
+    terminalRef.current?.focus();
+  }, [tab.sessionId, tab.type]);
+
+  const handleTerminalContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setCtxMenu({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  const getTerminalMenuItems = useCallback((): ContextMenuItem[] => {
+    const hasSelection = !!terminalRef.current?.getSelection();
+    return [
+      {
+        label: 'Copy',
+        shortcut: '⌘C',
+        disabled: !hasSelection,
+        action: () => {
+          const sel = terminalRef.current?.getSelection();
+          if (sel) navigator.clipboard.writeText(sel);
+        },
+      },
+      {
+        label: 'Paste',
+        shortcut: '⌘V',
+        action: () => {
+          navigator.clipboard.readText().then((text) => {
+            if (text && tab.sessionId) {
+              if (tab.type === 'ssh') {
+                window.void.ssh.write(tab.sessionId, text);
+              } else {
+                window.void.pty.write(tab.sessionId, text);
+              }
+            }
+          });
+        },
+      },
+      { label: '', separator: true },
+      {
+        label: 'Find...',
+        shortcut: '⌘F',
+        action: () => setSearchOpen(true),
+      },
+      {
+        label: 'Multi-line input',
+        shortcut: '⇧↵',
+        action: () => setMultiLineOpen(true),
+      },
+      { label: '', separator: true },
+      {
+        label: 'Clear terminal',
+        shortcut: '⌘K',
+        action: () => {
+          terminalRef.current?.clear();
+        },
+      },
+      {
+        label: 'Select all',
+        shortcut: '⌘A',
+        action: () => terminalRef.current?.selectAll(),
+      },
+    ];
+  }, [tab.sessionId, tab.type]);
 
   const handleClick = useCallback(() => {
     setFocusedPane(paneIndex);
@@ -128,7 +228,9 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
 
           {/* Latency or offline status */}
           {tab.connected ? (
-            <span className="text-[8px] text-status-online font-mono">connected</span>
+            <span className="text-[8px] text-status-online font-mono">
+              {tab.latency != null ? `${tab.latency}ms` : 'connected'}
+            </span>
           ) : isDisconnected ? (
             <span className="text-[8px] text-status-error font-mono">offline</span>
           ) : null}
@@ -187,10 +289,28 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
       <div
         ref={containerRef}
         className="flex-1 min-h-0"
+        onContextMenu={handleTerminalContextMenu}
         style={{
           opacity: isDisconnected ? 0.25 : 1,
           transition: 'opacity 300ms ease',
         }}
+      />
+
+      {/* AI error explainer */}
+      {aiExplanation && isPro && (
+        <AIInlineSuggestion
+          explanation={aiExplanation.explanation}
+          suggestedCommand={aiExplanation.suggestedCommand}
+          onRun={(cmd) => { sendToSession(cmd); setAiExplanation(null); }}
+          onDismiss={() => setAiExplanation(null)}
+        />
+      )}
+
+      {/* Multi-line input (Shift+Enter) */}
+      <MultiLineInput
+        visible={multiLineOpen && !isDisconnected}
+        onSubmit={sendToSession}
+        onClose={() => { setMultiLineOpen(false); terminalRef.current?.focus(); }}
       />
 
       {/* Disconnect overlay */}
@@ -255,6 +375,16 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
             <path d="M6 2.5V9.5M6 9.5L2.5 6M6 9.5L9.5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
+      )}
+
+      {/* Terminal context menu */}
+      {ctxMenu && (
+        <ContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          items={getTerminalMenuItems()}
+          onClose={() => setCtxMenu(null)}
+        />
       )}
     </div>
   );

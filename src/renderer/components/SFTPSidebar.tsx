@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../stores/app-store';
+import { ContextMenu } from './ContextMenu';
+import type { ContextMenuItem } from './ContextMenu';
 import { easing, duration } from '../utils/motion';
 
 interface SFTPEntry { name: string; type: 'file' | 'directory'; size: number; }
@@ -34,6 +36,7 @@ export function SFTPSidebar() {
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set());
   const [dragOver, setDragOver] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; entry: SFTPEntry } | null>(null);
 
   const loadDir = useCallback(async (path: string) => {
     if (!sessionId) return;
@@ -72,6 +75,34 @@ export function SFTPSidebar() {
   const goUp = () => {
     const parent = currentPath.split('/').slice(0, -1).join('/') || '/';
     loadDir(parent);
+  };
+
+  const getFileMenuItems = (entry: SFTPEntry): ContextMenuItem[] => {
+    const items: ContextMenuItem[] = [];
+    if (entry.type === 'directory') {
+      items.push({ label: 'Open', action: () => navigateTo(currentPath === '/' ? `/${entry.name}` : `${currentPath}/${entry.name}`) });
+    }
+    items.push({ label: 'Rename', action: () => {
+      const newName = prompt('Rename to:', entry.name);
+      if (!newName || newName === entry.name || !sessionId) return;
+      const oldPath = currentPath === '/' ? `/${entry.name}` : `${currentPath}/${entry.name}`;
+      const newPath = currentPath === '/' ? `/${newName}` : `${currentPath}/${newName}`;
+      (window as any).void.sftp.rename(sessionId, oldPath, newPath).then(() => loadDir(currentPath));
+    }});
+    items.push({ label: '', separator: true });
+    items.push({ label: 'New folder', action: () => {
+      const name = prompt('New folder name:');
+      if (!name || !sessionId) return;
+      const fullPath = currentPath === '/' ? `/${name}` : `${currentPath}/${name}`;
+      (window as any).void.sftp.mkdir(sessionId, fullPath).then(() => loadDir(currentPath));
+    }});
+    items.push({ label: '', separator: true });
+    items.push({ label: 'Delete', danger: true, action: () => {
+      if (!sessionId) return;
+      const fullPath = currentPath === '/' ? `/${entry.name}` : `${currentPath}/${entry.name}`;
+      (window as any).void.sftp.delete(sessionId, fullPath).then(() => loadDir(currentPath));
+    }});
+    return items;
   };
 
   // Collapsed state
@@ -163,6 +194,7 @@ export function SFTPSidebar() {
                 background: selected === e.name ? 'rgba(91,155,213,0.06)' : undefined,
                 borderLeft: selected === e.name ? '2px solid #5B9BD5' : '2px solid transparent',
               }}
+              onContextMenu={(ev) => { ev.preventDefault(); setCtxMenu({ x: ev.clientX, y: ev.clientY, entry: e }); }}
               onClick={() => {
                 if (e.type === 'directory') {
                   navigateTo(currentPath === '/' ? `/${e.name}` : `${currentPath}/${e.name}`);
@@ -206,6 +238,16 @@ export function SFTPSidebar() {
         <span>{files.length} items</span>
         {isSSH && <span className="text-status-online">{activeTab?.title}</span>}
       </div>
+
+      {/* SFTP context menu */}
+      {ctxMenu && (
+        <ContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          items={getFileMenuItems(ctxMenu.entry)}
+          onClose={() => setCtxMenu(null)}
+        />
+      )}
     </motion.div>
   );
 }

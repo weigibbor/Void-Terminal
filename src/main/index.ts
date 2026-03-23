@@ -72,6 +72,11 @@ function registerIPCHandlers(): void {
     return sshManager.getBuffer(sessionId);
   });
 
+  ipcMain.handle('ssh:getLatency', async (_event, sessionId: string) => {
+    if (!sshManager) return null;
+    return sshManager.getLatency(sessionId);
+  });
+
   // --- PTY ---
   ipcMain.handle('pty:create', async (_event, options) => {
     if (!ptyManager) return { success: false, error: 'PTY manager not ready' };
@@ -294,6 +299,13 @@ function registerIPCHandlers(): void {
   });
 
   ipcMain.handle('ai:checkDanger', async (_event, command: string, server: string) => {
+    // First check local regex patterns (fast, no API call)
+    const watcher = pro.getAIWatcher();
+    if (watcher?.checkDangerLocal) {
+      const localResult = watcher.checkDangerLocal(command, server);
+      if (localResult?.isDangerous) return localResult;
+    }
+    // Then optionally check via AI for complex cases
     return pro.aiCheckDanger(command, server);
   });
 
@@ -394,6 +406,14 @@ app.whenReady().then(async () => {
   uploadManager = new SFTPUploadManager(mainWindow);
   (global as any).__sshManager = sshManager;
   pro.initAIWatcher(memoryStore, mainWindow);
+
+  // Feed SSH output to AI Watcher for event detection
+  const watcher = pro.getAIWatcher();
+  if (watcher) {
+    sshManager.onOutput((sessionId, data, server) => {
+      watcher.feed(sessionId, data, server);
+    });
+  }
 
   mainWindow.on('close', () => {
     sshManager?.destroyAll();

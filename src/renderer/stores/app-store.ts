@@ -66,6 +66,8 @@ interface AppState {
   terminalFontSize: number;
   uiScale: number;
   activeModal: string | null;
+  broadcastMode: boolean;
+  pendingRestart: boolean;
 
   addTab: (type: TabType, config?: Partial<Tab>) => string;
   closeTab: (id: string) => void;
@@ -94,6 +96,8 @@ interface AppState {
   loadLicense: () => Promise<void>;
   openSettings: (section?: string) => void;
   setActiveModal: (modal: string | null) => void;
+  toggleBroadcast: () => void;
+  setPendingRestart: (v: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -119,6 +123,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   terminalFontSize: parseInt(localStorage.getItem('void-terminal-font-size') || '13'),
   uiScale: parseInt(localStorage.getItem('void-ui-scale') || '100'),
   activeModal: null,
+  broadcastMode: false,
+  pendingRestart: false,
 
   addTab: (type, config) => {
     const id = generateId();
@@ -438,5 +444,13 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setActiveModal: (modal) => {
     set({ activeModal: modal });
+  },
+
+  toggleBroadcast: () => {
+    set((state) => ({ broadcastMode: !state.broadcastMode }));
+  },
+
+  setPendingRestart: (v) => {
+    set({ pendingRestart: v });
   },
 }));

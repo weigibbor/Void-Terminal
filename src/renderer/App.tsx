@@ -30,6 +30,8 @@ export function App() {
   const activeModal = useAppStore((s) => s.activeModal);
   const sftpOpen = useAppStore((s) => s.sftpOpen);
   const uiScale = useAppStore((s) => s.uiScale);
+  const pendingRestart = useAppStore((s) => s.pendingRestart);
+  const setPendingRestart = useAppStore((s) => s.setPendingRestart);
   const loadSavedConnections = useAppStore((s) => s.loadSavedConnections);
   const loadLicense = useAppStore((s) => s.loadLicense);
   const setActiveModal = useAppStore((s) => s.setActiveModal);
@@ -68,6 +70,32 @@ export function App() {
       <TitleBar />
       <TabBar />
 
+      {/* Pending restart banner */}
+      {pendingRestart && (
+        <div className="flex items-center justify-between px-4 py-[6px] shrink-0"
+          style={{ background: 'rgba(249,115,22,0.06)', borderBottom: '0.5px solid rgba(249,115,22,0.15)' }}>
+          <div className="flex items-center gap-2">
+            <span className="w-[5px] h-[5px] rounded-full bg-accent void-pulse-slow" />
+            <span className="text-[10px] text-accent font-sans">Restart required to activate Pro features</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => window.void.app.restart()}
+              className="text-[9px] text-accent font-medium px-3 py-[3px] rounded-[4px]"
+              style={{ background: 'rgba(249,115,22,0.1)', border: '0.5px solid rgba(249,115,22,0.2)' }}
+            >
+              Restart now
+            </button>
+            <button
+              onClick={() => setPendingRestart(false)}
+              className="text-[9px] text-void-text-ghost hover:text-void-text-dim"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 flex min-h-0">
         {/* SFTP sidebar — LEFT */}
         <AnimatePresence>
@@ -84,33 +112,41 @@ export function App() {
           )}
         </motion.div>
 
-        {/* Right sidebars with AnimatePresence */}
+        {/* Right sidebar — Notes / AI Chat tabbed panel */}
         <AnimatePresence>
-          {notesSidebarOpen && (
+          {(notesSidebarOpen || aiChatSidebarOpen) && (
             <motion.div
-              key="notes-sidebar"
+              key="right-sidebar"
               initial={{ x: 220, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: 220, opacity: 0 }}
               transition={{ duration: duration.smooth, ease: easing.standard }}
-              className="shrink-0"
+              className="shrink-0 flex flex-col"
+              style={{ width: '260px', borderLeft: '0.5px solid #2A2A30', background: 'var(--input)' }}
             >
-              <NotesSidebar />
-            </motion.div>
-          )}
-        </AnimatePresence>
+              {/* Tab switcher */}
+              <div className="flex shrink-0" style={{ borderBottom: '0.5px solid rgba(42,42,48,0.5)' }}>
+                <button
+                  onClick={() => { useAppStore.getState().toggleNotesSidebar(); if (!notesSidebarOpen) { if (aiChatSidebarOpen) useAppStore.getState().toggleAIChatSidebar(); } }}
+                  className={`flex-1 py-[8px] text-[10px] font-sans transition-colors ${notesSidebarOpen ? 'text-void-text bg-void-elevated' : 'text-void-text-dim hover:text-void-text-muted'}`}
+                  style={notesSidebarOpen ? { borderBottom: '1.5px solid #F97316' } : {}}
+                >
+                  Notes
+                </button>
+                <button
+                  onClick={() => { useAppStore.getState().toggleAIChatSidebar(); if (!aiChatSidebarOpen) { if (notesSidebarOpen) useAppStore.getState().toggleNotesSidebar(); } }}
+                  className={`flex-1 py-[8px] text-[10px] font-sans transition-colors ${aiChatSidebarOpen ? 'text-void-text bg-void-elevated' : 'text-void-text-dim hover:text-void-text-muted'}`}
+                  style={aiChatSidebarOpen ? { borderBottom: '1.5px solid #F97316' } : {}}
+                >
+                  AI Chat
+                </button>
+              </div>
 
-        <AnimatePresence>
-          {aiChatSidebarOpen && (
-            <motion.div
-              key="ai-sidebar"
-              initial={{ x: 220, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 220, opacity: 0 }}
-              transition={{ duration: duration.smooth, ease: easing.standard }}
-              className="shrink-0"
-            >
-              <AIChatSidebar />
+              {/* Panel content */}
+              <div className="flex-1 min-h-0 overflow-hidden">
+                {notesSidebarOpen && <NotesSidebar />}
+                {aiChatSidebarOpen && <AIChatSidebar />}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

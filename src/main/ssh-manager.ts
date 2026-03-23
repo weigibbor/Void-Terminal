@@ -25,6 +25,8 @@ interface SSHSession {
   connected: boolean;
   reconnectAttempts: number;
   reconnectTimer?: ReturnType<typeof setTimeout>;
+  latencyTimer?: ReturnType<typeof setInterval>;
+  latency: number | null;
   dataBuffer: string[];
 }
 
@@ -40,9 +42,14 @@ function expandTilde(filePath: string): string {
 export class SSHManager {
   private sessions = new Map<string, SSHSession>();
   private window: BrowserWindow;
+  private outputCallback?: (sessionId: string, data: string, server: string) => void;
 
   constructor(window: BrowserWindow) {
     this.window = window;
+  }
+
+  onOutput(cb: (sessionId: string, data: string, server: string) => void): void {
+    this.outputCallback = cb;
   }
 
   private send(channel: string, ...args: unknown[]): void {
@@ -70,6 +77,7 @@ export class SSHManager {
         config,
         connected: false,
         reconnectAttempts: 0,
+        latency: null,
         dataBuffer: [],
       };
 
@@ -90,6 +98,7 @@ export class SSHManager {
             const str = data.toString();
             session.dataBuffer.push(str);
             this.send(`ssh:data:${sessionId}`, str);
+            this.outputCallback?.(sessionId, str, config.host);
           });
 
           stream.stderr.on('data', (data: Buffer) => {
@@ -101,12 +110,14 @@ export class SSHManager {
           stream.on('close', () => {
             console.log(`[SSH] Stream closed for ${config.host}`);
             session.connected = false;
+            this.stopLatencyProbe(session);
             this.send(`ssh:close:${sessionId}`);
             if (config.autoReconnect) {
               this.scheduleReconnect(session);
             }
           });
 
+          this.startLatencyProbe(session);
           console.log(`[SSH] Connected to ${config.username}@${config.host}:${config.port}`);
           resolve({ success: true, sessionId });
         });
@@ -218,6 +229,7 @@ export class SSHManager {
           }
         });
 
+        this.startLatencyProbe(session);
         this.send(
           `ssh:data:${session.id}`,
           '\r\n\x1b[32m[Void] Reconnected.\x1b[0m\r\n',
@@ -259,6 +271,34 @@ export class SSHManager {
     }
   }
 
+  private startLatencyProbe(session: SSHSession): void {
+    if (session.latencyTimer) clearInterval(session.latencyTimer);
+    const probe = () => {
+      if (!session.connected) return;
+      const start = Date.now();
+      session.client.exec('echo', (err) => {
+        if (!err) {
+          session.latency = Date.now() - start;
+          this.send(`ssh:latency:${session.id}`, session.latency);
+        }
+      });
+    };
+    // Initial probe after 1s, then every 15s
+    setTimeout(probe, 1000);
+    session.latencyTimer = setInterval(probe, 15000);
+  }
+
+  private stopLatencyProbe(session: SSHSession): void {
+    if (session.latencyTimer) {
+      clearInterval(session.latencyTimer);
+      session.latencyTimer = undefined;
+    }
+  }
+
+  getLatency(sessionId: string): number | null {
+    return this.sessions.get(sessionId)?.latency ?? null;
+  }
+
   getClient(sessionId: string): any {
     return this.sessions.get(sessionId)?.client || null;
   }
@@ -289,6 +329,7 @@ export class SSHManager {
     const session = this.sessions.get(sessionId);
     if (session) {
       if (session.reconnectTimer) clearTimeout(session.reconnectTimer);
+      this.stopLatencyProbe(session);
       session.client.end();
       this.sessions.delete(sessionId);
       return { success: true };
@@ -299,6 +340,7 @@ export class SSHManager {
   destroyAll(): void {
     for (const session of this.sessions.values()) {
       if (session.reconnectTimer) clearTimeout(session.reconnectTimer);
+      this.stopLatencyProbe(session);
       session.client.destroy();
     }
     this.sessions.clear();

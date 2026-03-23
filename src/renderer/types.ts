@@ -16,6 +16,7 @@ export interface Tab {
   lastActivity: number;
   disconnectedAt?: number;
   scrollbackPreserved?: boolean;
+  latency?: number | null;
 }
 
 export interface SSHConfig {
@@ -119,6 +120,8 @@ export interface VoidAPI {
     onData: (sessionId: string, cb: (data: string) => void) => () => void;
     onClose: (sessionId: string, cb: () => void) => () => void;
     onError: (sessionId: string, cb: (err: string) => void) => () => void;
+    getLatency: (sessionId: string) => Promise<number | null>;
+    onLatency: (sessionId: string, cb: (ms: number) => void) => () => void;
   };
   sftp: {
     readdir: (sessionId: string, path: string) => Promise<{ success: boolean; entries?: any[]; error?: string }>;

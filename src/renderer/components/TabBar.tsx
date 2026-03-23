@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { useAppStore, getPaneLabel } from '../stores/app-store';
+import { ContextMenu } from './ContextMenu';
+import type { ContextMenuItem } from './ContextMenu';
 import type { Tab } from '../types';
 
-function TabItem({ tab, isActive }: { tab: Tab; isActive: boolean }) {
+function TabItem({ tab, isActive, onContextMenu }: { tab: Tab; isActive: boolean; onContextMenu: (e: React.MouseEvent, tab: Tab) => void }) {
   const setActiveTab = useAppStore((s) => s.setActiveTab);
   const closeTab = useAppStore((s) => s.closeTab);
   const paneTabIds = useAppStore((s) => s.paneTabIds);
@@ -33,6 +36,7 @@ function TabItem({ tab, isActive }: { tab: Tab; isActive: boolean }) {
       onMouseDown={(e) => {
         if (e.button === 1) { e.preventDefault(); closeTab(tab.id); }
       }}
+      onContextMenu={(e) => { e.preventDefault(); onContextMenu(e, tab); }}
     >
       {/* Status dot / spinner */}
       {tab.type !== 'new-connection' && (
@@ -113,12 +117,53 @@ export function TabBar() {
   const tabs = useAppStore((s) => s.tabs);
   const activeTabId = useAppStore((s) => s.activeTabId);
   const addTab = useAppStore((s) => s.addTab);
+  const closeTab = useAppStore((s) => s.closeTab);
+  const disconnectTab = useAppStore((s) => s.disconnectTab);
+  const reconnectTab = useAppStore((s) => s.reconnectTab);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; tab: Tab } | null>(null);
+
+  const handleContextMenu = (e: React.MouseEvent, tab: Tab) => {
+    setCtxMenu({ x: e.clientX, y: e.clientY, tab });
+  };
+
+  const getMenuItems = (tab: Tab): ContextMenuItem[] => {
+    const items: ContextMenuItem[] = [];
+
+    if (tab.connected) {
+      items.push({ label: 'Disconnect', action: () => disconnectTab(tab.id) });
+    } else if (tab.disconnectedAt) {
+      items.push({ label: 'Reconnect', action: () => reconnectTab(tab.id) });
+    }
+
+    if (items.length > 0) items.push({ label: '', separator: true });
+
+    items.push({ label: 'Close tab', shortcut: '⌘W', action: () => closeTab(tab.id) });
+    items.push({
+      label: 'Close other tabs',
+      disabled: tabs.length <= 1,
+      action: () => { tabs.forEach((t) => { if (t.id !== tab.id) closeTab(t.id); }); },
+    });
+    items.push({ label: '', separator: true });
+    items.push({
+      label: 'Duplicate tab',
+      disabled: tab.type === 'new-connection',
+      action: () => {
+        if (tab.type === 'ssh' && tab.connectionConfig) {
+          addTab('ssh', { title: tab.title, connectionConfig: tab.connectionConfig });
+        } else if (tab.type === 'local') {
+          addTab('local');
+        }
+      },
+    });
+
+    return items;
+  };
 
   return (
     <div className="flex items-end bg-void-base overflow-x-auto shrink-0 px-3 pt-[10px]">
       <div className="flex items-end min-w-0">
         {tabs.map((tab) => (
-          <TabItem key={tab.id} tab={tab} isActive={tab.id === activeTabId} />
+          <TabItem key={tab.id} tab={tab} isActive={tab.id === activeTabId} onContextMenu={handleContextMenu} />
         ))}
       </div>
       <div
@@ -127,6 +172,15 @@ export function TabBar() {
       >
         +
       </div>
+
+      {ctxMenu && (
+        <ContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          items={getMenuItems(ctxMenu.tab)}
+          onClose={() => setCtxMenu(null)}
+        />
+      )}
     </div>
   );
 }

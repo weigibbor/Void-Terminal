@@ -82,7 +82,7 @@ export function useKeyboard() {
       // Cmd+Shift+B — Broadcast mode
       if (meta && shift && e.key === 'B') {
         e.preventDefault();
-        // TODO: toggle broadcast
+        useAppStore.getState().toggleBroadcast();
         return;
       }
 

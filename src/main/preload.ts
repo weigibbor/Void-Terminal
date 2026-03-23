@@ -29,6 +29,14 @@ contextBridge.exposeInMainWorld('void', {
         ipcRenderer.removeListener(`ssh:error:${sessionId}`, handler);
       };
     },
+    getLatency: (sessionId: string) => ipcRenderer.invoke('ssh:getLatency', sessionId),
+    onLatency: (sessionId: string, cb: (ms: number) => void) => {
+      const handler = (_event: unknown, ms: number) => cb(ms);
+      ipcRenderer.on(`ssh:latency:${sessionId}`, handler);
+      return () => {
+        ipcRenderer.removeListener(`ssh:latency:${sessionId}`, handler);
+      };
+    },
   },
 
   pty: {
@@ -112,6 +120,21 @@ contextBridge.exposeInMainWorld('void', {
       ipcRenderer.invoke('ai:chat', message, history),
     getConfig: () => ipcRenderer.invoke('ai:getConfig'),
     setConfig: (config: unknown) => ipcRenderer.invoke('ai:setConfig', config),
+    onErrorExplanation: (cb: (data: any) => void) => {
+      const handler = (_e: unknown, data: any) => cb(data);
+      ipcRenderer.on('ai:error-explanation', handler);
+      return () => ipcRenderer.removeListener('ai:error-explanation', handler);
+    },
+    onWatcherEvent: (cb: (event: any) => void) => {
+      const handler = (_e: unknown, event: any) => cb(event);
+      ipcRenderer.on('ai:watcher-event', handler);
+      return () => ipcRenderer.removeListener('ai:watcher-event', handler);
+    },
+    onAutoNote: (cb: (note: any) => void) => {
+      const handler = (_e: unknown, note: any) => cb(note);
+      ipcRenderer.on('ai:auto-note', handler);
+      return () => ipcRenderer.removeListener('ai:auto-note', handler);
+    },
   },
 
   license: {

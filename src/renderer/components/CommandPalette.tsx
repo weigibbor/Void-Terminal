@@ -130,7 +130,7 @@ export function CommandPalette() {
         label: 'Broadcast to all panes',
         shortcut: '\u2318\u21e7B',
         category: 'Pro',
-        action: () => { /* TODO: toggle broadcast mode */ },
+        action: () => { store.toggleBroadcast(); },
       },
       {
         id: 'scheduled-tasks',

@@ -8,6 +8,7 @@ export function StatusBar() {
   const sessionStartTime = useAppStore((s) => s.sessionStartTime);
   const isPro = useAppStore((s) => s.isPro);
   const splitLayout = useAppStore((s) => s.splitLayout);
+  const broadcastMode = useAppStore((s) => s.broadcastMode);
   const [elapsed, setElapsed] = useState(0);
   const [aiConfigured, setAiConfigured] = useState(false);
 
@@ -57,9 +58,16 @@ export function StatusBar() {
           </span>
         )}
 
-        {/* Active connection */}
+        {/* Active connection + latency */}
         {activeTab?.connected && activeTab.connectionConfig && (
-          <span>{activeTab.connectionConfig.username}@{activeTab.connectionConfig.host}</span>
+          <span>
+            {activeTab.connectionConfig.username}@{activeTab.connectionConfig.host}
+            {activeTab.latency != null && (
+              <span className={activeTab.latency < 100 ? 'text-status-online' : activeTab.latency < 300 ? 'text-yellow-500' : 'text-status-error'}>
+                {' · '}{activeTab.latency}ms
+              </span>
+            )}
+          </span>
         )}
 
         {/* AI status (Pro) */}
@@ -82,6 +90,17 @@ export function StatusBar() {
       </div>
 
       <div className="flex items-center gap-[14px]">
+        {/* Broadcast indicator */}
+        {broadcastMode && (
+          <span
+            className="flex items-center gap-[4px] text-[#C586C0] cursor-pointer"
+            onClick={() => useAppStore.getState().toggleBroadcast()}
+          >
+            <span className="inline-block w-[5px] h-[5px] rounded-full bg-[#C586C0] void-pulse-slow" />
+            BROADCAST
+          </span>
+        )}
+
         {/* Split layout indicator */}
         {splitLabel && <span>Split: {splitLabel}</span>}
 

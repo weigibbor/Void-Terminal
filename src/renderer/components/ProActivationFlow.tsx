@@ -251,7 +251,7 @@ export function ProActivationFlow({ initialScreen = 'license', onComplete }: { i
             <button onClick={handleRestart} className="px-7 py-[10px] bg-accent rounded-[8px] text-[13px] text-void-base font-semibold hover:bg-accent-hover transition-colors">
               Restart now
             </button>
-            <button onClick={() => onComplete ? onComplete() : useAppStore.getState().toggleSettings()} className="px-5 py-[10px] rounded-[8px] text-[13px] text-void-text-dim" style={{ border: '0.5px solid #2A2A30' }}>
+            <button onClick={() => { useAppStore.getState().setPendingRestart(true); onComplete ? onComplete() : useAppStore.getState().toggleSettings(); }} className="px-5 py-[10px] rounded-[8px] text-[13px] text-void-text-dim" style={{ border: '0.5px solid #2A2A30' }}>
               Later
             </button>
           </div>

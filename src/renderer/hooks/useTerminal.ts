@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
@@ -22,6 +22,8 @@ export function useTerminal({ sessionId, sessionType, onData }: UseTerminalOptio
   const sessionIdRef = useRef(sessionId);
   const sessionTypeRef = useRef(sessionType);
   const onDataRef = useRef(onData);
+  const commandBufferRef = useRef('');
+  const pendingDangerRef = useRef<{ command: string; resolve: (send: boolean) => void } | null>(null);
   sessionIdRef.current = sessionId;
   sessionTypeRef.current = sessionType;
   onDataRef.current = onData;
@@ -46,16 +48,96 @@ export function useTerminal({ sessionId, sessionType, onData }: UseTerminalOptio
     fitAddonRef.current = fitAddon;
     searchAddonRef.current = searchAddon;
 
-    // Handle user input
-    terminal.onData((data) => {
+    const sendData = (data: string) => {
       const sid = sessionIdRef.current;
       const stype = sessionTypeRef.current;
-      if (sid) {
+      const { broadcastMode, tabs, paneTabIds } = useAppStore.getState();
+
+      if (broadcastMode && paneTabIds.length > 1) {
+        for (const paneTabId of paneTabIds) {
+          if (!paneTabId) continue;
+          const tab = tabs.find((t) => t.id === paneTabId);
+          if (!tab?.connected || !tab.sessionId) continue;
+          if (tab.type === 'ssh') {
+            window.void.ssh.write(tab.sessionId, data);
+          } else {
+            window.void.pty.write(tab.sessionId, data);
+          }
+        }
+      } else if (sid) {
         if (stype === 'ssh') {
           window.void.ssh.write(sid, data);
         } else {
           window.void.pty.write(sid, data);
         }
+      }
+    };
+
+    // Handle user input with danger detection and NLP ? prefix
+    terminal.onData((data) => {
+      const { isPro } = useAppStore.getState();
+
+      // Buffer command chars (reset on Enter)
+      if (data === '\r') {
+        const command = commandBufferRef.current.trim();
+        commandBufferRef.current = '';
+
+        // NLP ? prefix — convert natural language to command
+        if (isPro && command.startsWith('?') && command.length > 1) {
+          const query = command.substring(1).trim();
+          // Don't send the ? line — show NLP result instead
+          sendData(data); // send Enter to clear line
+          window.void.ai.naturalLanguage(query, sessionIdRef.current || 'local').then((result: any) => {
+            if (result?.command) {
+              // Write the suggested command as ghost text to terminal display
+              terminal.write(`\r\n\x1b[36m  → ${result.command}\x1b[0m`);
+              terminal.write(`\r\n\x1b[90m    ${result.explanation}\x1b[0m\r\n`);
+            }
+          });
+          onDataRef.current?.(data);
+          return;
+        }
+
+        // Danger detection — check before sending Enter
+        if (isPro && command.length > 2) {
+          window.void.ai.checkDanger(command, sessionIdRef.current || 'local').then((result: any) => {
+            if (result?.isDangerous) {
+              // Show warning in terminal, don't send command yet
+              terminal.write(`\r\n\x1b[31m  ⚠ DANGER: ${result.reason}\x1b[0m`);
+              terminal.write(`\r\n\x1b[33m  Type 'y' to proceed, any other key to cancel:\x1b[0m `);
+              // Set up one-time confirm handler
+              const confirmDisposable = terminal.onData((confirmData) => {
+                confirmDisposable.dispose();
+                if (confirmData === 'y' || confirmData === 'Y') {
+                  terminal.write('\r\n');
+                  sendData(command + '\r');
+                } else {
+                  terminal.write('\r\n\x1b[32m  Cancelled.\x1b[0m\r\n');
+                }
+              });
+            } else {
+              sendData(data);
+            }
+          });
+          onDataRef.current?.(data);
+          return;
+        }
+
+        sendData(data);
+      } else if (data === '\x7f') {
+        // Backspace — remove last char from buffer
+        commandBufferRef.current = commandBufferRef.current.slice(0, -1);
+        sendData(data);
+      } else if (data === '\x03') {
+        // Ctrl+C — clear buffer
+        commandBufferRef.current = '';
+        sendData(data);
+      } else {
+        // Regular char — add to buffer
+        if (data.length === 1 && data.charCodeAt(0) >= 32) {
+          commandBufferRef.current += data;
+        }
+        sendData(data);
       }
       onDataRef.current?.(data);
     });
