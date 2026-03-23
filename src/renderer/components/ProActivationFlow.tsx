@@ -49,8 +49,9 @@ export function ProActivationFlow({ initialScreen = 'license', onComplete }: { i
   };
 
   const handleRestart = () => {
-    localStorage.setItem('void-first-pro-launch', '1');
-    window.void.app.relaunch();
+    // No restart needed — Pro activates immediately
+    useAppStore.setState({ isPro: true });
+    setScreen('welcome');
   };
 
   const handleFinishSetup = async () => {
@@ -242,20 +243,12 @@ export function ProActivationFlow({ initialScreen = 'license', onComplete }: { i
             <span className="text-[8px] font-mono font-semibold text-status-info px-2 py-[2px] rounded-[4px]" style={{ background: 'rgba(91,155,213,0.08)', border: '0.5px solid rgba(91,155,213,0.12)' }}>Unlimited</span>
           </div>
 
-          <div className="p-[14px] bg-void-surface rounded-[8px] mb-[18px] text-left" style={{ border: '0.5px solid #1A1A1E' }}>
-            <div className="text-[11px] text-status-warning font-medium mb-1">Restart required</div>
-            <div className="text-[10px] text-[#666] leading-relaxed">Void Terminal needs to restart to activate Pro features. Your open sessions will be saved and restored automatically.</div>
-          </div>
-
           <div className="flex gap-2 justify-center">
             <button onClick={handleRestart} className="px-7 py-[10px] bg-accent rounded-[8px] text-[13px] text-void-base font-semibold hover:bg-accent-hover transition-colors">
-              Restart now
-            </button>
-            <button onClick={() => { useAppStore.getState().setPendingRestart(true); onComplete ? onComplete() : useAppStore.getState().toggleSettings(); }} className="px-5 py-[10px] rounded-[8px] text-[13px] text-void-text-dim" style={{ border: '0.5px solid #2A2A30' }}>
-              Later
+              Continue to Pro
             </button>
           </div>
-          <div className="text-[9px] text-void-text-ghost mt-3">Your sessions and tabs will be restored after restart.</div>
+          <div className="text-[9px] text-void-text-ghost mt-3">Pro features activate instantly — no restart needed.</div>
         </div>
       </div>
     );
