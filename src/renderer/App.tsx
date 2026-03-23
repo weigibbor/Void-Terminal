@@ -18,6 +18,7 @@ import { MemoryTimeline } from './components/pro/MemoryTimeline';
 import { AuditLogPanel } from './components/pro/AuditLogPanel';
 import { WorkspaceManager } from './components/pro/WorkspaceManager';
 import { SecurityReport } from './components/pro/SecurityReport';
+import { AIClipboardOverlay } from './components/pro/AIClipboardOverlay';
 
 export function App() {
   useKeyboard();
@@ -180,6 +181,23 @@ export function App() {
           <SecurityReport issues={[]} server="scan" onClose={() => setActiveModal(null)} />
         )}
       </AnimatePresence>
+
+      {/* AI Clipboard overlay */}
+      <AIClipboardOverlay
+        visible={activeModal === 'ai-clipboard'}
+        onClose={() => setActiveModal(null)}
+        onPaste={(text) => {
+          const store = useAppStore.getState();
+          const tab = store.tabs.find((t) => t.id === store.activeTabId);
+          if (tab?.sessionId) {
+            if (tab.type === 'ssh') {
+              window.void.ssh.write(tab.sessionId, text);
+            } else {
+              window.void.pty.write(tab.sessionId, text);
+            }
+          }
+        }}
+      />
     </div>
   );
 }

@@ -93,10 +93,12 @@ export function useKeyboard() {
         return;
       }
 
-      // Cmd+Shift+V — AI Clipboard (placeholder)
+      // Cmd+Shift+V — AI Clipboard
       if (meta && shift && e.key === 'V') {
         e.preventDefault();
-        // TODO: toggle AI clipboard overlay
+        useAppStore.getState().setActiveModal(
+          useAppStore.getState().activeModal === 'ai-clipboard' ? null : 'ai-clipboard'
+        );
         return;
       }
 
