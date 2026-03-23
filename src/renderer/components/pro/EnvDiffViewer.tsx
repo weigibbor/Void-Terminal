@@ -1,5 +1,5 @@
 import { ProGate } from '../ProGate';
-import { useAppStore } from "../stores/app-store";
+import { useAppStore } from "../../stores/app-store";
 interface EnvDiffViewerProps {
   left: { label: string; content: string };
   right: { label: string; content: string };

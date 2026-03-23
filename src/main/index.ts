@@ -231,6 +231,11 @@ function registerIPCHandlers(): void {
   ipcMain.handle('app:getPlatform', async () => {
     return process.platform;
   });
+
+  ipcMain.on('app:relaunch', () => {
+    app.relaunch();
+    app.exit(0);
+  });
 }
 
 app.whenReady().then(async () => {

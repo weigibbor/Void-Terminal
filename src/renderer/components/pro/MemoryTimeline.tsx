@@ -1,5 +1,5 @@
 import { ProGate } from '../ProGate';
-import { useAppStore } from "../stores/app-store";
+import { useAppStore } from "../../stores/app-store";
 import { useState, useEffect } from 'react';
 import type { MemoryEvent } from '../../types';
 import { formatRelativeTime } from '../../utils/formatters';
@@ -26,6 +26,18 @@ const FILTER_MAP: Record<FilterType, string | null> = {
 };
 
 export function MemoryTimeline({ onClose }: { onClose: () => void }) {
+  const isPro = useAppStore((s) => s.isPro);
+
+  if (!isPro) {
+    return (
+      <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+        <div className="w-full max-w-md bg-void-base border border-void-border rounded-void-2xl shadow-2xl animate-palette-in overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <ProGate feature="Memory Timeline" description="Visual timeline of all terminal events — deploys, errors, config changes." />
+        </div>
+      </div>
+    );
+  }
+
   const [events, setEvents] = useState<MemoryEvent[]>([]);
   const [filter, setFilter] = useState<FilterType>('All');
   const [expandedId, setExpandedId] = useState<string | null>(null);

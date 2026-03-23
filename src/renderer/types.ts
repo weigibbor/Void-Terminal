@@ -171,6 +171,7 @@ export interface VoidAPI {
   app: {
     getVersion: () => Promise<string>;
     getPlatform: () => Promise<string>;
+    relaunch: () => void;
   };
 }
 

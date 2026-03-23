@@ -86,6 +86,58 @@ export function CommandPalette() {
           if (store.activeTabId) store.closeTab(store.activeTabId);
         },
       },
+      // --- Pro features ---
+      {
+        id: 'memory-timeline',
+        label: 'Memory timeline',
+        shortcut: '\u2318\u21e7M',
+        category: 'AI',
+        action: () => store.setActiveModal('memory-timeline'),
+      },
+      {
+        id: 'audit-log',
+        label: 'Audit log',
+        category: 'AI',
+        action: () => store.setActiveModal('audit-log'),
+      },
+      {
+        id: 'workspaces',
+        label: 'Save / load workspace',
+        shortcut: '\u2318\u21e7S',
+        category: 'Pro',
+        action: () => store.setActiveModal('workspaces'),
+      },
+      {
+        id: 'tunnels',
+        label: 'SSH tunnel manager',
+        category: 'Pro',
+        action: () => store.setActiveModal('tunnels'),
+      },
+      {
+        id: 'watch-rules',
+        label: 'Watch & alert rules',
+        category: 'Pro',
+        action: () => store.setActiveModal('watch-rules'),
+      },
+      {
+        id: 'security-scan',
+        label: 'Security scan',
+        category: 'AI',
+        action: () => store.setActiveModal('security-scan'),
+      },
+      {
+        id: 'broadcast',
+        label: 'Broadcast to all panes',
+        shortcut: '\u2318\u21e7B',
+        category: 'Pro',
+        action: () => { /* TODO: toggle broadcast mode */ },
+      },
+      {
+        id: 'scheduled-tasks',
+        label: 'Scheduled tasks',
+        category: 'Pro',
+        action: () => store.setActiveModal('scheduled-tasks'),
+      },
     ];
 
     // Add saved connections as quick-connect actions

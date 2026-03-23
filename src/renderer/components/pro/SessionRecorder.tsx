@@ -1,5 +1,5 @@
 import { ProGate } from '../ProGate';
-import { useAppStore } from "../stores/app-store";
+import { useAppStore } from "../../stores/app-store";
 import { useState, useRef, useCallback } from 'react';
 
 interface RecordedEvent {

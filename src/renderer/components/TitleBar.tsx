@@ -2,6 +2,7 @@ import { useAppStore } from '../stores/app-store';
 
 export function TitleBar() {
   const splitLayout = useAppStore((s) => s.splitLayout);
+  const isPro = useAppStore((s) => s.isPro);
   const cycleSplitH = useAppStore((s) => s.cycleSplitHorizontal);
   const cycleSplitV = useAppStore((s) => s.cycleSplitVertical);
 
@@ -14,9 +15,16 @@ export function TitleBar() {
       <div className="w-[60px]" />
 
       {/* Center title */}
-      <span className="text-[11px] text-void-text-dim tracking-[0.5px] font-mono select-none">
-        VOID TERMINAL
-      </span>
+      <div className="flex items-center gap-2 select-none">
+        <span className="text-[11px] text-void-text-dim tracking-[0.5px] font-mono">
+          VOID TERMINAL
+        </span>
+        {isPro && (
+          <span className="text-[8px] font-mono font-bold text-accent bg-accent-glow border-[0.5px] border-accent-dim px-1.5 py-[1px] rounded-[3px] tracking-wider">
+            PRO
+          </span>
+        )}
+      </div>
 
       {/* Right: split layout controls */}
       <div
