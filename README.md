@@ -137,4 +137,4 @@ MIT - See [LICENSE](LICENSE) for details.
 
 **Built in the Philippines. Made for the world.**
 
-*GE Tech - 2026*
+*GE Labs - 2026*

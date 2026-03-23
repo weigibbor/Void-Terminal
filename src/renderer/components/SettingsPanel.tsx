@@ -363,7 +363,7 @@ function AboutSection() {
         </p>
         <p>The terminal that thinks.</p>
         <p className="text-void-text-ghost">Built in the Philippines. Made for the world.</p>
-        <p className="text-void-text-ghost">GE Tech &copy; 2026</p>
+        <p className="text-void-text-ghost">GE Labs &copy; 2026</p>
       </div>
     </div>
   );
