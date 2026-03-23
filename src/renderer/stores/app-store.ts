@@ -69,6 +69,18 @@ interface AppState {
   broadcastMode: boolean;
   pendingRestart: boolean;
 
+  // Update system
+  updateStatus: 'idle' | 'available' | 'downloading' | 'ready' | 'failed';
+  updateVersion: string | null;
+  updateChangelog: { type: 'feature' | 'improvement' | 'fix' | 'security'; text: string }[];
+  updateRequired: boolean;
+  downloadProgress: number;
+  downloadSize: string;
+  updateError: string | null;
+  updateDismissed: boolean;
+  patchNotesOpen: boolean;
+  patchNotesMode: 'preview' | 'post-update';
+
   addTab: (type: TabType, config?: Partial<Tab>) => string;
   closeTab: (id: string) => void;
   setActiveTab: (id: string) => void;
@@ -125,6 +137,17 @@ export const useAppStore = create<AppState>((set, get) => ({
   activeModal: null,
   broadcastMode: false,
   pendingRestart: false,
+
+  updateStatus: 'idle',
+  updateVersion: null,
+  updateChangelog: [],
+  updateRequired: false,
+  downloadProgress: 0,
+  downloadSize: '',
+  updateError: null,
+  updateDismissed: false,
+  patchNotesOpen: false,
+  patchNotesMode: 'preview',
 
   addTab: (type, config) => {
     const id = generateId();
@@ -298,7 +321,12 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
       }
 
-      const paneSizes = Array(nextCount).fill(1 / nextCount);
+      let paneSizes: number[];
+      if (nextLayout === '2+1-grid' || nextLayout === '1+2-grid') {
+        paneSizes = [0.5, 0.5, 0.5];
+      } else {
+        paneSizes = Array(nextCount).fill(1 / nextCount);
+      }
       return { splitLayout: nextLayout, paneTabIds, paneSizes, tabs: reorderTabsByPanes(tabs, paneTabIds) };
     });
   },
@@ -350,7 +378,12 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
       }
 
-      const paneSizes = Array(nextCount).fill(1 / nextCount);
+      let paneSizes: number[];
+      if (nextLayout === '2+1-grid' || nextLayout === '1+2-grid') {
+        paneSizes = [0.5, 0.5, 0.5];
+      } else {
+        paneSizes = Array(nextCount).fill(1 / nextCount);
+      }
       return { splitLayout: nextLayout, paneTabIds, paneSizes, tabs: reorderTabsByPanes(tabs, paneTabIds) };
     });
   },

@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 contextBridge.exposeInMainWorld('void', {
   ssh: {
@@ -156,5 +156,7 @@ contextBridge.exposeInMainWorld('void', {
     getPlatform: () => ipcRenderer.invoke('app:getPlatform'),
     relaunch: () => ipcRenderer.send("app:relaunch"),
     setZoom: (factor: number) => ipcRenderer.send("app:setZoom", factor),
+    restart: () => ipcRenderer.send("app:relaunch"),
+    getFilePath: (file: File) => webUtils.getPathForFile(file),
   },
 });

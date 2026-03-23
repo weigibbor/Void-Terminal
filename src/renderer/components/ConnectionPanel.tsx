@@ -131,8 +131,8 @@ export function ConnectionPanel({ tabId }: { tabId: string }) {
   const formProps = { connType, setConnType, host, setHost, port, setPort, username, setUsername, password, setPassword, privateKeyPath, setPrivateKeyPath, authMethod, setAuthMethod, keepAlive, setKeepAlive, autoReconnect, setAutoReconnect, alias, setAlias, browserUrl, setBrowserUrl, error, connecting, handleConnect, inputClass, labelClass };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-void-elevated" style={{ borderTop: '0.5px solid #2A2A30' }}>
-      <div className="max-w-[480px] mx-auto px-8 py-6">
+    <div className="flex-1 h-full overflow-y-auto bg-void-elevated" style={{ borderTop: '0.5px solid #2A2A30' }}>
+      <div className="w-full px-5 py-5" style={{ maxWidth: '100%' }}>
         <AnimatePresence mode="wait" custom={direction}>
           {view === 'hub' ? (
             <motion.div key="hub" custom={direction} variants={viewVariants} initial="initial" animate="animate" exit="exit"
@@ -147,7 +147,7 @@ export function ConnectionPanel({ tabId }: { tabId: string }) {
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="#555" strokeWidth="1.2"/><line x1="11" y1="11" x2="14" y2="14" stroke="#555" strokeWidth="1.2" strokeLinecap="round"/></svg>
                 <input type="text" value={quickConnect} onChange={e => setQuickConnect(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && quickConnect) handleQuickConnectInput(quickConnect); }}
-                  placeholder="Quick connect — paste user@host:port" className="flex-1 bg-transparent text-[11px] text-void-text outline-none placeholder:text-void-text-ghost" />
+                  placeholder="Quick connect — paste user@host:port" className="flex-1 min-w-0 bg-transparent text-[11px] text-void-text outline-none placeholder:text-void-text-ghost truncate" />
                 <span className="text-[8px] text-void-text-faint px-[6px] py-[2px] rounded-[3px]" style={{ border: '0.5px solid #2A2A30' }}>Enter</span>
               </div>
               {hasSaved ? (
@@ -173,7 +173,7 @@ export function ConnectionPanel({ tabId }: { tabId: string }) {
                               <span className="text-[12px] text-void-text font-medium truncate">{conn.alias}</span>
                               {active && <span className="text-[8px] text-status-online px-[6px] py-[1px] rounded-[3px]" style={{ background: 'rgba(40,200,64,0.08)' }}>active</span>}
                             </div>
-                            <div className="text-[9px] text-void-text-dim mt-[2px]">{conn.username}@{conn.host}:{conn.port} · {conn.authMethod === 'key' ? 'SSH key' : 'Password'}</div>
+                            <div className="text-[9px] text-void-text-dim mt-[2px] truncate">{conn.username}@{conn.host}:{conn.port} · {conn.authMethod === 'key' ? 'SSH key' : 'Password'}</div>
                           </div>
                           <div className="flex gap-1 shrink-0">
                             <button onClick={e => { e.stopPropagation(); setHost(conn.host); setPort(String(conn.port)); setUsername(conn.username); setAuthMethod(conn.authMethod); setAlias(conn.alias); goToForm(); }}

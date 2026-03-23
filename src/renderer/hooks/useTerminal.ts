@@ -117,33 +117,7 @@ export function useTerminal({ sessionId, sessionType, onData }: UseTerminalOptio
       }
     };
 
-    // Handle user input — zero-lag with local echo
-    // Track if server has echo enabled (most SSH servers do)
-    let localEchoEnabled = true;
-    let pendingEcho = '';
-
-    // Suppress server echo for chars we already displayed locally
-    const originalWrite = terminal.write.bind(terminal);
-    terminal.write = (data: string | Uint8Array, cb?: () => void) => {
-      if (typeof data === 'string' && localEchoEnabled && pendingEcho.length > 0) {
-        // Check if incoming data starts with our pending echo chars
-        let consumed = 0;
-        for (let i = 0; i < data.length && consumed < pendingEcho.length; i++) {
-          if (data[i] === pendingEcho[consumed]) {
-            consumed++;
-          } else {
-            break;
-          }
-        }
-        if (consumed > 0) {
-          pendingEcho = pendingEcho.substring(consumed);
-          data = data.substring(consumed);
-          if (!data) { cb?.(); return; }
-        }
-      }
-      originalWrite(data, cb);
-    };
-
+    // Handle user input — send immediately, process async
     terminal.onData((data) => {
       // Tab — accept ghost text
       if (data === '\t' && ghostTextRef.current) {
@@ -157,51 +131,47 @@ export function useTerminal({ sessionId, sessionType, onData }: UseTerminalOptio
 
       if (ghostTextRef.current) clearGhostText();
 
-      // Send to SSH immediately — always first
+      // SEND IMMEDIATELY — zero delay, no processing before this
       sendData(data);
 
-      // Local echo for printable chars — instant visual feedback
-      if (data.length === 1 && data.charCodeAt(0) >= 32) {
-        originalWrite(data);
-        pendingEcho += data;
-        commandBufferRef.current += data;
-        const { isPro } = useAppStore.getState();
-        if (isPro) requestAutocomplete();
-      } else if (data === '\x7f') {
-        // Backspace — local echo: move back, clear, move back
-        originalWrite('\b \b');
-        pendingEcho += '\b \b';
-        commandBufferRef.current = commandBufferRef.current.slice(0, -1);
-      } else if (data === '\r') {
-        const command = commandBufferRef.current.trim();
-        if (command) commandHistoryRef.current.push(command);
-        commandBufferRef.current = '';
-        pendingEcho = ''; // Reset echo tracking on Enter
+      // All processing below is async — never blocks the keystroke
+      queueMicrotask(() => {
+        if (data === '\r') {
+          const command = commandBufferRef.current.trim();
+          if (command) commandHistoryRef.current.push(command);
+          commandBufferRef.current = '';
 
-        // NLP ? prefix
-        const { isPro } = useAppStore.getState();
-        if (isPro && command.startsWith('?') && command.length > 1) {
-          const query = command.substring(1).trim();
-          window.void.ai.naturalLanguage(query, sessionIdRef.current || 'local').then((result: any) => {
-            if (result?.command) {
-              originalWrite(`\r\n\x1b[36m  → ${result.command}\x1b[0m`);
-              originalWrite(`\r\n\x1b[90m    ${result.explanation}\x1b[0m\r\n`);
-            }
-          });
-        }
+          const { isPro } = useAppStore.getState();
 
-        // Danger check async
-        if (isPro && command.length > 2) {
-          window.void.ai.checkDanger(command, sessionIdRef.current || 'local').then((result: any) => {
-            if (result?.isDangerous) {
-              originalWrite(`\r\n\x1b[31m  ⚠ DANGER: ${result.reason}\x1b[0m\r\n`);
-            }
-          });
+          // NLP ? prefix
+          if (isPro && command.startsWith('?') && command.length > 1) {
+            const query = command.substring(1).trim();
+            window.void.ai.naturalLanguage(query, sessionIdRef.current || 'local').then((result: any) => {
+              if (result?.command) {
+                terminal.write(`\r\n\x1b[36m  → ${result.command}\x1b[0m`);
+                terminal.write(`\r\n\x1b[90m    ${result.explanation}\x1b[0m\r\n`);
+              }
+            });
+          }
+
+          // Danger check
+          if (isPro && command.length > 2) {
+            window.void.ai.checkDanger(command, sessionIdRef.current || 'local').then((result: any) => {
+              if (result?.isDangerous) {
+                terminal.write(`\r\n\x1b[31m  ⚠ DANGER: ${result.reason}\x1b[0m\r\n`);
+              }
+            });
+          }
+        } else if (data === '\x7f') {
+          commandBufferRef.current = commandBufferRef.current.slice(0, -1);
+        } else if (data === '\x03') {
+          commandBufferRef.current = '';
+        } else if (data.length === 1 && data.charCodeAt(0) >= 32) {
+          commandBufferRef.current += data;
+          const { isPro } = useAppStore.getState();
+          if (isPro) requestAutocomplete();
         }
-      } else if (data === '\x03') {
-        commandBufferRef.current = '';
-        pendingEcho = '';
-      }
+      });
 
       onDataRef.current?.(data);
     });

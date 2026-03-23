@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAppStore } from '../../stores/app-store';
 import { ProGate } from '../ProGate';
 
@@ -7,10 +7,25 @@ interface ChatMessage {
   content: string;
 }
 
+// Persist messages outside component so they survive tab switches
+let persistedMessages: ChatMessage[] = [];
+
 export function AIChatSidebar() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(persistedMessages);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Sync to persisted store
+  useEffect(() => {
+    persistedMessages = messages;
+  }, [messages]);
+
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
@@ -45,22 +60,31 @@ export function AIChatSidebar() {
   }
 
   return (
-    <div className="w-full flex-1 flex flex-col overflow-hidden">
+    <div className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-void-border/50">
+      <div className="flex items-center gap-2 px-3 py-2.5 shrink-0" style={{ borderBottom: '0.5px solid rgba(42,42,48,0.5)' }}>
         <span className="w-2 h-2 rounded-full bg-accent" />
-        <span className="text-sm text-void-text font-medium">AI Chat</span>
+        <span className="text-[13px] text-void-text font-medium font-sans">AI Chat</span>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-3">
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3"
+        style={{ scrollbarWidth: 'thin', scrollbarColor: '#2A2A30 transparent' }}
+      >
         {messages.length === 0 && (
           <div className="text-center py-8 space-y-2">
-            <p className="text-sm text-void-text-ghost">Ask Void AI anything.</p>
-            <p className="text-2xs text-void-text-faint">
+            <div className="w-10 h-10 rounded-[10px] mx-auto mb-3 flex items-center justify-center" style={{ background: 'rgba(249,115,22,0.08)' }}>
+              <div className="w-4 h-4 rounded-[4px] bg-accent/60" />
+            </div>
+            <p className="text-[13px] text-void-text-ghost font-sans">Ask Void AI anything.</p>
+            <p className="text-[11px] text-void-text-faint font-sans leading-relaxed">
               "When was the last deploy?"
               <br />
               "What errors happened today?"
+              <br />
+              "Show me recent git activity"
             </p>
           </div>
         )}
@@ -70,31 +94,46 @@ export function AIChatSidebar() {
             key={i}
             className={`${
               msg.role === 'user'
-                ? 'ml-4 bg-[#1A1A22] rounded-[10px_10px_2px_10px]'
-                : 'mr-4 bg-void-elevated border border-void-border rounded-[2px_10px_10px_10px]'
-            } p-2.5 text-sm text-void-text-muted`}
+                ? 'ml-6 bg-[#1A1A22] rounded-[10px_10px_2px_10px]'
+                : 'mr-3 bg-void-elevated rounded-[2px_10px_10px_10px]'
+            } p-3`}
+            style={msg.role === 'assistant' ? { border: '0.5px solid #2A2A30' } : {}}
           >
             {msg.role === 'assistant' && (
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <span className="w-3 h-3 rounded-sm bg-accent/80" />
-                <span className="text-2xs text-void-text-ghost">Void AI</span>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="w-3.5 h-3.5 rounded-[4px] bg-accent/80 flex items-center justify-center">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white/80" />
+                </span>
+                <span className="text-[10px] text-void-text-ghost font-sans">Void AI</span>
               </div>
             )}
-            <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+            <p className="text-[12px] text-void-text-muted whitespace-pre-wrap break-words leading-relaxed font-sans">{msg.content}</p>
           </div>
         ))}
 
         {loading && (
-          <div className="mr-4 bg-void-elevated border border-void-border rounded-[2px_10px_10px_10px] p-2.5">
-            <span className="text-sm text-void-text-ghost animate-pulse">Thinking...</span>
+          <div className="mr-3 bg-void-elevated rounded-[2px_10px_10px_10px] p-3" style={{ border: '0.5px solid #2A2A30' }}>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-3.5 h-3.5 rounded-[4px] bg-accent/80 flex items-center justify-center">
+                <span className="w-1.5 h-1.5 rounded-full bg-white/80" />
+              </span>
+              <span className="text-[10px] text-void-text-ghost font-sans">Void AI</span>
+            </div>
+            <div className="flex gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent/40 animate-pulse" style={{ animationDelay: '0ms' }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-accent/40 animate-pulse" style={{ animationDelay: '200ms' }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-accent/40 animate-pulse" style={{ animationDelay: '400ms' }} />
+            </div>
           </div>
         )}
+
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
-      <div className="border-t border-void-border/50 p-2">
-        <div className="flex items-center gap-2 bg-void-surface border border-void-border rounded-void px-2.5 py-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
+      <div className="p-2" style={{ borderTop: '0.5px solid rgba(42,42,48,0.5)' }}>
+        <div className="flex items-center gap-2 bg-void-surface px-3 py-2.5 rounded-[8px]" style={{ border: '0.5px solid #2A2A30' }}>
+          <span className="w-2 h-2 rounded-full bg-accent shrink-0" />
           <input
             type="text"
             value={input}
@@ -103,14 +142,14 @@ export function AIChatSidebar() {
               if (e.key === 'Enter') handleSend();
             }}
             placeholder="Ask Void AI..."
-            className="flex-1 bg-transparent text-sm text-void-text-muted outline-none"
+            className="flex-1 bg-transparent text-[12px] text-void-text-muted outline-none font-sans"
           />
           <button
             onClick={handleSend}
             disabled={loading}
-            className="text-void-text-ghost hover:text-accent text-xs disabled:opacity-50"
+            className="text-void-text-ghost hover:text-accent text-[14px] disabled:opacity-30 transition-colors"
           >
-            &#9166;
+            ↵
           </button>
         </div>
       </div>

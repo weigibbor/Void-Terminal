@@ -164,12 +164,9 @@ export class SFTPUploadManager {
     this.sendProgress();
 
     try {
-      // Get the SSH client from the session
-      const { SSHManager } = require('./ssh-manager');
-      // We need to get the client - this is passed via the sshManager reference
-      // For now, we use a global reference approach
       const sshManager = (global as any).__sshManager;
       if (!sshManager) {
+        console.error('[SFTP Upload] SSH manager not available on global');
         next.status = 'failed';
         next.error = 'SSH manager not available';
         this.sendProgress();
@@ -178,6 +175,7 @@ export class SFTPUploadManager {
 
       const client = sshManager.getClient(next.sessionId);
       if (!client) {
+        console.error('[SFTP Upload] No SSH client for session:', next.sessionId);
         next.status = 'failed';
         next.error = 'SSH session not found';
         this.sendProgress();
@@ -185,8 +183,10 @@ export class SFTPUploadManager {
         return;
       }
 
+      console.log('[SFTP Upload] Got SSH client, starting upload...');
       await this.uploadFile(client, next);
     } catch (err: any) {
+      console.error('[SFTP Upload] processNext error:', err.message);
       next.status = 'failed';
       next.error = err.message;
       this.sendProgress();
@@ -195,64 +195,70 @@ export class SFTPUploadManager {
   }
 
   private uploadFile(client: any, job: UploadJob): Promise<void> {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
+      console.log(`[SFTP Upload] Opening SFTP session for: ${job.fileName}`);
+      console.log(`[SFTP Upload] Local: ${job.localPath}`);
+      console.log(`[SFTP Upload] Remote: ${job.remotePath}`);
+
+      // Check local file exists
+      if (!fs.existsSync(job.localPath)) {
+        console.error(`[SFTP Upload] Local file not found: ${job.localPath}`);
+        job.status = 'failed';
+        job.error = 'Local file not found';
+        this.sendProgress();
+        resolve();
+        this.processNext();
+        return;
+      }
+
       client.sftp((err: any, sftp: any) => {
-        if (err) { reject(err); return; }
-        this.activeSftp = sftp;
-
-        const readStream = fs.createReadStream(job.localPath, {
-          start: job.uploadedBytes,
-        });
-
-        const writeStream = sftp.createWriteStream(job.remotePath, {
-          flags: job.uploadedBytes > 0 ? 'a' : 'w',
-          start: job.uploadedBytes,
-        });
-
-        this.activeStream = writeStream;
-
-        // Track progress
-        const progressInterval = setInterval(() => {
-          const now = Date.now();
-          const elapsed = (now - this.speedTracker.lastTime) / 1000;
-          if (elapsed > 0) {
-            job.speed = Math.round((job.uploadedBytes - this.speedTracker.lastBytes) / elapsed);
-            this.speedTracker = { lastBytes: job.uploadedBytes, lastTime: now };
-          }
+        if (err) {
+          console.error('[SFTP Upload] SFTP session error:', err.message);
+          job.status = 'failed';
+          job.error = `SFTP error: ${err.message}`;
           this.sendProgress();
-        }, 500);
+          resolve();
+          this.processNext();
+          return;
+        }
 
-        readStream.on('data', (chunk: Buffer) => {
-          job.uploadedBytes += chunk.length;
-        });
+        this.activeSftp = sftp;
+        console.log(`[SFTP Upload] SFTP session opened. Uploading ${job.totalBytes} bytes...`);
 
-        writeStream.on('finish', () => {
-          clearInterval(progressInterval);
-          job.status = 'completed';
-          job.uploadedBytes = job.totalBytes;
-          this.activeStream = null;
+        sftp.fastPut(job.localPath, job.remotePath, {
+          concurrency: 4,
+          chunkSize: 32768,
+          step: (transferred: number, _chunk: number, _total: number) => {
+            job.uploadedBytes = transferred;
+            const now = Date.now();
+            const elapsed = (now - this.speedTracker.lastTime) / 1000;
+            if (elapsed > 0.3) {
+              job.speed = Math.round((transferred - this.speedTracker.lastBytes) / elapsed);
+              this.speedTracker = { lastBytes: transferred, lastTime: now };
+              this.sendProgress();
+            }
+          },
+        }, (uploadErr: any) => {
           this.activeSftp = null;
-          sftp.end();
+          this.activeStream = null;
+          try { sftp.end(); } catch {}
+
+          if (uploadErr) {
+            console.error('[SFTP Upload] Upload failed:', uploadErr.message);
+            if (job.status !== 'paused') {
+              job.status = 'failed';
+              job.error = uploadErr.message;
+            }
+          } else {
+            console.log(`[SFTP Upload] Complete: ${job.fileName} (${job.totalBytes} bytes)`);
+            job.status = 'completed';
+            job.uploadedBytes = job.totalBytes;
+          }
+
           this.sendProgress();
           resolve();
           this.processNext();
         });
-
-        writeStream.on('error', (e: any) => {
-          clearInterval(progressInterval);
-          if (job.status !== 'paused') {
-            job.status = 'failed';
-            job.error = e.message;
-          }
-          this.activeStream = null;
-          this.activeSftp = null;
-          sftp.end();
-          this.sendProgress();
-          resolve();
-          if (job.status === 'failed') this.processNext();
-        });
-
-        readStream.pipe(writeStream);
       });
     });
   }

@@ -19,6 +19,8 @@ import { AuditLogPanel } from './components/pro/AuditLogPanel';
 import { WorkspaceManager } from './components/pro/WorkspaceManager';
 import { SecurityReport } from './components/pro/SecurityReport';
 import { AIClipboardOverlay } from './components/pro/AIClipboardOverlay';
+import { UpdateBar } from './components/UpdateBar';
+import { PatchNotesModal } from './components/PatchNotesModal';
 
 export function App() {
   useKeyboard();
@@ -50,6 +52,37 @@ export function App() {
     });
   }, [loadSavedConnections, loadLicense]);
 
+  // Check for updates on launch + every 6 hours
+  useEffect(() => {
+    const checkUpdate = async () => {
+      try {
+        const currentVersion = '0.1.0'; // TODO: get from package.json
+        const res = await fetch(`https://voidterminal.dev/api/updates?v=${currentVersion}&os=mac`);
+        const data = await res.json();
+        if (data.update) {
+          const lastSeen = localStorage.getItem('last-seen-changelog');
+          useAppStore.setState({
+            updateStatus: 'available',
+            updateVersion: data.version,
+            updateChangelog: data.changelog,
+            updateRequired: data.required,
+            downloadSize: data.downloadSize,
+            updateDismissed: false,
+          });
+          // Show patch notes if just updated
+          if (lastSeen && lastSeen !== data.version) {
+            setTimeout(() => {
+              useAppStore.setState({ patchNotesOpen: true, patchNotesMode: 'post-update' });
+            }, 1500);
+          }
+        }
+      } catch { /* offline, skip */ }
+    };
+    checkUpdate();
+    const interval = setInterval(checkUpdate, 6 * 60 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   if (showProWelcome) {
     return (
       <div className="h-screen w-screen flex flex-col bg-void-base select-none overflow-hidden">
@@ -69,6 +102,7 @@ export function App() {
   return (
     <div className="h-screen w-screen flex flex-col bg-void-base select-none overflow-hidden">
       <TitleBar />
+      <UpdateBar />
       <TabBar />
 
       {/* Pending restart banner */}
@@ -114,16 +148,16 @@ export function App() {
         </motion.div>
 
         {/* Right sidebar — Notes / AI Chat tabbed panel */}
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
           {(notesSidebarOpen || aiChatSidebarOpen) && (
             <motion.div
               key="right-sidebar"
-              initial={{ x: 220, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 220, opacity: 0 }}
-              transition={{ duration: duration.smooth, ease: easing.standard }}
-              className="shrink-0 flex flex-col"
-              style={{ width: '260px', borderLeft: '0.5px solid #2A2A30', background: 'var(--input)' }}
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 260, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+              className="shrink-0 flex flex-col overflow-hidden"
+              style={{ height: '100%', maxHeight: '100%', borderLeft: '0.5px solid #2A2A30', background: 'var(--input)' }}
             >
               {/* Tab switcher */}
               <div className="flex shrink-0" style={{ borderBottom: '0.5px solid rgba(42,42,48,0.5)' }}>
@@ -144,7 +178,7 @@ export function App() {
               </div>
 
               {/* Panel content */}
-              <div className="flex-1 min-h-0 overflow-hidden">
+              <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
                 {notesSidebarOpen && <NotesSidebar />}
                 {aiChatSidebarOpen && <AIChatSidebar />}
               </div>
@@ -181,6 +215,9 @@ export function App() {
           <SecurityReport issues={[]} server="scan" onClose={() => setActiveModal(null)} />
         )}
       </AnimatePresence>
+
+      {/* Patch notes modal */}
+      <PatchNotesModal />
 
       {/* AI Clipboard overlay */}
       <AIClipboardOverlay

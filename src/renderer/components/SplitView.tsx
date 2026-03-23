@@ -111,62 +111,66 @@ function Divider({
   onDrag: (delta: number) => void;
 }) {
   const [dragging, setDragging] = useState(false);
-  const startRef = useRef(0);
-
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      setDragging(true);
-      startRef.current = direction === 'vertical' ? e.clientX : e.clientY;
-
-      const handleMouseMove = (ev: MouseEvent) => {
-        const current = direction === 'vertical' ? ev.clientX : ev.clientY;
-        const delta = current - startRef.current;
-        startRef.current = current;
-        onDrag(delta);
-      };
-
-      const handleMouseUp = () => {
-        setDragging(false);
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
-      };
-
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-    },
-    [direction, onDrag],
-  );
+  const [hovered, setHovered] = useState(false);
+  const onDragRef = useRef(onDrag);
+  onDragRef.current = onDrag;
 
   const isV = direction === 'vertical';
-  const [hovered, setHovered] = useState(false);
   const active = dragging || hovered;
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragging(true);
+    let lastPos = isV ? e.clientX : e.clientY;
+
+    const onMove = (ev: MouseEvent) => {
+      const current = isV ? ev.clientX : ev.clientY;
+      const delta = current - lastPos;
+      lastPos = current;
+      if (delta !== 0) onDragRef.current(delta);
+    };
+
+    const onUp = () => {
+      setDragging(false);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.body.style.cursor = isV ? 'col-resize' : 'row-resize';
+    document.body.style.userSelect = 'none';
+  };
 
   return (
     <div
-      className={`shrink-0 relative ${isV ? 'cursor-col-resize' : 'cursor-row-resize'}`}
+      className="shrink-0"
       style={{
-        [isV ? 'width' : 'height']: '9px',
-        [isV ? 'marginLeft' : 'marginTop']: '-4px',
-        [isV ? 'marginRight' : 'marginBottom']: '-4px',
-        zIndex: 5,
+        [isV ? 'width' : 'height']: '6px',
+        cursor: isV ? 'col-resize' : 'row-resize',
+        zIndex: 20,
+        position: 'relative',
+        background: 'transparent',
       }}
       onMouseDown={handleMouseDown}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <div
-        style={{
-          position: 'absolute',
-          [isV ? 'width' : 'height']: active ? '2px' : '1px',
-          [isV ? 'left' : 'top']: '50%',
-          transform: isV ? 'translateX(-50%)' : 'translateY(-50%)',
-          [isV ? 'top' : 'left']: 0,
-          [isV ? 'bottom' : 'right']: 0,
-          background: active ? '#F97316' : '#2A2A30',
-          transition: 'background 150ms ease, width 150ms ease, height 150ms ease',
-        }}
-      />
+      {/* Visible line */}
+      <div style={{
+        position: 'absolute',
+        [isV ? 'width' : 'height']: active ? '3px' : '1px',
+        [isV ? 'height' : 'width']: '100%',
+        [isV ? 'left' : 'top']: '50%',
+        transform: isV ? 'translateX(-50%)' : 'translateY(-50%)',
+        background: active ? '#F97316' : '#2A2A30',
+        borderRadius: '2px',
+        transition: 'all 150ms ease',
+        pointerEvents: 'none',
+      }} />
     </div>
   );
 }
@@ -184,15 +188,31 @@ export function SplitView() {
       const totalWidth = containerRef.current.offsetWidth;
       const sizes = [...paneSizes];
       const deltaFrac = delta / totalWidth;
+      const minFrac = SPLIT_MIN_WIDTH / totalWidth;
 
-      sizes[index] = Math.max(SPLIT_MIN_WIDTH / totalWidth, sizes[index] + deltaFrac);
-      sizes[index + 1] = Math.max(SPLIT_MIN_WIDTH / totalWidth, sizes[index + 1] - deltaFrac);
+      sizes[index] = Math.max(minFrac, sizes[index] + deltaFrac);
+      sizes[index + 1] = Math.max(minFrac, sizes[index + 1] - deltaFrac);
 
-      // Normalize
-      const sum = sizes.reduce((a, b) => a + b, 0);
-      setPaneSizes(sizes.map((s) => s / sum));
+      // For grid layouts, only normalize the horizontal pair, preserve vertical ratio
+      if (splitLayout === '2+1-grid') {
+        // paneSizes[0] and [1] are horizontal, [2] is vertical — don't touch [2]
+        const hSum = sizes[0] + sizes[1];
+        sizes[0] = sizes[0] / hSum;
+        sizes[1] = sizes[1] / hSum;
+      } else if (splitLayout === '1+2-grid') {
+        // paneSizes[1] and [2] are horizontal, [0] is vertical — don't touch [0]
+        const hSum = sizes[1] + sizes[2];
+        sizes[1] = sizes[1] / hSum;
+        sizes[2] = sizes[2] / hSum;
+      } else {
+        // 2-col, 3-col: normalize all
+        const sum = sizes.reduce((a, b) => a + b, 0);
+        for (let i = 0; i < sizes.length; i++) sizes[i] = sizes[i] / sum;
+      }
+
+      setPaneSizes(sizes);
     },
-    [paneSizes, setPaneSizes],
+    [paneSizes, setPaneSizes, splitLayout],
   );
 
   const handleDragV = useCallback(
@@ -201,26 +221,14 @@ export function SplitView() {
       const totalHeight = containerRef.current.offsetHeight;
       const sizes = [...paneSizes];
       const deltaFrac = delta / totalHeight;
+      const minFrac = SPLIT_MIN_HEIGHT / totalHeight;
 
-      // For grid layouts, first group and second group
       if (splitLayout === '2+1-grid') {
-        // Top row takes first 2 sizes, bottom row is third
-        const topSize = (sizes[0] + sizes[1]) / 2;
-        const newTop = Math.max(SPLIT_MIN_HEIGHT / totalHeight, topSize + deltaFrac / 2);
-        const newBottom = Math.max(SPLIT_MIN_HEIGHT / totalHeight, sizes[2] - deltaFrac);
-        const total = newTop * 2 + newBottom;
-        sizes[0] = newTop / total;
-        sizes[1] = newTop / total;
-        sizes[2] = newBottom / total;
+        // paneSizes[2] controls vertical split (top height ratio)
+        sizes[2] = Math.max(minFrac, Math.min(1 - minFrac, sizes[2] + deltaFrac));
       } else {
-        const topSize = sizes[0];
-        const newTop = Math.max(SPLIT_MIN_HEIGHT / totalHeight, topSize + deltaFrac);
-        const bottomSize = (sizes[1] + sizes[2]) / 2;
-        const newBottom = Math.max(SPLIT_MIN_HEIGHT / totalHeight, bottomSize - deltaFrac / 2);
-        const total = newTop + newBottom * 2;
-        sizes[0] = newTop / total;
-        sizes[1] = newBottom / total;
-        sizes[2] = newBottom / total;
+        // 1+2-grid: paneSizes[0] controls vertical split (top height ratio)
+        sizes[0] = Math.max(minFrac, Math.min(1 - minFrac, sizes[0] + deltaFrac));
       }
 
       setPaneSizes(sizes);
@@ -230,7 +238,7 @@ export function SplitView() {
 
   if (splitLayout === 'single') {
     return (
-      <div ref={containerRef} className="flex-1 flex flex-col min-h-0">
+      <div ref={containerRef} className="flex-1 flex flex-col min-h-0 bg-void-elevated">
         <PaneContent tabId={paneTabIds[0]} paneIndex={0} />
       </div>
     );
@@ -238,12 +246,12 @@ export function SplitView() {
 
   if (splitLayout === '2-col') {
     return (
-      <div ref={containerRef} className="flex-1 flex min-h-0">
-        <div style={{ flex: paneSizes[0] }} className="min-w-0">
+      <div ref={containerRef} className="flex-1 flex min-h-0 bg-void-elevated">
+        <div style={{ flex: paneSizes[0] }} className="min-w-0 h-full bg-void-elevated overflow-hidden relative">
           <PaneContent tabId={paneTabIds[0]} paneIndex={0} />
         </div>
         <Divider direction="vertical" onDrag={(d) => handleDragH(0, d)} />
-        <div style={{ flex: paneSizes[1] }} className="min-w-0">
+        <div style={{ flex: paneSizes[1] }} className="min-w-0 h-full bg-void-elevated overflow-hidden relative">
           <PaneContent tabId={paneTabIds[1]} paneIndex={1} />
         </div>
       </div>
@@ -252,16 +260,16 @@ export function SplitView() {
 
   if (splitLayout === '3-col') {
     return (
-      <div ref={containerRef} className="flex-1 flex min-h-0">
-        <div style={{ flex: paneSizes[0] }} className="min-w-0">
+      <div ref={containerRef} className="flex-1 flex min-h-0 bg-void-elevated">
+        <div style={{ flex: paneSizes[0] }} className="min-w-0 h-full bg-void-elevated overflow-hidden relative">
           <PaneContent tabId={paneTabIds[0]} paneIndex={0} />
         </div>
         <Divider direction="vertical" onDrag={(d) => handleDragH(0, d)} />
-        <div style={{ flex: paneSizes[1] }} className="min-w-0">
+        <div style={{ flex: paneSizes[1] }} className="min-w-0 h-full bg-void-elevated overflow-hidden relative">
           <PaneContent tabId={paneTabIds[1]} paneIndex={1} />
         </div>
         <Divider direction="vertical" onDrag={(d) => handleDragH(1, d)} />
-        <div style={{ flex: paneSizes[2] }} className="min-w-0">
+        <div style={{ flex: paneSizes[2] }} className="min-w-0 h-full bg-void-elevated overflow-hidden relative">
           <PaneContent tabId={paneTabIds[2]} paneIndex={2} />
         </div>
       </div>
@@ -269,21 +277,19 @@ export function SplitView() {
   }
 
   if (splitLayout === '2+1-grid') {
-    const topSize = paneSizes[0] + paneSizes[1];
-    const bottomSize = paneSizes[2];
     return (
-      <div ref={containerRef} className="flex-1 flex flex-col min-h-0">
-        <div style={{ flex: topSize }} className="flex min-h-0">
-          <div style={{ flex: paneSizes[0] }} className="min-w-0">
+      <div ref={containerRef} className="flex-1 flex flex-col min-h-0 bg-void-elevated">
+        <div style={{ flex: `${paneSizes[2] * 100}%` }} className="flex min-h-[80px] bg-void-elevated">
+          <div style={{ flex: paneSizes[0] }} className="min-w-0 bg-void-elevated overflow-hidden relative">
             <PaneContent tabId={paneTabIds[0]} paneIndex={0} />
           </div>
           <Divider direction="vertical" onDrag={(d) => handleDragH(0, d)} />
-          <div style={{ flex: paneSizes[1] }} className="min-w-0">
+          <div style={{ flex: paneSizes[1] }} className="min-w-0 bg-void-elevated overflow-hidden relative">
             <PaneContent tabId={paneTabIds[1]} paneIndex={1} />
           </div>
         </div>
         <Divider direction="horizontal" onDrag={handleDragV} />
-        <div style={{ flex: bottomSize }} className="min-w-0">
+        <div className="flex-1 min-h-[80px] bg-void-elevated overflow-hidden relative">
           <PaneContent tabId={paneTabIds[2]} paneIndex={2} />
         </div>
       </div>
@@ -291,20 +297,18 @@ export function SplitView() {
   }
 
   // 1+2-grid
-  const topSize = paneSizes[0];
-  const bottomSize = paneSizes[1] + paneSizes[2];
   return (
-    <div ref={containerRef} className="flex-1 flex flex-col min-h-0">
-      <div style={{ flex: topSize }} className="min-w-0">
+    <div ref={containerRef} className="flex-1 flex flex-col min-h-0 bg-void-elevated">
+      <div style={{ flex: `${paneSizes[0] * 100}%` }} className="min-h-[80px] bg-void-elevated overflow-hidden relative">
         <PaneContent tabId={paneTabIds[0]} paneIndex={0} />
       </div>
       <Divider direction="horizontal" onDrag={handleDragV} />
-      <div style={{ flex: bottomSize }} className="flex min-h-0">
-        <div style={{ flex: paneSizes[1] }} className="min-w-0">
+      <div className="flex-1 flex min-h-[80px] bg-void-elevated">
+        <div style={{ flex: paneSizes[1] }} className="min-w-0 bg-void-elevated overflow-hidden relative">
           <PaneContent tabId={paneTabIds[1]} paneIndex={1} />
         </div>
         <Divider direction="vertical" onDrag={(d) => handleDragH(1, d)} />
-        <div style={{ flex: paneSizes[2] }} className="min-w-0">
+        <div style={{ flex: paneSizes[2] }} className="min-w-0 bg-void-elevated overflow-hidden relative">
           <PaneContent tabId={paneTabIds[2]} paneIndex={2} />
         </div>
       </div>

@@ -100,7 +100,7 @@ export function SearchBar({ visible, onClose, onSearch, onNext, onPrev }: Search
           )}
 
           {/* Close */}
-          <button onClick={onClose} className="text-void-text-ghost hover:text-void-text-muted text-[12px]" title="Close (Escape)">
+          <button onClick={onClose} className="flex items-center justify-center w-[22px] h-[22px] rounded-[4px] text-void-text-ghost hover:text-void-text-muted hover:bg-void-surface text-[14px] transition-all" title="Close (Escape)">
             ✕
           </button>
         </motion.div>

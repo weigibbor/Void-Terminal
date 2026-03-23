@@ -204,8 +204,8 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
       {/* Pane header */}
       {showHeader && (
         <div
-          className="flex items-center gap-[6px] px-3 shrink-0 cursor-grab active:cursor-grabbing"
-          style={{ height: '28px', fontSize: '9px', borderBottom: '0.5px solid rgba(42,42,48,0.5)', background: 'rgba(17,17,21,0.5)' }}
+          className="flex items-center gap-[8px] px-3 shrink-0 cursor-grab active:cursor-grabbing"
+          style={{ height: '32px', fontSize: '11px', borderBottom: '0.5px solid rgba(42,42,48,0.5)', background: 'rgba(17,17,21,0.5)' }}
           draggable
           onDragStart={(e) => {
             e.dataTransfer.setData('text/pane-index', String(paneIndex));
@@ -214,7 +214,7 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
         >
           {/* Status dot */}
           <span
-            className={`w-[5px] h-[5px] rounded-full shrink-0 ${
+            className={`w-[7px] h-[7px] rounded-full shrink-0 ${
               tab.connected ? 'bg-status-online' : 'bg-void-text-ghost'
             }`}
             style={{ transition: 'background-color 300ms ease' }}
@@ -227,7 +227,7 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
 
           {/* Position badge */}
           <span
-            className="text-[8px] px-[5px] py-[1px] rounded-[3px] font-mono"
+            className="text-[10px] px-[6px] py-[2px] rounded-[3px] font-mono"
             style={{
               color: isFocused ? '#F97316' : '#5B9BD5',
               border: `0.5px solid ${isFocused ? 'rgba(249,115,22,0.25)' : 'rgba(91,155,213,0.25)'}`,
@@ -241,11 +241,11 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
 
           {/* Latency or offline status */}
           {tab.connected ? (
-            <span className="text-[8px] text-status-online font-mono">
+            <span className="text-[10px] text-status-online font-mono">
               {tab.latency != null ? `${tab.latency}ms` : 'connected'}
             </span>
           ) : isDisconnected ? (
-            <span className="text-[8px] text-status-error font-mono">offline</span>
+            <span className="text-[10px] text-status-error font-mono">offline</span>
           ) : null}
 
           {/* Divider */}
@@ -267,7 +267,7 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
                 <circle cx="6" cy="6" r="4.5" stroke="#FF5F57" strokeWidth="1" />
                 <path d="M4 4l4 4M8 4l-4 4" stroke="#FF5F57" strokeWidth="1" strokeLinecap="round" />
               </svg>
-              <span className="text-[8px] text-status-error">Disconnect</span>
+              <span className="text-[10px] text-status-error">Disconnect</span>
             </button>
           ) : isDisconnected ? (
             <button
@@ -283,7 +283,7 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
               <svg width="8" height="8" viewBox="0 0 12 12" fill="none">
                 <path d="M4 2l5 4-5 4" stroke="#28C840" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              <span className="text-[8px] text-status-online">Reconnect</span>
+              <span className="text-[10px] text-status-online">Reconnect</span>
             </button>
           ) : null}
         </div>
@@ -313,14 +313,14 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
       {detectedPort && isPro && tab.type === 'ssh' && (
         <div className="flex items-center gap-2 px-3 py-[6px] shrink-0"
           style={{ background: 'rgba(91,155,213,0.05)', borderBottom: '0.5px solid rgba(91,155,213,0.15)' }}>
-          <span className="w-[5px] h-[5px] rounded-full bg-status-info" />
-          <span className="text-[9px] text-status-info font-mono flex-1">
+          <span className="w-[6px] h-[6px] rounded-full bg-status-info" />
+          <span className="text-[11px] text-status-info font-mono flex-1">
             Port {detectedPort} detected — <span className="underline cursor-pointer" onClick={() => {
               window.open(`http://localhost:${detectedPort}`);
               setDetectedPort(null);
             }}>open localhost:{detectedPort}</span>
           </span>
-          <button onClick={() => setDetectedPort(null)} className="text-[9px] text-void-text-ghost hover:text-void-text-dim">✕</button>
+          <button onClick={() => setDetectedPort(null)} className="flex items-center justify-center w-[20px] h-[20px] rounded-[4px] text-[13px] text-void-text-ghost hover:text-void-text-dim hover:bg-void-surface transition-all">✕</button>
         </div>
       )}
 
@@ -369,7 +369,7 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
             </div>
 
             <div className="text-[11px] text-void-text font-medium font-sans mb-[2px]">Session paused</div>
-            <div className="text-[9px] text-void-text-dim mb-[10px]">{tab.title} disconnected</div>
+            <div className="text-[12px] text-void-text-dim mb-[10px]">{tab.title} disconnected</div>
 
             {/* Action buttons */}
             <div className="flex items-center justify-center gap-[6px]">
@@ -381,11 +381,11 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
                 <svg width="8" height="8" viewBox="0 0 12 12" fill="none">
                   <path d="M4 2l5 4-5 4" stroke="#28C840" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                <span className="text-[9px] text-status-online font-medium">Reconnect</span>
+                <span className="text-[11px] text-status-online font-medium">Reconnect</span>
               </button>
             </div>
 
-            <div className="text-[8px] text-void-text-faint mt-2">Scrollback preserved · Tab still open</div>
+            <div className="text-[10px] text-void-text-faint mt-2">Scrollback preserved · Tab still open</div>
           </div>
         </div>
       )}

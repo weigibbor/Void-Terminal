@@ -14,19 +14,19 @@ export function TitleBar() {
 
   return (
     <div
-      className="flex items-center justify-between px-4 pt-3 pb-0 bg-void-base shrink-0"
+      className="relative flex items-center justify-between px-4 pt-3 pb-0 bg-void-base shrink-0"
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
       {/* macOS traffic light spacer */}
       <div className="w-[60px]" />
 
-      {/* Center title */}
-      <div className="flex items-center gap-2 select-none">
+      {/* Center title — absolute so it's always perfectly centered */}
+      <div className="absolute left-0 right-0 flex items-center justify-center gap-2 select-none pointer-events-none">
         <span className="text-[11px] text-void-text-dim tracking-[0.5px] font-mono">
           VOID TERMINAL
         </span>
         {isPro && (
-          <span className="text-[8px] font-mono font-bold text-accent bg-accent-glow border-[0.5px] border-accent-dim px-1.5 py-[1px] rounded-[3px] tracking-wider">
+          <span className="text-[9px] font-mono font-bold text-accent bg-accent-glow border-[0.5px] border-accent-dim px-2 py-[2px] rounded-[4px] tracking-wider">
             PRO
           </span>
         )}
@@ -40,7 +40,7 @@ export function TitleBar() {
         {/* SFTP button */}
         <button
           onClick={toggleSFTP}
-          className={`px-[6px] py-[2px] rounded-[4px] text-[8px] font-mono transition-colors ${
+          className={`px-[6px] py-[2px] rounded-[4px] text-[10px] font-mono transition-colors ${
             sftpOpen ? 'text-status-info' : 'text-void-text-dim hover:text-void-text-muted'
           }`}
           style={{ border: `0.5px solid ${sftpOpen ? 'rgba(91,155,213,0.25)' : '#2A2A30'}` }}
@@ -85,7 +85,7 @@ export function TitleBar() {
         {/* Notes button */}
         <button
           onClick={toggleNotes}
-          className={`px-[6px] py-[2px] rounded-[4px] text-[8px] font-mono transition-colors ${
+          className={`px-[6px] py-[2px] rounded-[4px] text-[10px] font-mono transition-colors ${
             notesSidebarOpen
               ? 'text-accent border-accent-dim'
               : 'text-void-text-dim hover:text-void-text-muted'
@@ -100,7 +100,7 @@ export function TitleBar() {
         {isPro && (
           <button
             onClick={toggleAI}
-            className={`px-[6px] py-[2px] rounded-[4px] text-[8px] font-mono transition-colors ${
+            className={`px-[6px] py-[2px] rounded-[4px] text-[10px] font-mono transition-colors ${
               aiChatSidebarOpen
                 ? 'text-accent border-accent-dim'
                 : 'text-void-text-dim hover:text-void-text-muted'

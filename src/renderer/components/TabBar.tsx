@@ -102,12 +102,12 @@ function TabItem({ tab, isActive, onContextMenu }: { tab: Tab; isActive: boolean
 
       {/* Close button */}
       <span
-        className={`text-[11px] text-void-text-ghost transition-opacity ${
+        className={`flex items-center justify-center w-[18px] h-[18px] rounded-[4px] text-[13px] text-void-text-ghost transition-all cursor-pointer hover:bg-void-surface ${
           isActive ? 'opacity-60 hover:opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100'
         }`}
         onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }}
       >
-        x
+        ✕
       </span>
     </div>
   );
