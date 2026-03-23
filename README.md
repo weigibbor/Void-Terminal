@@ -137,4 +137,4 @@ MIT - See [LICENSE](LICENSE) for details.
 
 **Built in the Philippines. Made for the world.**
 
-*Clearmud Labs - 2026*
+*GE Tech - 2026*
