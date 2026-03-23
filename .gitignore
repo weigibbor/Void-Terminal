@@ -1,0 +1,16 @@
+node_modules/
+dist/
+dist-electron/
+release/
+.DS_Store
+*.log
+.env
+.env.local
+
+# Private pro package — NEVER commit to public repo
+void-terminal-pro/
+node_modules/@void/
+.void-license
+void-docs/
+CLAUDE-CODE-PROMPT.md
+Void-Terminal-Complete-Docs.zip

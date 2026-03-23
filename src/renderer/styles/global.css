@@ -1,0 +1,161 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --base: #0A0A0D;
+  --surface: #111115;
+  --elevated: #141418;
+  --input: #0E0E12;
+  --border: #2A2A30;
+  --border-hover: #3A3A42;
+  --text: #E8E6E0;
+  --text-muted: #888;
+  --text-dim: #555;
+  --text-ghost: #444;
+  --text-faint: #333;
+  --accent: #F97316;
+  --accent-hover: #FB923C;
+  --accent-dim: rgba(249,115,22,0.25);
+  --accent-glow: rgba(249,115,22,0.08);
+  --accent-glow-border: rgba(249,115,22,0.12);
+  --online: #28C840;
+  --warning: #FEBC2E;
+  --error: #FF5F57;
+  --info: #5B9BD5;
+  --ai: #C586C0;
+
+  /* Easing functions from spec */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--base);
+  color: var(--text);
+  font-family: 'DM Sans', 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+::selection { background: rgba(249, 115, 22, 0.25); }
+
+/* xterm.js */
+.xterm { padding: 14px 16px; }
+.xterm-viewport { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+.xterm-viewport::-webkit-scrollbar { width: 5px; }
+.xterm-viewport::-webkit-scrollbar-track { background: transparent; }
+.xterm-viewport::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Inputs */
+input, textarea { outline: none; font-family: inherit; }
+input::placeholder, textarea::placeholder { color: var(--text-dim); }
+
+/* Focus */
+button:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+button:focus:not(:focus-visible) { outline: none; }
+
+/* Button press — spec: scale(0.97) on active */
+button:active {
+  transform: scale(0.97);
+  transition: transform 100ms ease;
+}
+
+/* Transitions — spec: prefer CSS transitions, nothing > 300ms */
+button, input, textarea, select {
+  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+
+/* Status dot transition */
+.status-dot {
+  transition: background-color 300ms ease;
+}
+
+/* Sidebar slide-in from right */
+@keyframes slideInRight {
+  from { transform: translateX(220px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes slideOutRight {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(220px); opacity: 0; }
+}
+
+/* Sidebar slide-in from left */
+@keyframes slideInLeft {
+  from { transform: translateX(-240px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* Command palette */
+@keyframes paletteIn {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* AI inline suggestion */
+@keyframes aiSuggestIn {
+  from { opacity: 0; transform: translateY(4px); max-height: 0; }
+  to { opacity: 1; transform: translateY(0); max-height: 200px; }
+}
+
+/* Danger shake */
+@keyframes dangerShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+/* Note card enter */
+@keyframes noteIn {
+  from { opacity: 0; transform: translateY(-8px); max-height: 0; }
+  to { opacity: 1; transform: translateY(0); max-height: 200px; }
+}
+
+/* Tab enter */
+@keyframes tabIn {
+  from { opacity: 0; transform: translateX(8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Recording pulse */
+@keyframes recPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Reconnecting pulse */
+@keyframes reconnectPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* AI active pulse */
+@keyframes aiPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0ms !important;
+    transition-duration: 0ms !important;
+  }
+}
