@@ -434,9 +434,10 @@ function LicenseSettings() {
 
   const handleDeactivate = async () => {
     await window.void.license.deactivate();
+    // Immediately lock Pro features — no restart needed
+    useAppStore.setState({ isPro: false, licenseInfo: null });
     await loadLicense();
-    setStatus('License deactivated. Restart to apply.');
-    setNeedsRestart(true);
+    setStatus('License deactivated. Pro features disabled.');
   };
 
   const handleRestart = () => {

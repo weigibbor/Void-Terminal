@@ -71,6 +71,37 @@ export function isProAvailable(): boolean {
   return proAvailable;
 }
 
+// Check license validity and flush if expired
+export async function enforceLicenseExpiry(window: BrowserWindow): Promise<void> {
+  if (!licenseManager || !proAvailable) return;
+  try {
+    const status = await licenseManager.validate();
+    if (!status.valid) {
+      console.log('[Void Pro] License expired or invalid:', status.error);
+      licenseActive = false;
+      // Flush AI config
+      if (aiEngine) {
+        aiEngine.setConfig({
+          provider: 'anthropic',
+          apiKey: undefined,
+          features: {
+            autoNotes: false, errorExplainer: false, dangerDetection: false,
+            autocomplete: false, naturalLanguage: false, securityScanner: false, anomalyDetection: false,
+          },
+        });
+      }
+      aiEngine = null;
+      aiWatcher = null;
+      // Notify renderer to lock Pro features immediately
+      try {
+        if (!window.isDestroyed()) {
+          window.webContents.send('license:expired', { reason: status.error });
+        }
+      } catch { /* destroyed */ }
+    }
+  } catch { /* offline — grace period handled by license-manager */ }
+}
+
 export function isLicenseActive(): boolean {
   return licenseActive;
 }

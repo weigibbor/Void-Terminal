@@ -101,6 +101,14 @@ export function App() {
     });
   }, []);
 
+  // Listen for license expiry — immediately lock Pro features
+  useEffect(() => {
+    return (window.void.license as any).onExpired?.((data: any) => {
+      console.log('[License] Expired:', data?.reason);
+      useAppStore.setState({ isPro: false, licenseInfo: null });
+    });
+  }, []);
+
   if (showProWelcome) {
     return (
       <div className="h-screen w-screen flex flex-col bg-void-base select-none overflow-hidden">

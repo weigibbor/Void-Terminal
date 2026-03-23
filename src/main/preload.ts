@@ -143,6 +143,11 @@ contextBridge.exposeInMainWorld('void', {
     getInfo: () => ipcRenderer.invoke('license:getInfo'),
     activate: (key: string, email: string) => ipcRenderer.invoke('license:activate', key, email),
     deactivate: () => ipcRenderer.invoke('license:deactivate'),
+    onExpired: (cb: (data: any) => void) => {
+      const handler = (_e: unknown, data: any) => cb(data);
+      ipcRenderer.on('license:expired', handler);
+      return () => ipcRenderer.removeListener('license:expired', handler);
+    },
   },
 
   window: {

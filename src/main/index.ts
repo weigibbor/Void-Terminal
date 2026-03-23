@@ -399,6 +399,15 @@ function registerIPCHandlers(): void {
 
   ipcMain.handle('license:deactivate', async () => {
     await pro.deactivateLicense();
+    // Flush AI config (API key) for security
+    pro.setAIConfig({
+      provider: null as any,
+      apiKey: undefined,
+      features: {
+        autoNotes: false, errorExplainer: false, dangerDetection: false,
+        autocomplete: false, naturalLanguage: false, securityScanner: false, anomalyDetection: false,
+      },
+    });
   });
 
   // --- Window ---
@@ -454,13 +463,9 @@ function registerIPCHandlers(): void {
   });
 
   ipcMain.on('app:relaunch', async () => {
-    // Re-init pro bridge with new license
-    await pro.initProBridge();
-    pro.initAIEngine();
-    if (mainWindow) {
-      pro.initAIWatcher(memoryStore, mainWindow);
-      mainWindow.webContents.reload();
-    }
+    // Quit and relaunch the app properly
+    app.relaunch();
+    app.exit(0);
   });
 }
 
@@ -492,6 +497,14 @@ app.whenReady().then(async () => {
       watcher.feed(sessionId, data, server);
     });
   }
+
+  // Periodic license enforcement (every 6 hours)
+  pro.enforceLicenseExpiry(mainWindow);
+  setInterval(() => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      pro.enforceLicenseExpiry(mainWindow);
+    }
+  }, 6 * 60 * 60 * 1000);
 
   mainWindow.on('close', () => {
     sshManager?.destroyAll();
