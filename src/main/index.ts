@@ -360,6 +360,10 @@ function registerIPCHandlers(): void {
     return process.platform;
   });
 
+  ipcMain.on('app:setZoom', (_event, factor: number) => {
+    mainWindow?.webContents.setZoomFactor(factor);
+  });
+
   ipcMain.on('app:relaunch', async () => {
     // Re-init pro bridge with new license
     await pro.initProBridge();

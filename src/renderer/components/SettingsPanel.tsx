@@ -73,19 +73,72 @@ export function SettingsPanel() {
 }
 
 function GeneralSettings() {
+  const terminalFontSize = useAppStore((s) => s.terminalFontSize);
+  const uiScale = useAppStore((s) => s.uiScale);
+  const setTerminalFontSize = useAppStore((s) => s.setTerminalFontSize);
+  const setUIScale = useAppStore((s) => s.setUIScale);
+
   return (
     <div className="max-w-md space-y-6">
       <h3 className="text-lg text-void-text font-medium">General</h3>
       <SettingRow label="Theme" description="Dark theme only for v1">
         <span className="text-sm text-void-text-ghost">Dark</span>
       </SettingRow>
-      <SettingRow label="Font Size" description="Terminal font size in pixels">
-        <input
-          type="number"
-          defaultValue={13}
-          className="w-20 bg-void-input border border-void-border rounded-void text-sm text-void-text-muted px-2 py-1"
-        />
-      </SettingRow>
+
+      {/* Terminal Font Size */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <div><div className="text-sm text-void-text">Terminal Font Size</div><div className="text-2xs text-void-text-ghost">Size of text in terminal panes · default 13px</div></div>
+          <span className="text-[13px] text-void-text font-mono font-medium">{terminalFontSize}px</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-[9px] text-void-text-ghost font-mono">8</span>
+          <input type="range" min="8" max="24" step="1" value={terminalFontSize}
+            onChange={(e) => setTerminalFontSize(parseInt(e.target.value))}
+            className="flex-1 h-1 bg-void-border rounded-full appearance-none cursor-pointer accent-accent"
+            style={{ accentColor: '#F97316' }} />
+          <span className="text-[9px] text-void-text-ghost font-mono">24</span>
+        </div>
+      </div>
+
+      {/* UI Scale */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <div><div className="text-sm text-void-text">UI Scale</div><div className="text-2xs text-void-text-ghost">Scale the entire app interface · default 100%</div></div>
+          <span className="text-[13px] text-void-text font-mono font-medium">{uiScale}%</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-[9px] text-void-text-ghost font-mono">75%</span>
+          <input type="range" min="75" max="150" step="5" value={uiScale}
+            onChange={(e) => setUIScale(parseInt(e.target.value))}
+            className="flex-1 h-1 bg-void-border rounded-full appearance-none cursor-pointer"
+            style={{ accentColor: '#F97316' }} />
+          <span className="text-[9px] text-void-text-ghost font-mono">150%</span>
+        </div>
+        <div className="flex gap-2 mt-2">
+          {[80, 90, 100, 110, 120].map((s) => (
+            <button key={s} onClick={() => setUIScale(s)}
+              className={`px-2 py-[3px] rounded-[4px] text-[9px] font-mono ${uiScale === s ? 'text-accent bg-accent-glow border-accent-dim' : 'text-void-text-ghost'}`}
+              style={{ border: `0.5px solid ${uiScale === s ? 'rgba(249,115,22,0.25)' : '#2A2A30'}` }}>
+              {s}%
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Restore defaults — subtle text, only when changed */}
+      {(terminalFontSize !== 13 || uiScale !== 100) && (
+        <div className="flex justify-end">
+          <span
+            onClick={() => { setTerminalFontSize(13); setUIScale(100); }}
+            className="text-[9px] text-void-text-faint hover:text-accent cursor-pointer font-mono"
+            style={{ transition: 'color 0.15s ease' }}
+          >
+            reset to defaults
+          </span>
+        </div>
+      )}
+
       <SettingRow label="Cursor Style" description="Terminal cursor appearance">
         <select className="bg-void-input border border-void-border rounded-void text-sm text-void-text-muted px-2 py-1">
           <option value="bar">Bar</option>

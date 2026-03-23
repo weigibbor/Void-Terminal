@@ -29,6 +29,7 @@ export function App() {
   const settingsOpen = useAppStore((s) => s.settingsOpen);
   const activeModal = useAppStore((s) => s.activeModal);
   const sftpOpen = useAppStore((s) => s.sftpOpen);
+  const uiScale = useAppStore((s) => s.uiScale);
   const loadSavedConnections = useAppStore((s) => s.loadSavedConnections);
   const loadLicense = useAppStore((s) => s.loadLicense);
   const setActiveModal = useAppStore((s) => s.setActiveModal);
@@ -56,6 +57,11 @@ export function App() {
       </div>
     );
   }
+
+  // Apply UI scale via Electron's webContents.setZoomFactor (scales entire window properly)
+  useEffect(() => {
+    window.void.app.setZoom(uiScale / 100);
+  }, [uiScale]);
 
   return (
     <div className="h-screen w-screen flex flex-col bg-void-base select-none overflow-hidden">

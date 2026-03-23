@@ -63,6 +63,8 @@ interface AppState {
   isPro: boolean;
   licenseInfo: { plan: string; email?: string; activatedAt?: number } | null;
   settingsSection: string;
+  terminalFontSize: number;
+  uiScale: number;
   activeModal: string | null;
 
   addTab: (type: TabType, config?: Partial<Tab>) => string;
@@ -77,6 +79,8 @@ interface AppState {
   setFocusedPane: (index: number) => void;
   setPaneSizes: (sizes: number[]) => void;
 
+  setTerminalFontSize: (size: number) => void;
+  setUIScale: (scale: number) => void;
   toggleSFTP: () => void;
   collapseSFTP: () => void;
   toggleNotesSidebar: () => void;
@@ -112,6 +116,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   isPro: false,
   licenseInfo: null,
   settingsSection: 'general',
+  terminalFontSize: parseInt(localStorage.getItem('void-terminal-font-size') || '13'),
+  uiScale: parseInt(localStorage.getItem('void-ui-scale') || '100'),
   activeModal: null,
 
   addTab: (type, config) => {
@@ -355,6 +361,17 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setPaneSizes: (sizes) => {
     set({ paneSizes: sizes });
+  },
+
+  setTerminalFontSize: (size) => {
+    const clamped = Math.max(8, Math.min(24, size));
+    set({ terminalFontSize: clamped });
+    try { localStorage.setItem('void-terminal-font-size', String(clamped)); } catch {}
+  },
+  setUIScale: (scale) => {
+    const clamped = Math.max(75, Math.min(150, scale));
+    set({ uiScale: clamped });
+    try { localStorage.setItem('void-ui-scale', String(clamped)); } catch {}
   },
 
   toggleSFTP: () => {

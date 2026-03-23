@@ -185,6 +185,7 @@ export interface VoidAPI {
     getVersion: () => Promise<string>;
     getPlatform: () => Promise<string>;
     relaunch: () => void;
+    setZoom: (factor: number) => void;
   };
 }
 

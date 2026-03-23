@@ -130,6 +130,7 @@ contextBridge.exposeInMainWorld('void', {
   app: {
     getVersion: () => ipcRenderer.invoke('app:getVersion'),
     getPlatform: () => ipcRenderer.invoke('app:getPlatform'),
-    relaunch: () => ipcRenderer.send('app:relaunch'),
+    relaunch: () => ipcRenderer.send("app:relaunch"),
+    setZoom: (factor: number) => ipcRenderer.send("app:setZoom", factor),
   },
 });

@@ -3,6 +3,7 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
 import { TERMINAL_THEME, TERMINAL_OPTIONS } from '../utils/constants';
+import { useAppStore } from '../stores/app-store';
 import '@xterm/xterm/css/xterm.css';
 
 interface UseTerminalOptions {
@@ -28,8 +29,10 @@ export function useTerminal({ sessionId, sessionType, onData }: UseTerminalOptio
   useEffect(() => {
     if (!containerRef.current) return;
 
+    const fontSize = useAppStore.getState().terminalFontSize;
     const terminal = new Terminal({
       ...TERMINAL_OPTIONS,
+      fontSize,
       theme: TERMINAL_THEME,
     });
 
