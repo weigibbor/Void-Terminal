@@ -86,10 +86,10 @@ export function useKeyboard() {
         return;
       }
 
-      // Cmd+Shift+F — SFTP sidebar (placeholder)
+      // Cmd+Shift+F — SFTP sidebar
       if (meta && shift && e.key === 'F') {
         e.preventDefault();
-        // TODO: toggle SFTP sidebar
+        store.toggleSFTP();
         return;
       }
 

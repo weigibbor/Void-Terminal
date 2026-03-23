@@ -164,6 +164,9 @@ function AISettings() {
     ollama: 'Ollama (Local)',
   };
 
+  const hasApiKey = !!config.apiKey || config.provider === 'ollama';
+  const hasProvider = !!config.provider;
+
   return (
     <div className="max-w-md space-y-4">
       <div>
@@ -171,14 +174,35 @@ function AISettings() {
         <div className="text-[10px] text-void-text-dim mb-5">Manage your AI provider and toggle individual features.</div>
       </div>
 
+      {/* Not configured warning */}
+      {!hasApiKey && (
+        <div className="p-4 rounded-[10px] text-center mb-2" style={{ background: 'rgba(254,188,46,0.04)', border: '0.5px solid rgba(254,188,46,0.12)' }}>
+          <div className="w-11 h-11 rounded-[11px] mx-auto mb-3 flex items-center justify-center" style={{ background: 'rgba(254,188,46,0.06)', border: '0.5px solid rgba(254,188,46,0.1)' }}>
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#FEBC2E" strokeWidth="1.3"/><line x1="8" y1="5" x2="8" y2="8.5" stroke="#FEBC2E" strokeWidth="1.5" strokeLinecap="round"/><circle cx="8" cy="11" r="0.7" fill="#FEBC2E"/></svg>
+          </div>
+          <div className="text-[14px] text-void-text font-semibold mb-1">AI is not configured</div>
+          <div className="text-[10px] text-void-text-muted leading-relaxed mb-1">You have Pro, but AI features need an API key to work.</div>
+          <div className="text-[10px] text-void-text-dim">BYOK — bring your own key. Your data never leaves your machine.</div>
+        </div>
+      )}
+
+      {/* Verified banner */}
+      {hasApiKey && (
+        <div className="flex items-center gap-2 p-[10px] rounded-[8px] mb-2" style={{ background: 'rgba(40,200,64,0.04)', border: '0.5px solid rgba(40,200,64,0.12)' }}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#28C840" strokeWidth="1.3"/><path d="M5.5 8l2 2 3.5-4" stroke="#28C840" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <span className="text-[10px] text-status-online font-medium">API key verified</span>
+          <span className="text-[10px] text-void-text-muted">— {providerNames[config.provider] || 'Provider'} connected</span>
+        </div>
+      )}
+
       {/* Provider card */}
       <div className="flex items-center gap-[10px] p-3 bg-void-surface rounded-[8px]" style={{ border: '0.5px solid #2A2A30' }}>
         <div className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0" style={{ background: 'rgba(249,115,22,0.08)' }}>
           <div className="w-3 h-3 rounded-full border-[1.5px] border-accent" />
         </div>
         <div className="flex-1">
-          <div className="text-[12px] text-void-text font-medium">{providerNames[config.provider] || config.provider}</div>
-          <div className="text-[9px] text-status-online mt-[1px]">Connected · API key verified</div>
+          <div className="text-[12px] text-void-text font-medium">{providerNames[config.provider] || 'Select a provider'}</div>
+          <div className={`text-[9px] mt-[1px] ${hasApiKey ? 'text-status-online' : 'text-void-text-dim'}`}>{hasApiKey ? 'Connected' : 'Not configured'}</div>
         </div>
         <span className="text-[10px] text-accent cursor-pointer">Change provider</span>
       </div>
@@ -201,8 +225,10 @@ function AISettings() {
       </div>
 
       {/* Feature toggles */}
-      <div className="text-[10px] text-void-text-muted uppercase tracking-wider mt-2 mb-[10px]">Feature toggles</div>
-      <div className="flex flex-col gap-[6px]">
+      <div className="text-[10px] text-void-text-muted uppercase tracking-wider mt-2 mb-[10px]">
+        {hasApiKey ? 'Features — all enabled' : 'Features (activate after setup)'}
+      </div>
+      <div className="flex flex-col gap-[6px]" style={{ opacity: hasApiKey ? 1 : 0.35, pointerEvents: hasApiKey ? 'auto' : 'none' }}>
         {FEATURES.map((f) => (
           <div key={f.key} className="flex items-center justify-between p-[10px] bg-void-surface rounded-[6px]" style={{ border: '0.5px solid #1A1A1E' }}>
             <div className="flex items-center gap-2">

@@ -59,6 +59,79 @@ export function ProActivationFlow({ initialScreen = 'license', onComplete }: { i
     setTimeout(() => onComplete ? onComplete() : useAppStore.getState().toggleSettings(), 4500);
   };
 
+  // Screen 1: License — PRO ACTIVE (subscription details)
+  if (screen === 'license' && isPro) {
+    const info = useAppStore.getState().licenseInfo;
+    return (
+      <div className="max-w-md">
+        <div className="text-[16px] text-void-text font-semibold font-sans mb-[3px]">License</div>
+        <div className="text-[10px] text-void-text-dim mb-5">Manage your Void Terminal Pro subscription.</div>
+
+        {/* Plan card */}
+        <div className="p-4 bg-void-surface rounded-[8px] mb-[18px]" style={{ border: '0.5px solid rgba(40,200,64,0.12)' }}>
+          <div className="flex items-center gap-[10px] mb-3">
+            <div className="w-8 h-8 rounded-[8px] flex items-center justify-center" style={{ background: 'rgba(40,200,64,0.06)', border: '0.5px solid rgba(40,200,64,0.1)' }}>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4l6-2 6 2v5c0 3-3 5-6 6-3-1-6-3-6-6V4z" stroke="#28C840" strokeWidth="1.2"/><path d="M5.5 8l2 2 3.5-4" stroke="#28C840" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </div>
+            <div>
+              <div className="text-[11px] text-void-text-muted">Current plan</div>
+              <div className="flex items-center gap-[6px]">
+                <span className="text-[16px] text-void-text font-bold">Pro</span>
+                <span className="text-[8px] text-status-online px-2 py-[2px] rounded-[4px]" style={{ background: 'rgba(40,200,64,0.08)', border: '0.5px solid rgba(40,200,64,0.12)' }}>Active</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-[5px] flex-wrap">
+            <span className="text-[8px] text-accent px-2 py-[3px] rounded-[4px]" style={{ background: 'rgba(249,115,22,0.06)' }}>8 AI features</span>
+            <span className="text-[8px] text-status-online px-2 py-[3px] rounded-[4px]" style={{ background: 'rgba(40,200,64,0.06)' }}>Unlimited connections</span>
+            <span className="text-[8px] text-status-info px-2 py-[3px] rounded-[4px]" style={{ background: 'rgba(91,155,213,0.06)' }}>Workspaces</span>
+            <span className="text-[8px] text-status-ai px-2 py-[3px] rounded-[4px]" style={{ background: 'rgba(197,134,192,0.06)' }}>Broadcast</span>
+          </div>
+        </div>
+
+        {/* License details table */}
+        <div className="text-[10px] text-void-text-muted uppercase tracking-wider mb-2">License details</div>
+        <div className="bg-void-surface rounded-[8px] overflow-hidden mb-[18px] text-[10px]" style={{ border: '0.5px solid #1A1A1E' }}>
+          {[
+            ['License key', `VOID-•••••-•••••-•••••-${key?.slice(-4) || '????'}`],
+            ['Email', info?.email || 'N/A'],
+            ['Plan', 'Pro · $12/month'],
+            ['Activated', info?.activatedAt ? new Date(info.activatedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A'],
+            ['Machine', `${navigator.platform} · ${navigator.hardwareConcurrency} cores`],
+          ].map(([label, value], i) => (
+            <div key={label} className="flex justify-between px-[14px] py-[10px]" style={{ borderBottom: i < 4 ? '0.5px solid #1A1A1E' : 'none' }}>
+              <span className="text-void-text-dim">{label}</span>
+              <span className="text-void-text-muted font-mono">{value}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Manage buttons */}
+        <div className="flex gap-2 mb-[18px]">
+          <button className="px-4 py-2 rounded-[6px] text-[10px] text-void-text-muted" style={{ border: '0.5px solid #2A2A30' }}>Manage subscription</button>
+          <button className="px-4 py-2 rounded-[6px] text-[10px] text-void-text-dim" style={{ border: '0.5px solid #2A2A30' }}>Switch to annual ($120/yr)</button>
+        </div>
+
+        {/* Deactivate */}
+        <div className="p-3 rounded-[8px]" style={{ background: 'rgba(255,95,87,0.02)', border: '0.5px solid rgba(255,95,87,0.1)' }}>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-[10px] text-status-error font-medium">Deactivate license</div>
+              <div className="text-[9px] text-void-text-dim mt-[2px]">Remove license from this machine.</div>
+            </div>
+            <button onClick={async () => {
+              await window.void.license.deactivate();
+              await loadLicense();
+              window.void.app.relaunch();
+            }} className="px-[14px] py-[6px] rounded-[5px] text-[9px] text-status-error" style={{ border: '0.5px solid rgba(255,95,87,0.2)' }}>
+              Deactivate
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Screen 1: License (Free)
   if (screen === 'license') {
     return (

@@ -6,6 +6,7 @@ import { easing, duration } from './utils/motion';
 import { TitleBar } from './components/TitleBar';
 import { TabBar } from './components/TabBar';
 import { SplitView } from './components/SplitView';
+import { SFTPSidebar } from './components/SFTPSidebar';
 import { StatusBar } from './components/StatusBar';
 import { CommandPalette } from './components/CommandPalette';
 import { NotesSidebar } from './components/NotesSidebar';
@@ -27,6 +28,7 @@ export function App() {
   const commandPaletteOpen = useAppStore((s) => s.commandPaletteOpen);
   const settingsOpen = useAppStore((s) => s.settingsOpen);
   const activeModal = useAppStore((s) => s.activeModal);
+  const sftpOpen = useAppStore((s) => s.sftpOpen);
   const loadSavedConnections = useAppStore((s) => s.loadSavedConnections);
   const loadLicense = useAppStore((s) => s.loadLicense);
   const setActiveModal = useAppStore((s) => s.setActiveModal);
@@ -61,6 +63,11 @@ export function App() {
       <TabBar />
 
       <div className="flex-1 flex min-h-0">
+        {/* SFTP sidebar — LEFT */}
+        <AnimatePresence>
+          {sftpOpen && <SFTPSidebar />}
+        </AnimatePresence>
+
         <motion.div className="flex-1 flex min-h-0" layout transition={{ duration: duration.smooth, ease: easing.standard }}>
           {settingsOpen ? (
             <SettingsPanel />

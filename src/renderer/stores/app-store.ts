@@ -53,6 +53,8 @@ interface AppState {
 
   notesSidebarOpen: boolean;
   aiChatSidebarOpen: boolean;
+  sftpOpen: boolean;
+  sftpCollapsed: boolean;
   commandPaletteOpen: boolean;
   settingsOpen: boolean;
 
@@ -75,6 +77,8 @@ interface AppState {
   setFocusedPane: (index: number) => void;
   setPaneSizes: (sizes: number[]) => void;
 
+  toggleSFTP: () => void;
+  collapseSFTP: () => void;
   toggleNotesSidebar: () => void;
   toggleAIChatSidebar: () => void;
   toggleCommandPalette: () => void;
@@ -98,6 +102,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   notesSidebarOpen: false,
   aiChatSidebarOpen: false,
+  sftpOpen: false,
+  sftpCollapsed: false,
   commandPaletteOpen: false,
   settingsOpen: false,
 
@@ -349,6 +355,14 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setPaneSizes: (sizes) => {
     set({ paneSizes: sizes });
+  },
+
+  toggleSFTP: () => {
+    set((state) => ({ sftpOpen: !state.sftpOpen, sftpCollapsed: false }));
+  },
+
+  collapseSFTP: () => {
+    set((state) => ({ sftpCollapsed: !state.sftpCollapsed }));
   },
 
   toggleNotesSidebar: () => {

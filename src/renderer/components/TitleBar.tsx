@@ -5,8 +5,10 @@ export function TitleBar() {
   const isPro = useAppStore((s) => s.isPro);
   const notesSidebarOpen = useAppStore((s) => s.notesSidebarOpen);
   const aiChatSidebarOpen = useAppStore((s) => s.aiChatSidebarOpen);
+  const sftpOpen = useAppStore((s) => s.sftpOpen);
   const cycleSplitH = useAppStore((s) => s.cycleSplitHorizontal);
   const cycleSplitV = useAppStore((s) => s.cycleSplitVertical);
+  const toggleSFTP = useAppStore((s) => s.toggleSFTP);
   const toggleNotes = useAppStore((s) => s.toggleNotesSidebar);
   const toggleAI = useAppStore((s) => s.toggleAIChatSidebar);
 
@@ -37,8 +39,11 @@ export function TitleBar() {
       >
         {/* SFTP button */}
         <button
-          className="px-[6px] py-[2px] rounded-[4px] text-[8px] font-mono text-void-text-dim hover:text-void-text-muted transition-colors"
-          style={{ border: '0.5px solid #2A2A30' }}
+          onClick={toggleSFTP}
+          className={`px-[6px] py-[2px] rounded-[4px] text-[8px] font-mono transition-colors ${
+            sftpOpen ? 'text-status-info' : 'text-void-text-dim hover:text-void-text-muted'
+          }`}
+          style={{ border: `0.5px solid ${sftpOpen ? 'rgba(91,155,213,0.25)' : '#2A2A30'}` }}
           title="SFTP Sidebar (Cmd+Shift+F)"
         >
           SFTP
