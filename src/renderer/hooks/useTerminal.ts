@@ -117,11 +117,35 @@ export function useTerminal({ sessionId, sessionType, onData }: UseTerminalOptio
       }
     };
 
-    // Handle user input with danger detection, NLP ? prefix, and ghost text
-    terminal.onData((data) => {
-      const { isPro } = useAppStore.getState();
+    // Handle user input — zero-lag with local echo
+    // Track if server has echo enabled (most SSH servers do)
+    let localEchoEnabled = true;
+    let pendingEcho = '';
 
-      // Tab — accept ghost text suggestion
+    // Suppress server echo for chars we already displayed locally
+    const originalWrite = terminal.write.bind(terminal);
+    terminal.write = (data: string | Uint8Array, cb?: () => void) => {
+      if (typeof data === 'string' && localEchoEnabled && pendingEcho.length > 0) {
+        // Check if incoming data starts with our pending echo chars
+        let consumed = 0;
+        for (let i = 0; i < data.length && consumed < pendingEcho.length; i++) {
+          if (data[i] === pendingEcho[consumed]) {
+            consumed++;
+          } else {
+            break;
+          }
+        }
+        if (consumed > 0) {
+          pendingEcho = pendingEcho.substring(consumed);
+          data = data.substring(consumed);
+          if (!data) { cb?.(); return; }
+        }
+      }
+      originalWrite(data, cb);
+    };
+
+    terminal.onData((data) => {
+      // Tab — accept ghost text
       if (data === '\t' && ghostTextRef.current) {
         const ghost = ghostTextRef.current;
         clearGhostText();
@@ -131,76 +155,54 @@ export function useTerminal({ sessionId, sessionType, onData }: UseTerminalOptio
         return;
       }
 
-      // Clear ghost text on any keypress
-      if (ghostTextRef.current) {
-        clearGhostText();
-      }
+      if (ghostTextRef.current) clearGhostText();
 
-      // Buffer command chars (reset on Enter)
-      if (data === '\r') {
+      // Send to SSH immediately — always first
+      sendData(data);
+
+      // Local echo for printable chars — instant visual feedback
+      if (data.length === 1 && data.charCodeAt(0) >= 32) {
+        originalWrite(data);
+        pendingEcho += data;
+        commandBufferRef.current += data;
+        const { isPro } = useAppStore.getState();
+        if (isPro) requestAutocomplete();
+      } else if (data === '\x7f') {
+        // Backspace — local echo: move back, clear, move back
+        originalWrite('\b \b');
+        pendingEcho += '\b \b';
+        commandBufferRef.current = commandBufferRef.current.slice(0, -1);
+      } else if (data === '\r') {
         const command = commandBufferRef.current.trim();
         if (command) commandHistoryRef.current.push(command);
         commandBufferRef.current = '';
+        pendingEcho = ''; // Reset echo tracking on Enter
 
-        // NLP ? prefix — convert natural language to command
+        // NLP ? prefix
+        const { isPro } = useAppStore.getState();
         if (isPro && command.startsWith('?') && command.length > 1) {
           const query = command.substring(1).trim();
-          // Don't send the ? line — show NLP result instead
-          sendData(data); // send Enter to clear line
           window.void.ai.naturalLanguage(query, sessionIdRef.current || 'local').then((result: any) => {
             if (result?.command) {
-              // Write the suggested command as ghost text to terminal display
-              terminal.write(`\r\n\x1b[36m  → ${result.command}\x1b[0m`);
-              terminal.write(`\r\n\x1b[90m    ${result.explanation}\x1b[0m\r\n`);
+              originalWrite(`\r\n\x1b[36m  → ${result.command}\x1b[0m`);
+              originalWrite(`\r\n\x1b[90m    ${result.explanation}\x1b[0m\r\n`);
             }
           });
-          onDataRef.current?.(data);
-          return;
         }
 
-        // Danger detection — check before sending Enter
+        // Danger check async
         if (isPro && command.length > 2) {
           window.void.ai.checkDanger(command, sessionIdRef.current || 'local').then((result: any) => {
             if (result?.isDangerous) {
-              // Show warning in terminal, don't send command yet
-              terminal.write(`\r\n\x1b[31m  ⚠ DANGER: ${result.reason}\x1b[0m`);
-              terminal.write(`\r\n\x1b[33m  Type 'y' to proceed, any other key to cancel:\x1b[0m `);
-              // Set up one-time confirm handler
-              const confirmDisposable = terminal.onData((confirmData) => {
-                confirmDisposable.dispose();
-                if (confirmData === 'y' || confirmData === 'Y') {
-                  terminal.write('\r\n');
-                  sendData(command + '\r');
-                } else {
-                  terminal.write('\r\n\x1b[32m  Cancelled.\x1b[0m\r\n');
-                }
-              });
-            } else {
-              sendData(data);
+              originalWrite(`\r\n\x1b[31m  ⚠ DANGER: ${result.reason}\x1b[0m\r\n`);
             }
           });
-          onDataRef.current?.(data);
-          return;
         }
-
-        sendData(data);
-      } else if (data === '\x7f') {
-        // Backspace — remove last char from buffer
-        commandBufferRef.current = commandBufferRef.current.slice(0, -1);
-        sendData(data);
       } else if (data === '\x03') {
-        // Ctrl+C — clear buffer
         commandBufferRef.current = '';
-        sendData(data);
-      } else {
-        // Regular char — add to buffer
-        if (data.length === 1 && data.charCodeAt(0) >= 32) {
-          commandBufferRef.current += data;
-          // Request autocomplete after idle
-          if (isPro) requestAutocomplete();
-        }
-        sendData(data);
+        pendingEcho = '';
       }
+
       onDataRef.current?.(data);
     });
 
@@ -221,13 +223,12 @@ export function useTerminal({ sessionId, sessionType, onData }: UseTerminalOptio
     // Try immediately
     openWhenReady();
 
-    // Also observe for size changes (handles hidden → visible transition)
-    const resizeObserver = new ResizeObserver(() => {
-      if (!openedRef.current) {
-        openWhenReady();
-        return;
-      }
-      requestAnimationFrame(() => {
+    // Debounced fit — prevents multiple rapid fits
+    let fitTimer: ReturnType<typeof setTimeout> | null = null;
+    const debouncedFit = () => {
+      if (fitTimer) clearTimeout(fitTimer);
+      fitTimer = setTimeout(() => {
+        if (!openedRef.current) return;
         try {
           fitAddon.fit();
           const sid = sessionIdRef.current;
@@ -240,15 +241,32 @@ export function useTerminal({ sessionId, sessionType, onData }: UseTerminalOptio
               window.void.pty.resize(sid, cols, rows);
             }
           }
-        } catch {
-          // Ignore resize errors
-        }
-      });
+        } catch { /* ignore */ }
+      }, 50);
+    };
+
+    // Observe container size changes
+    const resizeObserver = new ResizeObserver(() => {
+      if (!openedRef.current) {
+        openWhenReady();
+        return;
+      }
+      debouncedFit();
     });
     resizeObserver.observe(container);
 
+    // Also fit on window resize
+    window.addEventListener('resize', debouncedFit);
+
+    // Fit again after a short delay (catches layout shifts after mount)
+    setTimeout(debouncedFit, 100);
+    setTimeout(debouncedFit, 300);
+    setTimeout(debouncedFit, 600);
+
     return () => {
       resizeObserver.disconnect();
+      window.removeEventListener('resize', debouncedFit);
+      if (fitTimer) clearTimeout(fitTimer);
       terminal.dispose();
       terminalRef.current = null;
       fitAddonRef.current = null;
