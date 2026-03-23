@@ -189,9 +189,15 @@ function ConnectionSettings() {
 function AISettings() {
   const isPro = useAppStore((s) => s.isPro);
   const [config, setConfig] = useState<AIConfig | null>(null);
+  const [editingKey, setEditingKey] = useState(false);
+  const [keyInput, setKeyInput] = useState('');
+  const [choosingProvider, setChoosingProvider] = useState(false);
 
   useEffect(() => {
-    window.void.ai.getConfig().then(setConfig);
+    window.void.ai.getConfig().then((c: any) => {
+      setConfig(c);
+      if (!c?.provider) setChoosingProvider(true);
+    });
   }, []);
 
   if (!isPro) {
@@ -199,6 +205,11 @@ function AISettings() {
   }
 
   if (!config) return null;
+
+  const saveConfig = (updated: AIConfig) => {
+    setConfig(updated);
+    window.void.ai.setConfig(updated);
+  };
 
   const FEATURES: { key: keyof AIConfig['features']; label: string; desc: string; color: string }[] = [
     { key: 'autoNotes', label: 'Auto-notes & memory', desc: 'AI watches output, takes notes, builds memory. Feeds AI chat and timeline.', color: '#F97316' },
@@ -248,28 +259,79 @@ function AISettings() {
         </div>
       )}
 
-      {/* Provider card */}
-      <div className="flex items-center gap-[10px] p-3 bg-void-surface rounded-[8px]" style={{ border: '0.5px solid #2A2A30' }}>
-        <div className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0" style={{ background: 'rgba(249,115,22,0.08)' }}>
-          <div className="w-3 h-3 rounded-full border-[1.5px] border-accent" />
+      {/* Provider selector */}
+      {choosingProvider ? (
+        <div className="space-y-2">
+          <div className="text-[10px] text-void-text-muted uppercase tracking-wider mb-[6px]">Choose AI provider</div>
+          {(['anthropic', 'openai', 'gemini', 'ollama'] as const).map((p) => (
+            <button key={p} onClick={() => { saveConfig({ ...config, provider: p }); setChoosingProvider(false); if (p !== 'ollama') { setEditingKey(true); setKeyInput(''); } }}
+              className="w-full flex items-center gap-3 p-3 bg-void-surface rounded-[8px] text-left transition-all hover:bg-void-elevated"
+              style={{ border: `0.5px solid ${config.provider === p ? 'var(--accent-border)' : '#2A2A30'}` }}>
+              <div className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0"
+                style={{ background: config.provider === p ? 'rgba(249,115,22,0.12)' : 'rgba(255,255,255,0.03)' }}>
+                <div className={`w-3 h-3 rounded-full border-[1.5px] ${config.provider === p ? 'border-accent bg-accent' : 'border-void-border'}`} />
+              </div>
+              <div>
+                <div className="text-[12px] text-void-text font-medium">{providerNames[p]}</div>
+                <div className="text-[9px] text-void-text-dim mt-[1px]">{p === 'ollama' ? 'Free · Fully offline' : 'BYOK · Pay your provider'}</div>
+              </div>
+            </button>
+          ))}
         </div>
-        <div className="flex-1">
-          <div className="text-[12px] text-void-text font-medium">{providerNames[config.provider] || 'Select a provider'}</div>
-          <div className={`text-[9px] mt-[1px] ${hasApiKey ? 'text-status-online' : 'text-void-text-dim'}`}>{hasApiKey ? 'Connected' : 'Not configured'}</div>
+      ) : (
+        <div className="flex items-center gap-[10px] p-3 bg-void-surface rounded-[8px]" style={{ border: '0.5px solid #2A2A30' }}>
+          <div className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0" style={{ background: 'rgba(249,115,22,0.08)' }}>
+            <div className="w-3 h-3 rounded-full border-[1.5px] border-accent bg-accent" />
+          </div>
+          <div className="flex-1">
+            <div className="text-[12px] text-void-text font-medium">{providerNames[config.provider] || 'Select a provider'}</div>
+            <div className={`text-[9px] mt-[1px] ${hasApiKey ? 'text-status-online' : 'text-void-text-dim'}`}>{hasApiKey ? 'Connected' : 'Not configured'}</div>
+          </div>
+          <span className="text-[10px] text-accent cursor-pointer" onClick={() => setChoosingProvider(true)}>Change provider</span>
         </div>
-        <span className="text-[10px] text-accent cursor-pointer">Change provider</span>
-      </div>
+      )}
 
       {/* API Key */}
-      <div>
-        <div className="text-[10px] text-void-text-muted uppercase tracking-wider mb-[6px]">API key</div>
-        <div className="flex gap-2">
-          <div className="flex-1 px-3 py-2 bg-void-input rounded-[6px] text-[11px] text-void-text-dim font-mono" style={{ border: '0.5px solid #2A2A30' }}>
-            {config.apiKey ? `${config.apiKey.substring(0, 8)}${'•'.repeat(16)}${config.apiKey.slice(-4)}` : 'No API key set'}
-          </div>
-          <button className="px-[14px] py-2 rounded-[6px] text-[10px] text-void-text-muted" style={{ border: '0.5px solid #2A2A30' }}>Edit</button>
+      {config.provider !== 'ollama' && (
+        <div>
+          <div className="text-[10px] text-void-text-muted uppercase tracking-wider mb-[6px]">API key</div>
+          {editingKey ? (
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={keyInput}
+                onChange={(e) => setKeyInput(e.target.value)}
+                placeholder={config.provider === 'anthropic' ? 'sk-ant-...' : config.provider === 'openai' ? 'sk-...' : 'AIza...'}
+                className="flex-1 px-3 py-2 bg-void-input rounded-[6px] text-[11px] text-void-text font-mono outline-none"
+                style={{ border: '0.5px solid var(--accent-border)' }}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && keyInput.trim()) {
+                    saveConfig({ ...config, apiKey: keyInput.trim() });
+                    setEditingKey(false);
+                  }
+                  if (e.key === 'Escape') { setEditingKey(false); setKeyInput(''); }
+                }}
+              />
+              <button onClick={() => { if (keyInput.trim()) { saveConfig({ ...config, apiKey: keyInput.trim() }); setEditingKey(false); } }}
+                className="px-[14px] py-2 rounded-[6px] text-[10px] text-void-base font-medium bg-accent"
+                style={{ border: 'none' }}>Save</button>
+              <button onClick={() => { setEditingKey(false); setKeyInput(''); }}
+                className="px-[10px] py-2 rounded-[6px] text-[10px] text-void-text-dim"
+                style={{ border: '0.5px solid #2A2A30' }}>✕</button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <div className="flex-1 px-3 py-2 bg-void-input rounded-[6px] text-[11px] text-void-text-dim font-mono" style={{ border: '0.5px solid #2A2A30' }}>
+                {config.apiKey ? `${config.apiKey.substring(0, 8)}${'•'.repeat(16)}${config.apiKey.slice(-4)}` : 'No API key set'}
+              </div>
+              <button onClick={() => { setEditingKey(true); setKeyInput(config.apiKey || ''); }}
+                className="px-[14px] py-2 rounded-[6px] text-[10px] text-void-text-muted hover:text-void-text transition-colors cursor-pointer"
+                style={{ border: '0.5px solid #2A2A30' }}>Edit</button>
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
       {/* Rate limit */}
       <div className="flex items-center justify-between p-[10px] bg-void-surface rounded-[6px]">
@@ -293,9 +355,7 @@ function AISettings() {
             </div>
             <button
               onClick={() => {
-                const updated = { ...config, features: { ...config.features, [f.key]: !config.features[f.key] } };
-                setConfig(updated);
-                window.void.ai.setConfig(updated);
+                saveConfig({ ...config, features: { ...config.features, [f.key]: !config.features[f.key] } });
               }}
               className={`relative w-8 h-[18px] rounded-[9px] shrink-0 ${config.features[f.key] ? 'bg-accent' : 'bg-void-border'}`}
               style={{ transition: 'background-color 200ms ease' }}

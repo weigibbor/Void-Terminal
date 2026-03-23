@@ -60,7 +60,7 @@ export function NotesSidebar() {
   };
 
   return (
-    <div className="w-[220px] bg-void-input border-l border-void-border flex flex-col animate-slide-in-right shrink-0">
+    <div className="w-full flex-1 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-void-border/50">
         <div className="flex items-center gap-2">

@@ -128,15 +128,15 @@ export function App() {
               {/* Tab switcher */}
               <div className="flex shrink-0" style={{ borderBottom: '0.5px solid rgba(42,42,48,0.5)' }}>
                 <button
-                  onClick={() => { useAppStore.getState().toggleNotesSidebar(); if (!notesSidebarOpen) { if (aiChatSidebarOpen) useAppStore.getState().toggleAIChatSidebar(); } }}
-                  className={`flex-1 py-[8px] text-[10px] font-sans transition-colors ${notesSidebarOpen ? 'text-void-text bg-void-elevated' : 'text-void-text-dim hover:text-void-text-muted'}`}
+                  onClick={() => useAppStore.setState({ notesSidebarOpen: true, aiChatSidebarOpen: false })}
+                  className={`flex-1 py-[8px] text-[10px] font-sans cursor-pointer transition-colors ${notesSidebarOpen ? 'text-void-text bg-void-elevated' : 'text-void-text-dim hover:text-void-text-muted'}`}
                   style={notesSidebarOpen ? { borderBottom: '1.5px solid #F97316' } : {}}
                 >
                   Notes
                 </button>
                 <button
-                  onClick={() => { useAppStore.getState().toggleAIChatSidebar(); if (!aiChatSidebarOpen) { if (notesSidebarOpen) useAppStore.getState().toggleNotesSidebar(); } }}
-                  className={`flex-1 py-[8px] text-[10px] font-sans transition-colors ${aiChatSidebarOpen ? 'text-void-text bg-void-elevated' : 'text-void-text-dim hover:text-void-text-muted'}`}
+                  onClick={() => useAppStore.setState({ notesSidebarOpen: false, aiChatSidebarOpen: true })}
+                  className={`flex-1 py-[8px] text-[10px] font-sans cursor-pointer transition-colors ${aiChatSidebarOpen ? 'text-void-text bg-void-elevated' : 'text-void-text-dim hover:text-void-text-muted'}`}
                   style={aiChatSidebarOpen ? { borderBottom: '1.5px solid #F97316' } : {}}
                 >
                   AI Chat
