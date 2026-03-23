@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTerminal } from '../hooks/useTerminal';
 import { useAppStore, getPaneLabel } from '../stores/app-store';
 import { SearchBar } from './SearchBar';
@@ -63,10 +63,15 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
     return () => { onScroll.dispose(); onWrite.dispose(); };
   }, [terminalRef.current]);
 
-  // Listen for AI error explanations
+  // Listen for AI error explanations — once dismissed, don't show same error again
+  const dismissedErrorsRef = useRef(new Set<string>());
   useEffect(() => {
     if (!isPro) return;
     return window.void.ai.onErrorExplanation?.((data: any) => {
+      if (!data?.explanation) return;
+      // Don't show if this exact explanation was already dismissed
+      const key = data.explanation.substring(0, 50);
+      if (dismissedErrorsRef.current.has(key)) return;
       setAiExplanation({ explanation: data.explanation, suggestedCommand: data.suggestedCommand });
     });
   }, [isPro]);
@@ -326,7 +331,10 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
           explanation={aiExplanation.explanation}
           suggestedCommand={aiExplanation.suggestedCommand}
           onRun={(cmd) => { sendToSession(cmd); setAiExplanation(null); }}
-          onDismiss={() => setAiExplanation(null)}
+          onDismiss={() => {
+            if (aiExplanation) dismissedErrorsRef.current.add(aiExplanation.explanation.substring(0, 50));
+            setAiExplanation(null);
+          }}
         />
       )}
 
