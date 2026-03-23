@@ -1,9 +1,11 @@
 {
   "name": "void-terminal",
-  "version": "1.0.0",
-  "description": "The terminal that thinks.",
-  "author": "Clearmud Labs",
+  "version": "0.1.0",
+  "description": "The terminal that thinks. AI-powered SSH client.",
+  "author": "GE Labs <dev@gelabs.dev>",
   "license": "MIT",
+  "homepage": "https://voidterminal.dev",
+  "repository": "https://github.com/weigibbor/Void-Terminal",
   "main": "dist-electron/index.js",
   "scripts": {
     "dev": "vite",
@@ -12,6 +14,77 @@
     "dist:mac": "npm run build && electron-builder --mac",
     "dist:win": "npm run build && electron-builder --win",
     "dist": "npm run build && electron-builder --mac --win"
+  },
+  "build": {
+    "appId": "dev.voidterminal.app",
+    "productName": "Void Terminal",
+    "copyright": "Copyright © 2026 GE Labs",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "!node_modules/@void/pro/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "node_modules/@void/pro",
+        "to": "pro",
+        "filter": ["**/*"]
+      }
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["universal"]
+        }
+      ],
+      "icon": "build/icon.icns",
+      "category": "public.app-category.developer-tools",
+      "darkModeSupport": true,
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "dmg": {
+      "backgroundColor": "#0A0A0D",
+      "title": "Void Terminal",
+      "contents": [
+        { "x": 130, "y": 220 },
+        { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "icon": "build/icon.png",
+      "category": "Development"
+    },
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**",
+      "node_modules/node-pty/**",
+      "node_modules/ssh2/**"
+    ],
+    "publish": null
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.10.0",

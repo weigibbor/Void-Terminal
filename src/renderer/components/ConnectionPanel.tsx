@@ -64,7 +64,7 @@ export function ConnectionPanel({ tabId }: { tabId: string }) {
       setConnecting(true);
       const r = await ptyCreate(tabId);
       setConnecting(false);
-      if (!r.success) setError(r.error || 'Failed');
+      if (!r.success) setError((r as any).error || 'Failed');
       return;
     }
     if (connType === 'browser') {

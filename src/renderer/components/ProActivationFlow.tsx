@@ -54,7 +54,7 @@ export function ProActivationFlow({ initialScreen = 'license', onComplete }: { i
   };
 
   const handleFinishSetup = async () => {
-    await window.void.ai.setConfig({ provider, apiKey, features });
+    await window.void.ai.setConfig({ provider, apiKey, features } as any);
     setScreen('celebration');
     setTimeout(() => onComplete ? onComplete() : useAppStore.getState().toggleSettings(), 4500);
   };

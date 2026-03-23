@@ -5,13 +5,13 @@
 
 export const easing = {
   // Standard — most transitions (panels, tabs, content)
-  standard: [0.2, 0, 0, 1],
+  standard: [0.2, 0, 0, 1] as [number, number, number, number],
 
   // Enter — things appearing (overlays, modals, new elements)
-  enter: [0, 0, 0.2, 1],
+  enter: [0, 0, 0.2, 1] as [number, number, number, number],
 
   // Exit — things disappearing
-  exit: [0.4, 0, 1, 1],
+  exit: [0.4, 0, 1, 1] as [number, number, number, number],
 
   // Spring — bouncy (toggles, success checkmarks, badges)
   spring: { type: "spring" as const, stiffness: 400, damping: 17 },

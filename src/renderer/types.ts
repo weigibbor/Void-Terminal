@@ -172,6 +172,9 @@ export interface VoidAPI {
     chat: (message: string, history: { role: string; content: string }[]) => Promise<string>;
     getConfig: () => Promise<AIConfig>;
     setConfig: (config: Partial<AIConfig>) => Promise<void>;
+    onErrorExplanation?: (cb: (data: any) => void) => () => void;
+    onWatcherEvent?: (cb: (event: any) => void) => () => void;
+    onAutoNote?: (cb: (note: any) => void) => () => void;
   };
   license: {
     isPro: () => Promise<boolean>;
@@ -189,6 +192,11 @@ export interface VoidAPI {
     getPlatform: () => Promise<string>;
     relaunch: () => void;
     setZoom: (factor: number) => void;
+    restart: () => void;
+    getFilePath: (file: File) => string;
+    checkForUpdates: (currentVersion: string) => Promise<any>;
+    detachTab: (tabData: any, screenX: number, screenY: number) => Promise<any>;
+    onReceiveTab?: (cb: (tabData: any) => void) => () => void;
   };
 }
 
