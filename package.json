@@ -25,13 +25,19 @@
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
-      "!node_modules/@void/pro/**/*"
+      "!node_modules/@void/pro",
+      "!void-terminal-pro",
+      "!void-web",
+      "!void-api",
+      "!void-docs",
+      "!dev-notes",
+      "!release"
     ],
     "extraResources": [
       {
-        "from": "node_modules/@void/pro",
+        "from": "void-terminal-pro/build",
         "to": "pro",
-        "filter": ["**/*"]
+        "filter": ["*.js", "*.d.ts"]
       }
     ],
     "mac": {
