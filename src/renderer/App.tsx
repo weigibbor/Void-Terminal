@@ -56,25 +56,26 @@ export function App() {
   useEffect(() => {
     const checkUpdate = async () => {
       try {
-        const currentVersion = '0.1.0'; // TODO: get from package.json
-        const res = await fetch(`https://voidterminal.dev/api/updates?v=${currentVersion}&os=mac`);
-        const data = await res.json();
+        const currentVersion = '0.1.0';
+        const data = await window.void.app.checkForUpdates(currentVersion);
         if (data.update) {
           const lastSeen = localStorage.getItem('last-seen-changelog');
           useAppStore.setState({
             updateStatus: 'available',
             updateVersion: data.version,
-            updateChangelog: data.changelog,
-            updateRequired: data.required,
-            downloadSize: data.downloadSize,
+            updateChangelog: data.changelog || [],
+            updateRequired: data.required || false,
+            downloadSize: data.downloadSize || '',
             updateDismissed: false,
           });
-          // Show patch notes if just updated
           if (lastSeen && lastSeen !== data.version) {
             setTimeout(() => {
               useAppStore.setState({ patchNotesOpen: true, patchNotesMode: 'post-update' });
             }, 1500);
           }
+        } else {
+          // No update — reset state
+          useAppStore.setState({ updateStatus: 'idle', updateVersion: null, updateChangelog: [], updateDismissed: false });
         }
       } catch { /* offline, skip */ }
     };

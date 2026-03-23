@@ -36,6 +36,11 @@ export const TERMINAL_OPTIONS = {
   allowProposedApi: true,
   drawBoldTextInBrightColors: true,
   minimumContrastRatio: 1,
+  smoothScrollDuration: 125,
+  scrollSensitivity: 3,
+  fastScrollSensitivity: 7,
+  fastScrollModifier: 'alt' as const,
+  overviewRulerWidth: 0,
 };
 
 export const DEFAULT_SSH_PORT = 22;

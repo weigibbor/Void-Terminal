@@ -10,9 +10,10 @@ interface UseTerminalOptions {
   sessionId?: string;
   sessionType: 'ssh' | 'local';
   onData?: (data: string) => void;
+  onShiftEnter?: () => void;
 }
 
-export function useTerminal({ sessionId, sessionType, onData }: UseTerminalOptions) {
+export function useTerminal({ sessionId, sessionType, onData, onShiftEnter }: UseTerminalOptions) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -28,9 +29,11 @@ export function useTerminal({ sessionId, sessionType, onData }: UseTerminalOptio
   const ghostDecorRef = useRef<any>(null);
   const autocompleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const commandHistoryRef = useRef<string[]>([]);
+  const onShiftEnterRef = useRef(onShiftEnter);
   sessionIdRef.current = sessionId;
   sessionTypeRef.current = sessionType;
   onDataRef.current = onData;
+  onShiftEnterRef.current = onShiftEnter;
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -251,11 +254,34 @@ export function useTerminal({ sessionId, sessionType, onData }: UseTerminalOptio
 
     let unsub: (() => void) | undefined;
 
+    // Watch & Alert — match terminal output against saved rules
+    let lastNotification = 0;
+    const checkWatchRules = (data: string) => {
+      const now = Date.now();
+      if (now - lastNotification < 5000) return; // throttle: max 1 notification per 5s
+      try {
+        const saved = localStorage.getItem('void-watch-rules');
+        if (!saved) return;
+        const rules = JSON.parse(saved);
+        for (const rule of rules) {
+          if (!rule.enabled) continue;
+          try {
+            const regex = new RegExp(rule.pattern, 'i');
+            if (regex.test(data)) {
+              lastNotification = now;
+              new Notification('Void Terminal — Watch Alert', { body: `Pattern matched: ${rule.pattern}`, silent: false });
+              break;
+            }
+          } catch { /* invalid regex */ }
+        }
+      } catch { /* no rules */ }
+    };
+
     if (sessionType === 'ssh') {
       unsub = window.void.ssh.onData(sessionId, (data) => {
         terminalRef.current?.write(data);
+        checkWatchRules(data);
       });
-      // Replay buffered data that arrived before listener was ready
       window.void.ssh.getBuffer(sessionId).then((buffered) => {
         if (buffered && terminalRef.current) {
           terminalRef.current.write(buffered);
@@ -264,6 +290,7 @@ export function useTerminal({ sessionId, sessionType, onData }: UseTerminalOptio
     } else {
       unsub = window.void.pty.onData(sessionId, (data) => {
         terminalRef.current?.write(data);
+        checkWatchRules(data);
       });
     }
 

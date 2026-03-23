@@ -400,6 +400,17 @@ function registerIPCHandlers(): void {
     mainWindow?.webContents.setZoomFactor(factor);
   });
 
+  ipcMain.handle('app:checkUpdates', async (_event, currentVersion: string) => {
+    try {
+      const os = process.platform === 'darwin' ? 'mac' : 'win';
+      const res = await fetch(`https://voidterminal.dev/api/updates?v=${currentVersion}&os=${os}`);
+      if (!res.ok) return { update: false, error: 'Server error' };
+      return await res.json();
+    } catch (err: any) {
+      return { update: false, error: err.message || 'Network error' };
+    }
+  });
+
   ipcMain.on('app:relaunch', async () => {
     // Re-init pro bridge with new license
     await pro.initProBridge();

@@ -45,8 +45,22 @@ export function UpdateBar() {
     useAppStore.setState({ updateDismissed: true });
   };
 
-  const retry = () => {
-    useAppStore.setState({ updateStatus: 'available', updateError: null });
+  const retry = async () => {
+    useAppStore.setState({ updateStatus: 'idle', updateError: null });
+    try {
+      const data = await window.void.app.checkForUpdates('0.1.0');
+      if (data.error) throw new Error(data.error);
+      if (data.update) {
+        useAppStore.setState({
+          updateStatus: 'available', updateVersion: data.version, updateChangelog: data.changelog || [],
+          updateRequired: data.required || false, downloadSize: data.downloadSize || '', updateDismissed: false,
+        });
+      } else {
+        useAppStore.setState({ updateStatus: 'idle' });
+      }
+    } catch {
+      useAppStore.setState({ updateStatus: 'failed', updateError: 'Unable to reach update server.' });
+    }
   };
 
   // State 1: Available

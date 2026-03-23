@@ -62,83 +62,105 @@ export function NotesSidebar() {
   return (
     <div className="w-full flex-1 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-void-border/50">
+      <div className="flex items-center justify-between px-3 py-2.5" style={{ borderBottom: '0.5px solid rgba(42,42,48,0.5)' }}>
         <div className="flex items-center gap-2">
-          <span className="text-void-text-ghost text-xs">&#128278;</span>
-          <span className="text-sm text-void-text font-medium">Notes</span>
+          <span className="text-void-text-ghost text-[13px]">📌</span>
+          <span className="text-[13px] text-void-text font-medium font-sans">Notes</span>
         </div>
-        <button
-          onClick={() => setComposing(true)}
-          className="text-void-text-ghost hover:text-void-text-muted text-lg leading-none"
-        >
-          +
-        </button>
+        <div className="flex items-center gap-[4px]">
+          <button
+            onClick={() => {
+              const content = notes.map(n => `[${n.type.toUpperCase()}] ${n.content}`).join('\n\n---\n\n');
+              const header = `# Void Terminal Notes\n# Scope: ${currentScope}\n# Exported: ${new Date().toLocaleString()}\n# Total: ${notes.length} notes\n\n`;
+              const blob = new Blob([header + content], { type: 'text/plain' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `void-notes-${currentScope.replace(/[@:]/g, '-')}-${new Date().toISOString().split('T')[0]}.txt`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="w-[28px] h-[28px] flex items-center justify-center rounded-[6px] text-[14px] text-void-text-ghost hover:text-void-text-muted hover:bg-void-surface cursor-pointer bg-transparent border-none transition-all"
+            title="Export notes"
+          >
+            ↓
+          </button>
+          <button
+            onClick={() => setComposing(true)}
+            className="w-[28px] h-[28px] flex items-center justify-center rounded-[6px] text-[18px] text-void-text-ghost hover:text-void-text-muted hover:bg-void-surface cursor-pointer bg-transparent border-none transition-all leading-none"
+            title="Add note"
+          >
+            +
+          </button>
+        </div>
       </div>
 
       {/* Scope tabs */}
-      <div className="flex border-b border-void-border/50">
+      <div className="flex shrink-0" style={{ borderBottom: '0.5px solid rgba(42,42,48,0.5)' }}>
         <button
           onClick={() => setScope(serverScope !== 'global' ? 'server' : 'global')}
-          className={`flex-1 py-1.5 text-2xs transition-colors ${
-            scope === 'server' ? 'text-accent border-b border-accent' : 'text-void-text-ghost'
+          className={`flex-1 py-[8px] text-[11px] font-sans cursor-pointer transition-colors ${
+            scope === 'server' ? 'text-accent' : 'text-void-text-ghost hover:text-void-text-muted'
           }`}
+          style={scope === 'server' ? { borderBottom: '1.5px solid #F97316' } : {}}
         >
           This server
         </button>
         <button
           onClick={() => setScope('global')}
-          className={`flex-1 py-1.5 text-2xs transition-colors ${
-            scope === 'global' ? 'text-accent border-b border-accent' : 'text-void-text-ghost'
+          className={`flex-1 py-[8px] text-[11px] font-sans cursor-pointer transition-colors ${
+            scope === 'global' ? 'text-accent' : 'text-void-text-ghost hover:text-void-text-muted'
           }`}
+          style={scope === 'global' ? { borderBottom: '1.5px solid #F97316' } : {}}
         >
           Global
         </button>
       </div>
 
       {/* Notes list */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-2">
+      <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#2A2A30 transparent' }}>
         {notes.length === 0 && (
-          <p className="text-2xs text-void-text-ghost text-center py-4">
+          <p className="text-[11px] text-void-text-ghost text-center py-6 font-sans">
             No notes yet. Click + to start.
           </p>
         )}
         {notes.map((note) => (
           <div
             key={note.id}
-            className={`bg-void-surface/50 rounded-void-lg p-2.5 border-l-2 ${NOTE_BORDER_COLORS[note.type]} group`}
+            className={`bg-void-surface/50 rounded-[6px] p-3 border-l-2 ${NOTE_BORDER_COLORS[note.type]} group`}
           >
             <div className="flex items-start justify-between mb-1">
-              <span className="text-2xs text-void-text-ghost uppercase">{note.type}</span>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="text-[9px] text-void-text-ghost uppercase tracking-wider font-mono">{note.type}</span>
+              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={() => handleTogglePin(note)}
-                  className="text-2xs text-void-text-ghost hover:text-accent"
+                  className="text-[11px] text-void-text-ghost hover:text-accent bg-transparent border-none cursor-pointer"
                   title={note.pinned ? 'Unpin' : 'Pin'}
                 >
-                  &#128204;
+                  📌
                 </button>
                 <button
                   onClick={() => handleDelete(note.id)}
-                  className="text-2xs text-void-text-ghost hover:text-status-error"
+                  className="text-[13px] text-void-text-ghost hover:text-status-error bg-transparent border-none cursor-pointer"
                 >
-                  x
+                  ×
                 </button>
               </div>
             </div>
-            <p className="text-sm text-void-text-muted whitespace-pre-wrap break-words">
+            <p className="text-[12px] text-void-text-muted whitespace-pre-wrap break-words leading-relaxed font-sans">
               {note.content}
             </p>
             {note.aiGenerated && (
-              <span className="inline-block mt-1 text-2xs text-status-ai">AI</span>
+              <span className="inline-block mt-1 text-[9px] text-[#C586C0] font-mono">AI generated</span>
             )}
           </div>
         ))}
       </div>
 
       {/* Quick add */}
-      <div className="border-t border-void-border/50 p-2">
+      <div className="p-2 shrink-0" style={{ borderTop: '0.5px solid rgba(42,42,48,0.5)' }}>
         {composing ? (
-          <div className="space-y-1.5">
+          <div className="space-y-[6px]">
             <textarea
               value={newNote}
               onChange={(e) => setNewNote(e.target.value)}
@@ -147,26 +169,26 @@ export function NotesSidebar() {
                   e.preventDefault();
                   handleSaveNote();
                 }
+                if (e.key === 'Escape') { setComposing(false); setNewNote(''); }
               }}
               placeholder="Type a note..."
               rows={3}
               autoFocus
-              className="w-full bg-void-surface border border-void-border rounded-void text-sm text-void-text-muted p-2 resize-none focus:border-accent/50 transition-colors"
+              className="w-full bg-void-surface rounded-[6px] text-[12px] text-void-text-muted p-2.5 resize-none outline-none font-sans"
+              style={{ border: '0.5px solid rgba(249,115,22,0.15)' }}
             />
-            <div className="flex items-center justify-between text-2xs text-void-text-ghost">
+            <div className="flex items-center justify-between text-[10px] text-void-text-ghost font-sans">
               <span>Shift+Enter new line</span>
-              <button
-                onClick={handleSaveNote}
-                className="text-accent hover:text-accent-hover"
-              >
-                Save Enter
+              <button onClick={handleSaveNote} className="text-accent hover:text-accent-hover bg-transparent border-none cursor-pointer font-sans font-semibold">
+                Save ↵
               </button>
             </div>
           </div>
         ) : (
           <button
             onClick={() => setComposing(true)}
-            className="w-full text-left text-sm text-void-text-ghost bg-void-surface border border-void-border rounded-void px-3 py-2 hover:border-void-border-hover transition-colors"
+            className="w-full text-left text-[12px] text-void-text-ghost bg-void-surface rounded-[6px] px-3 py-2.5 hover:text-void-text-muted transition-colors font-sans cursor-pointer"
+            style={{ border: '0.5px solid #2A2A30' }}
           >
             Type a note...
           </button>

@@ -40,6 +40,7 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
   const { containerRef, terminalRef, search, searchNext, searchPrev } = useTerminal({
     sessionId: tab.sessionId,
     sessionType: tab.type === 'ssh' ? 'ssh' : 'local',
+    onShiftEnter: () => setMultiLineOpen(true),
   });
 
   useEffect(() => {
@@ -100,11 +101,6 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 'f' && isFocused) {
         e.preventDefault();
         setSearchOpen((prev) => !prev);
-      }
-      // Shift+Enter to toggle multi-line input
-      if (e.shiftKey && e.key === 'Enter' && isFocused && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault();
-        setMultiLineOpen((prev) => !prev);
       }
     };
     window.addEventListener('keydown', handler);

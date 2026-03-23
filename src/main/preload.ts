@@ -158,5 +158,6 @@ contextBridge.exposeInMainWorld('void', {
     setZoom: (factor: number) => ipcRenderer.send("app:setZoom", factor),
     restart: () => ipcRenderer.send("app:relaunch"),
     getFilePath: (file: File) => webUtils.getPathForFile(file),
+    checkForUpdates: (currentVersion: string) => ipcRenderer.invoke('app:checkUpdates', currentVersion),
   },
 });
