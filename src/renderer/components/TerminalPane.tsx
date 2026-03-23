@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTerminal } from '../hooks/useTerminal';
 import { useAppStore, getPaneLabel } from '../stores/app-store';
+import { SearchBar } from './SearchBar';
 import type { Tab } from '../types';
 
 interface TerminalPaneProps {
@@ -20,11 +21,12 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
   const isFocused = focusedPaneIndex === paneIndex;
   const [isScrolledUp, setIsScrolledUp] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const isDisconnected = !tab.connected && !!tab.disconnectedAt;
   const position = getPaneLabel(splitLayout, paneIndex);
 
-  const { containerRef, terminalRef } = useTerminal({
+  const { containerRef, terminalRef, search, searchNext, searchPrev } = useTerminal({
     sessionId: tab.sessionId,
     sessionType: tab.type === 'ssh' ? 'ssh' : 'local',
   });
@@ -53,6 +55,18 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
     terminalRef.current?.scrollToBottom();
     setIsScrolledUp(false);
   }, []);
+
+  // Cmd+F to open search (only for focused pane)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 'f' && isFocused) {
+        e.preventDefault();
+        setSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isFocused]);
 
   const handleClick = useCallback(() => {
     setFocusedPane(paneIndex);
@@ -159,6 +173,15 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
           ) : null}
         </div>
       )}
+
+      {/* Search bar (Cmd+F) */}
+      <SearchBar
+        visible={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        onSearch={(q, opts) => search(q, opts)}
+        onNext={() => searchNext()}
+        onPrev={() => searchPrev()}
+      />
 
       {/* Terminal container — dims when disconnected */}
       <div
