@@ -5,11 +5,13 @@ import { PTYManager } from './pty-manager';
 import { ConnectionStore } from './connection-store';
 import { MemoryStore } from './memory-store';
 import * as pro from './pro-bridge';
+import { SFTPUploadManager } from './sftp-upload-manager';
 import { isMac } from './utils/platform';
 
 let mainWindow: BrowserWindow | null = null;
 let sshManager: SSHManager;
 let ptyManager: PTYManager;
+let uploadManager: SFTPUploadManager;
 let connectionStore: ConnectionStore;
 let memoryStore: MemoryStore;
 
@@ -104,6 +106,131 @@ function registerIPCHandlers(): void {
 
   ipcMain.handle('connections:delete', async (_event, id: string) => {
     connectionStore.delete(id);
+  });
+
+  // --- SFTP (uses SSH client's SFTP subsystem) ---
+  ipcMain.handle('sftp:readdir', async (_event, sessionId: string, dirPath: string) => {
+    if (!sshManager) return { success: false, error: 'Not ready' };
+    const client = sshManager.getClient(sessionId);
+    if (!client) return { success: false, error: 'Session not found' };
+    return new Promise((resolve) => {
+      client.sftp((err: any, sftp: any) => {
+        if (err) { resolve({ success: false, error: err.message }); return; }
+        sftp.readdir(dirPath, (err2: any, list: any[]) => {
+          if (err2) { resolve({ success: false, error: err2.message }); sftp.end(); return; }
+          const entries = list.map((item: any) => ({
+            name: item.filename,
+            type: (item.attrs.mode & 0o40000) !== 0 ? 'directory' : 'file',
+            size: item.attrs.size || 0,
+            modified: (item.attrs.mtime || 0) * 1000,
+            permissions: (item.attrs.mode & 0o777).toString(8),
+          })).sort((a: any, b: any) => {
+            if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
+            return a.name.localeCompare(b.name);
+          });
+          sftp.end();
+          resolve({ success: true, entries });
+        });
+      });
+    });
+  });
+
+  ipcMain.handle('sftp:readFile', async (_event, sessionId: string, filePath: string) => {
+    if (!sshManager) return { success: false, error: 'Not ready' };
+    const client = sshManager.getClient(sessionId);
+    if (!client) return { success: false, error: 'Session not found' };
+    return new Promise((resolve) => {
+      client.sftp((err: any, sftp: any) => {
+        if (err) { resolve({ success: false, error: err.message }); return; }
+        const chunks: Buffer[] = [];
+        const stream = sftp.createReadStream(filePath);
+        stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+        stream.on('end', () => { sftp.end(); resolve({ success: true, content: Buffer.concat(chunks).toString('utf-8') }); });
+        stream.on('error', (e: any) => { sftp.end(); resolve({ success: false, error: e.message }); });
+      });
+    });
+  });
+
+  ipcMain.handle('sftp:writeFile', async (_event, sessionId: string, filePath: string, content: string) => {
+    if (!sshManager) return { success: false, error: 'Not ready' };
+    const client = sshManager.getClient(sessionId);
+    if (!client) return { success: false, error: 'Session not found' };
+    return new Promise((resolve) => {
+      client.sftp((err: any, sftp: any) => {
+        if (err) { resolve({ success: false, error: err.message }); return; }
+        const stream = sftp.createWriteStream(filePath);
+        stream.on('finish', () => { sftp.end(); resolve({ success: true }); });
+        stream.on('error', (e: any) => { sftp.end(); resolve({ success: false, error: e.message }); });
+        stream.end(Buffer.from(content, 'utf-8'));
+      });
+    });
+  });
+
+  ipcMain.handle('sftp:delete', async (_event, sessionId: string, filePath: string) => {
+    if (!sshManager) return { success: false, error: 'Not ready' };
+    const client = sshManager.getClient(sessionId);
+    if (!client) return { success: false, error: 'Session not found' };
+    return new Promise((resolve) => {
+      client.sftp((err: any, sftp: any) => {
+        if (err) { resolve({ success: false, error: err.message }); return; }
+        sftp.unlink(filePath, (e: any) => { sftp.end(); resolve(e ? { success: false, error: e.message } : { success: true }); });
+      });
+    });
+  });
+
+  ipcMain.handle('sftp:mkdir', async (_event, sessionId: string, dirPath: string) => {
+    if (!sshManager) return { success: false, error: 'Not ready' };
+    const client = sshManager.getClient(sessionId);
+    if (!client) return { success: false, error: 'Session not found' };
+    return new Promise((resolve) => {
+      client.sftp((err: any, sftp: any) => {
+        if (err) { resolve({ success: false, error: err.message }); return; }
+        sftp.mkdir(dirPath, (e: any) => { sftp.end(); resolve(e ? { success: false, error: e.message } : { success: true }); });
+      });
+    });
+  });
+
+  ipcMain.handle('sftp:rename', async (_event, sessionId: string, oldPath: string, newPath: string) => {
+    if (!sshManager) return { success: false, error: 'Not ready' };
+    const client = sshManager.getClient(sessionId);
+    if (!client) return { success: false, error: 'Session not found' };
+    return new Promise((resolve) => {
+      client.sftp((err: any, sftp: any) => {
+        if (err) { resolve({ success: false, error: err.message }); return; }
+        sftp.rename(oldPath, newPath, (e: any) => { sftp.end(); resolve(e ? { success: false, error: e.message } : { success: true }); });
+      });
+    });
+  });
+
+  // --- SFTP Upload ---
+  ipcMain.handle('sftp:upload', async (_event, sessionId: string, localPath: string, remotePath: string) => {
+    if (!uploadManager) return { success: false, error: 'Upload manager not ready' };
+    try {
+      const job = uploadManager.addToQueue(sessionId, localPath, remotePath);
+      return { success: true, jobId: job.id };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('sftp:upload-pause', async () => {
+    uploadManager?.pause();
+  });
+
+  ipcMain.handle('sftp:upload-resume', async () => {
+    uploadManager?.resume();
+  });
+
+  ipcMain.handle('sftp:upload-pause-all', async () => {
+    uploadManager?.pauseAll();
+  });
+
+  ipcMain.handle('sftp:upload-cancel', async (_event, jobId: string) => {
+    uploadManager?.cancel(jobId);
+  });
+
+  ipcMain.handle('sftp:upload-queue', async () => {
+    return uploadManager?.getQueue() || [];
   });
 
   // --- Memory ---
@@ -260,6 +387,8 @@ app.whenReady().then(async () => {
   mainWindow = createWindow();
   sshManager = new SSHManager(mainWindow);
   ptyManager = new PTYManager(mainWindow);
+  uploadManager = new SFTPUploadManager(mainWindow);
+  (global as any).__sshManager = sshManager;
   pro.initAIWatcher(memoryStore, mainWindow);
 
   mainWindow.on('close', () => {

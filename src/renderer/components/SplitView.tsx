@@ -26,11 +26,15 @@ function PaneContent({ tabId, paneIndex }: { tabId: string | null; paneIndex: nu
     if (activeTab?.type === 'browser') {
       return <BrowserPane tab={activeTab} />;
     }
-    return (
-      <div className="flex-1 flex items-center justify-center bg-void-elevated text-void-text-ghost text-2xs">
-        No session
-      </div>
-    );
+    // Fallback: if tab exists but type is unexpected, or tab not found — show ConnectionPanel
+    // This handles the case when a tab ID is in paneTabIds but the tab was removed
+    if (tabId) {
+      const fallbackTab = tabs.find(t => t.type === 'new-connection') || (tabs.length > 0 ? tabs[0] : null);
+      if (fallbackTab?.type === 'new-connection') {
+        return <ConnectionPanel tabId={fallbackTab.id} />;
+      }
+    }
+    return <ConnectionPanel tabId={tabId || 'fallback'} />;
   }
 
   // Complex case: terminal tabs exist — use absolute stacking to preserve instances

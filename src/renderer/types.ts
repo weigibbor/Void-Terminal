@@ -120,6 +120,14 @@ export interface VoidAPI {
     onClose: (sessionId: string, cb: () => void) => () => void;
     onError: (sessionId: string, cb: (err: string) => void) => () => void;
   };
+  sftp: {
+    readdir: (sessionId: string, path: string) => Promise<{ success: boolean; entries?: any[]; error?: string }>;
+    readFile: (sessionId: string, path: string) => Promise<{ success: boolean; content?: string; error?: string }>;
+    writeFile: (sessionId: string, path: string, content: string) => Promise<{ success: boolean; error?: string }>;
+    delete: (sessionId: string, path: string) => Promise<{ success: boolean; error?: string }>;
+    mkdir: (sessionId: string, path: string) => Promise<{ success: boolean; error?: string }>;
+    rename: (sessionId: string, oldPath: string, newPath: string) => Promise<{ success: boolean; error?: string }>;
+  };
   pty: {
     create: (options?: { shell?: string; cwd?: string }) => Promise<{ success: boolean; sessionId?: string }>;
     write: (sessionId: string, data: string) => void;

@@ -54,6 +54,22 @@ contextBridge.exposeInMainWorld('void', {
     },
   },
 
+  sftp: {
+    readdir: (sessionId: string, path: string) => ipcRenderer.invoke("sftp:readdir", sessionId, path),
+    readFile: (sessionId: string, path: string) => ipcRenderer.invoke("sftp:readFile", sessionId, path),
+    writeFile: (sessionId: string, path: string, content: string) => ipcRenderer.invoke("sftp:writeFile", sessionId, path, content),
+    delete: (sessionId: string, path: string) => ipcRenderer.invoke("sftp:delete", sessionId, path),
+    mkdir: (sessionId: string, path: string) => ipcRenderer.invoke("sftp:mkdir", sessionId, path),
+    rename: (sessionId: string, oldPath: string, newPath: string) => ipcRenderer.invoke("sftp:rename", sessionId, oldPath, newPath),
+    upload: (sessionId: string, localPath: string, remotePath: string) => ipcRenderer.invoke("sftp:upload", sessionId, localPath, remotePath),
+    uploadPause: () => ipcRenderer.invoke("sftp:upload-pause"),
+    uploadResume: () => ipcRenderer.invoke("sftp:upload-resume"),
+    uploadPauseAll: () => ipcRenderer.invoke("sftp:upload-pause-all"),
+    uploadCancel: (jobId: string) => ipcRenderer.invoke("sftp:upload-cancel", jobId),
+    uploadQueue: () => ipcRenderer.invoke("sftp:upload-queue"),
+    onUploadProgress: (cb: (data: any) => void) => { const h = (_e: any, d: any) => cb(d); ipcRenderer.on("sftp:upload-progress", h); return () => ipcRenderer.removeListener("sftp:upload-progress", h); },
+  },
+
   connections: {
     list: () => ipcRenderer.invoke('connections:list'),
     save: (conn: unknown) => ipcRenderer.invoke('connections:save', conn),

@@ -259,6 +259,10 @@ export class SSHManager {
     }
   }
 
+  getClient(sessionId: string): any {
+    return this.sessions.get(sessionId)?.client || null;
+  }
+
   getBuffer(sessionId: string): string {
     const session = this.sessions.get(sessionId);
     if (!session) return '';
