@@ -1,10 +1,22 @@
 import { ProGate } from '../ProGate';
-import { useAppStore } from "../stores/app-store";
+import { useAppStore } from "../../stores/app-store";
 import { useState, useEffect } from 'react';
 import type { MemoryEvent } from '../../types';
 import { formatRelativeTime } from '../../utils/formatters';
 
 export function AuditLogPanel({ onClose }: { onClose: () => void }) {
+  const isPro = useAppStore((s) => s.isPro);
+
+  if (!isPro) {
+    return (
+      <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+        <div className="w-full max-w-md bg-void-base border border-void-border rounded-void-2xl shadow-2xl animate-palette-in overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <ProGate feature="Audit Log" description="Every command logged with timestamps, servers, and exit codes." />
+        </div>
+      </div>
+    );
+  }
+
   const [events, setEvents] = useState<MemoryEvent[]>([]);
   const [search, setSearch] = useState('');
 

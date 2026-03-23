@@ -11,6 +11,15 @@ function getPaneCount(layout: SplitLayout): number {
   return 3;
 }
 
+function reorderTabsByPanes(tabs: Tab[], paneTabIds: (string | null)[]): Tab[] {
+  const paneOrder = paneTabIds.filter(Boolean) as string[];
+  const inPanes = new Set(paneOrder);
+  return [
+    ...paneOrder.map((id) => tabs.find((t) => t.id === id)!).filter(Boolean),
+    ...tabs.filter((t) => !inPanes.has(t.id)),
+  ];
+}
+
 interface AppState {
   tabs: Tab[];
   activeTabId: string | null;
@@ -29,6 +38,7 @@ interface AppState {
   isPro: boolean;
   licenseInfo: { plan: string; email?: string; activatedAt?: number } | null;
   settingsSection: string;
+  activeModal: string | null;
 
   addTab: (type: TabType, config?: Partial<Tab>) => string;
   closeTab: (id: string) => void;
@@ -45,10 +55,12 @@ interface AppState {
   toggleCommandPalette: () => void;
   toggleSettings: () => void;
 
+  swapPanes: (fromIndex: number, toIndex: number) => void;
   setSavedConnections: (connections: SavedConnection[]) => void;
   loadSavedConnections: () => Promise<void>;
   loadLicense: () => Promise<void>;
   openSettings: (section?: string) => void;
+  setActiveModal: (modal: string | null) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -69,6 +81,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   isPro: false,
   licenseInfo: null,
   settingsSection: 'general',
+  activeModal: null,
 
   addTab: (type, config) => {
     const id = generateId();
@@ -148,34 +161,51 @@ export const useAppStore = create<AppState>((set, get) => ({
       const nextLayout = cycle[(idx + 1) % cycle.length];
       const nextCount = getPaneCount(nextLayout);
       const paneTabIds = [...state.paneTabIds];
+      let tabs = [...state.tabs];
 
-      // Add panes if needed
-      while (paneTabIds.length < nextCount) {
-        // Create a new-connection tab for new panes
-        const id = generateId();
-        const tab: Tab = {
-          id,
-          type: 'new-connection',
-          title: 'New Connection',
-          connected: false,
-          lastActivity: Date.now(),
-        };
-        state.tabs.push(tab);
-        paneTabIds.push(id);
+      // Find tabs not already assigned to a pane
+      const assignedSet = new Set(paneTabIds.filter(Boolean));
+      const unassigned = tabs.filter((t) => !assignedSet.has(t.id));
+
+      // Fill any existing null pane slots first
+      for (let i = 0; i < paneTabIds.length; i++) {
+        if (paneTabIds[i] === null) {
+          const next = unassigned.shift();
+          if (next) {
+            paneTabIds[i] = next.id;
+          } else {
+            const id = generateId();
+            tabs.push({ id, type: 'new-connection', title: 'New Connection', connected: false, lastActivity: Date.now() });
+            paneTabIds[i] = id;
+          }
+        }
       }
 
-      // Remove extra panes
+      // Add new pane slots — fill with unassigned tabs, then new-connection tabs
+      while (paneTabIds.length < nextCount) {
+        const next = unassigned.shift();
+        if (next) {
+          paneTabIds.push(next.id);
+        } else {
+          const id = generateId();
+          tabs.push({ id, type: 'new-connection', title: 'New Connection', connected: false, lastActivity: Date.now() });
+          paneTabIds.push(id);
+        }
+      }
+
+      // Remove extra panes — clean up unused new-connection ghost tabs
       while (paneTabIds.length > nextCount) {
-        paneTabIds.pop();
+        const removedTabId = paneTabIds.pop();
+        if (removedTabId) {
+          const tab = tabs.find((t) => t.id === removedTabId);
+          if (tab && tab.type === 'new-connection') {
+            tabs = tabs.filter((t) => t.id !== removedTabId);
+          }
+        }
       }
 
       const paneSizes = Array(nextCount).fill(1 / nextCount);
-      return {
-        splitLayout: nextLayout,
-        paneTabIds,
-        paneSizes,
-        tabs: [...state.tabs],
-      };
+      return { splitLayout: nextLayout, paneTabIds, paneSizes, tabs: reorderTabsByPanes(tabs, paneTabIds) };
     });
   },
 
@@ -186,31 +216,48 @@ export const useAppStore = create<AppState>((set, get) => ({
       const nextLayout = cycle[(idx + 1) % cycle.length];
       const nextCount = getPaneCount(nextLayout);
       const paneTabIds = [...state.paneTabIds];
+      let tabs = [...state.tabs];
+
+      const assignedSet = new Set(paneTabIds.filter(Boolean));
+      const unassigned = tabs.filter((t) => !assignedSet.has(t.id));
+
+      // Fill existing null pane slots first
+      for (let i = 0; i < paneTabIds.length; i++) {
+        if (paneTabIds[i] === null) {
+          const next = unassigned.shift();
+          if (next) {
+            paneTabIds[i] = next.id;
+          } else {
+            const id = generateId();
+            tabs.push({ id, type: 'new-connection', title: 'New Connection', connected: false, lastActivity: Date.now() });
+            paneTabIds[i] = id;
+          }
+        }
+      }
 
       while (paneTabIds.length < nextCount) {
-        const id = generateId();
-        const tab: Tab = {
-          id,
-          type: 'new-connection',
-          title: 'New Connection',
-          connected: false,
-          lastActivity: Date.now(),
-        };
-        state.tabs.push(tab);
-        paneTabIds.push(id);
+        const next = unassigned.shift();
+        if (next) {
+          paneTabIds.push(next.id);
+        } else {
+          const id = generateId();
+          tabs.push({ id, type: 'new-connection', title: 'New Connection', connected: false, lastActivity: Date.now() });
+          paneTabIds.push(id);
+        }
       }
 
       while (paneTabIds.length > nextCount) {
-        paneTabIds.pop();
+        const removedTabId = paneTabIds.pop();
+        if (removedTabId) {
+          const tab = tabs.find((t) => t.id === removedTabId);
+          if (tab && tab.type === 'new-connection') {
+            tabs = tabs.filter((t) => t.id !== removedTabId);
+          }
+        }
       }
 
       const paneSizes = Array(nextCount).fill(1 / nextCount);
-      return {
-        splitLayout: nextLayout,
-        paneTabIds,
-        paneSizes,
-        tabs: [...state.tabs],
-      };
+      return { splitLayout: nextLayout, paneTabIds, paneSizes, tabs: reorderTabsByPanes(tabs, paneTabIds) };
     });
   },
 
@@ -247,7 +294,17 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   toggleSettings: () => {
-    set((state) => ({ settingsOpen: !state.settingsOpen }));
+    set((state) => ({ settingsOpen: !state.settingsOpen, settingsSection: 'general' }));
+  },
+
+  swapPanes: (fromIndex, toIndex) => {
+    set((state) => {
+      const paneTabIds = [...state.paneTabIds];
+      const tmp = paneTabIds[fromIndex];
+      paneTabIds[fromIndex] = paneTabIds[toIndex];
+      paneTabIds[toIndex] = tmp;
+      return { paneTabIds, tabs: reorderTabsByPanes([...state.tabs], paneTabIds) };
+    });
   },
 
   setSavedConnections: (connections) => {
@@ -266,6 +323,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   openSettings: (section) => {
-    set({ settingsOpen: true, settingsSection: section || 'general' });
+    set((state) => ({
+      settingsOpen: section ? true : !state.settingsOpen,
+      settingsSection: section || 'general',
+    }));
+  },
+
+  setActiveModal: (modal) => {
+    set({ activeModal: modal });
   },
 }));

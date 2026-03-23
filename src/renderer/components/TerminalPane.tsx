@@ -12,7 +12,9 @@ interface TerminalPaneProps {
 export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) {
   const focusedPaneIndex = useAppStore((s) => s.focusedPaneIndex);
   const setFocusedPane = useAppStore((s) => s.setFocusedPane);
+  const swapPanes = useAppStore((s) => s.swapPanes);
   const activeTabId = useAppStore((s) => s.activeTabId);
+  const [dragOver, setDragOver] = useState(false);
   const isFocused = focusedPaneIndex === paneIndex;
   const [isScrolledUp, setIsScrolledUp] = useState(false);
 
@@ -55,12 +57,31 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
 
   return (
     <div
-      className="relative flex flex-col h-full w-full bg-void-elevated"
+      className={`relative flex flex-col h-full w-full bg-void-elevated ${
+        dragOver ? 'ring-1 ring-accent/40 ring-inset' : ''
+      }`}
       onClick={handleClick}
+      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragOver(false);
+        const from = parseInt(e.dataTransfer.getData('text/pane-index'));
+        if (!isNaN(from) && from !== paneIndex) {
+          swapPanes(from, paneIndex);
+        }
+      }}
     >
       {showHeader && (
-        <div className="flex items-center gap-[6px] px-3 py-[6px] border-b-[0.5px] border-void-border/50 bg-void-surface/50 shrink-0"
-          style={{ fontSize: '10px' }}>
+        <div
+          className="flex items-center gap-[6px] px-3 py-[6px] border-b-[0.5px] border-void-border/50 bg-void-surface/50 shrink-0 cursor-grab active:cursor-grabbing"
+          style={{ fontSize: '10px' }}
+          draggable
+          onDragStart={(e) => {
+            e.dataTransfer.setData('text/pane-index', String(paneIndex));
+            e.dataTransfer.effectAllowed = 'move';
+          }}
+        >
           <span className={`w-[5px] h-[5px] rounded-full shrink-0 ${
             tab.connected ? 'bg-status-online' : 'bg-void-text-dim'
           }`} />

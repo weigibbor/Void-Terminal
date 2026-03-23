@@ -10,6 +10,10 @@ import { NotesSidebar } from './components/NotesSidebar';
 import { AIChatSidebar } from './components/pro/AIChatSidebar';
 import { SettingsPanel } from './components/SettingsPanel';
 import { WelcomeScreen } from './components/WelcomeScreen';
+import { MemoryTimeline } from './components/pro/MemoryTimeline';
+import { AuditLogPanel } from './components/pro/AuditLogPanel';
+import { WorkspaceManager } from './components/pro/WorkspaceManager';
+import { SecurityReport } from './components/pro/SecurityReport';
 
 export function App() {
   useKeyboard();
@@ -19,8 +23,10 @@ export function App() {
   const aiChatSidebarOpen = useAppStore((s) => s.aiChatSidebarOpen);
   const commandPaletteOpen = useAppStore((s) => s.commandPaletteOpen);
   const settingsOpen = useAppStore((s) => s.settingsOpen);
+  const activeModal = useAppStore((s) => s.activeModal);
   const loadSavedConnections = useAppStore((s) => s.loadSavedConnections);
   const loadLicense = useAppStore((s) => s.loadLicense);
+  const setActiveModal = useAppStore((s) => s.setActiveModal);
 
   useEffect(() => {
     loadSavedConnections();
@@ -48,6 +54,20 @@ export function App() {
       <StatusBar />
 
       {commandPaletteOpen && <CommandPalette />}
+
+      {/* Pro modals */}
+      {activeModal === 'memory-timeline' && (
+        <MemoryTimeline onClose={() => setActiveModal(null)} />
+      )}
+      {activeModal === 'audit-log' && (
+        <AuditLogPanel onClose={() => setActiveModal(null)} />
+      )}
+      {activeModal === 'workspaces' && (
+        <WorkspaceManager onClose={() => setActiveModal(null)} />
+      )}
+      {activeModal === 'security-scan' && (
+        <SecurityReport issues={[]} server="scan" onClose={() => setActiveModal(null)} />
+      )}
     </div>
   );
 }

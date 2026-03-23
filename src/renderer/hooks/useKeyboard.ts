@@ -57,6 +57,27 @@ export function useKeyboard() {
         return;
       }
 
+      // Cmd+Shift+M — Memory timeline
+      if (meta && shift && e.key === 'M') {
+        e.preventDefault();
+        store.setActiveModal(store.activeModal === 'memory-timeline' ? null : 'memory-timeline');
+        return;
+      }
+
+      // Cmd+Shift+B — Broadcast mode
+      if (meta && shift && e.key === 'B') {
+        e.preventDefault();
+        // TODO: toggle broadcast
+        return;
+      }
+
+      // Cmd+Shift+S — Workspaces
+      if (meta && shift && e.key === 'S') {
+        e.preventDefault();
+        store.setActiveModal(store.activeModal === 'workspaces' ? null : 'workspaces');
+        return;
+      }
+
       // Cmd+, — Settings
       if (meta && !shift && e.key === ',') {
         e.preventDefault();

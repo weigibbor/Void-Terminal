@@ -235,14 +235,17 @@ function LicenseSettings() {
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const [needsRestart, setNeedsRestart] = useState(false);
+
   const handleActivate = async () => {
     if (!key || !email) { setStatus('Enter license key and email.'); return; }
     setLoading(true);
     const result = await window.void.license.activate(key, email);
     setLoading(false);
     if (result.success) {
-      setStatus('License activated! Pro features unlocked.');
+      setStatus('License activated! Restart to enable Pro features.');
       await loadLicense();
+      setNeedsRestart(true);
     } else {
       setStatus(result.error || 'Activation failed.');
     }
@@ -251,7 +254,12 @@ function LicenseSettings() {
   const handleDeactivate = async () => {
     await window.void.license.deactivate();
     await loadLicense();
-    setStatus('License deactivated.');
+    setStatus('License deactivated. Restart to apply.');
+    setNeedsRestart(true);
+  };
+
+  const handleRestart = () => {
+    window.void.app.relaunch();
   };
 
   return (
@@ -321,12 +329,21 @@ function LicenseSettings() {
 
       {status && (
         <div className={`text-[11px] px-3 py-2 rounded-[6px] ${
-          status.includes('activated!') || status.includes('unlocked')
+          status.includes('activated!') || status.includes('Restart')
             ? 'text-status-online bg-status-online/10 border-[0.5px] border-status-online/20'
             : 'text-status-error bg-status-error/5 border-[0.5px] border-status-error/15'
         }`}>
           {status}
         </div>
+      )}
+
+      {needsRestart && (
+        <button
+          onClick={handleRestart}
+          className="w-full px-7 py-[10px] bg-accent rounded-[8px] text-[12px] text-void-base font-semibold hover:bg-accent-hover transition-colors font-mono"
+        >
+          Restart Void Terminal
+        </button>
       )}
 
       {/* Pro features list */}
@@ -363,7 +380,7 @@ function AboutSection() {
         </p>
         <p>The terminal that thinks.</p>
         <p className="text-void-text-ghost">Built in the Philippines. Made for the world.</p>
-        <p className="text-void-text-ghost">Clearmud Labs &copy; 2026</p>
+        <p className="text-void-text-ghost">GE Labs &copy; 2026</p>
       </div>
     </div>
   );
