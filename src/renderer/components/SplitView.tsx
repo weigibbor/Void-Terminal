@@ -2,6 +2,7 @@ import { useRef, useCallback, useState } from 'react';
 import { useAppStore } from '../stores/app-store';
 import { TerminalPane } from './TerminalPane';
 import { ConnectionPanel } from './ConnectionPanel';
+import { ConnectionProgress } from './ConnectionProgress';
 import { BrowserPane } from './BrowserPane';
 import { SPLIT_MIN_WIDTH, SPLIT_MIN_HEIGHT } from '../utils/constants';
 
@@ -51,6 +52,41 @@ function PaneContent({ tabId, paneIndex }: { tabId: string | null; paneIndex: nu
       {activeTab?.type === 'new-connection' && (
         <div className="absolute inset-0 z-10 flex flex-col">
           <ConnectionPanel tabId={activeTab.id} />
+        </div>
+      )}
+
+      {/* Connection progress overlay for connecting tabs */}
+      {activeTab?.connecting && activeTab.connectionConfig && (
+        <div className="absolute inset-0 z-20 flex flex-col">
+          <ConnectionProgress
+            host={activeTab.connectionConfig.host}
+            port={activeTab.connectionConfig.port}
+            username={activeTab.connectionConfig.username}
+            sessionId={activeTab.sessionId}
+            error={activeTab.connectionError}
+            onConnected={() => {}}
+            onCancel={() => {
+              useAppStore.getState().updateTab(activeTab.id, { connecting: false, type: 'new-connection' });
+            }}
+            onFailed={() => {}}
+          />
+        </div>
+      )}
+
+      {/* Connection error overlay */}
+      {activeTab?.connectionError && !activeTab.connecting && (
+        <div className="absolute inset-0 z-20 flex flex-col">
+          <ConnectionProgress
+            host={activeTab.connectionConfig?.host || ''}
+            port={activeTab.connectionConfig?.port || 22}
+            username={activeTab.connectionConfig?.username || ''}
+            error={activeTab.connectionError}
+            onConnected={() => {}}
+            onCancel={() => {
+              useAppStore.getState().updateTab(activeTab.id, { connectionError: undefined, type: 'new-connection' });
+            }}
+            onFailed={() => {}}
+          />
         </div>
       )}
 

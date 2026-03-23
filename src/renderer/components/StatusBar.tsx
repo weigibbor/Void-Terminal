@@ -9,6 +9,7 @@ export function StatusBar() {
   const isPro = useAppStore((s) => s.isPro);
   const splitLayout = useAppStore((s) => s.splitLayout);
   const [elapsed, setElapsed] = useState(0);
+  const [aiConfigured, setAiConfigured] = useState(false);
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const connectedCount = tabs.filter((t) => t.connected).length;
@@ -19,6 +20,14 @@ export function StatusBar() {
     const interval = setInterval(() => setElapsed(Date.now() - sessionStartTime), 1000);
     return () => clearInterval(interval);
   }, [sessionStartTime]);
+
+  useEffect(() => {
+    if (isPro) {
+      window.void.ai.getConfig().then((config: any) => {
+        setAiConfigured(!!config?.apiKey || config?.provider === 'ollama');
+      });
+    }
+  }, [isPro]);
 
   const splitLabel = splitLayout === '2-col' ? '2-col'
     : splitLayout === '3-col' ? '3-col'
@@ -53,12 +62,22 @@ export function StatusBar() {
           <span>{activeTab.connectionConfig.username}@{activeTab.connectionConfig.host}</span>
         )}
 
-        {/* AI watching (Pro) */}
+        {/* AI status (Pro) */}
         {isPro && (
-          <span className="flex items-center gap-[5px] text-accent">
-            <span className="inline-block w-[5px] h-[5px] rounded-full bg-accent animate-ai-pulse" />
-            AI watching
-          </span>
+          aiConfigured ? (
+            <span className="flex items-center gap-[5px] text-accent">
+              <span className="inline-block w-[5px] h-[5px] rounded-full bg-accent void-pulse-slow" />
+              AI watching
+            </span>
+          ) : (
+            <span
+              className="flex items-center gap-[5px] text-void-text-dim cursor-pointer hover:text-void-text-muted"
+              onClick={() => useAppStore.getState().openSettings('ai')}
+            >
+              <span className="inline-block w-[5px] h-[5px] rounded-full bg-void-text-dim" />
+              AI not configured
+            </span>
+          )
         )}
       </div>
 

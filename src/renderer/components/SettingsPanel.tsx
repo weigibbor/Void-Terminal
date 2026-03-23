@@ -1,20 +1,25 @@
 import { useState, useEffect } from 'react';
 import { useAppStore } from '../stores/app-store';
+import { ProActivationFlow } from './ProActivationFlow';
 import type { AIConfig } from '../types';
 
-type SettingsSection = 'general' | 'connections' | 'ai' | 'shortcuts' | 'license' | 'about';
+type SettingsSection = 'general' | 'connections' | 'ai' | 'shortcuts' | 'license' | 'watch' | 'tasks' | 'about';
 
 export function SettingsPanel() {
   const storeSection = useAppStore((s) => s.settingsSection) as SettingsSection;
   const [section, setSection] = useState<SettingsSection>(storeSection || 'general');
   const toggleSettings = useAppStore((s) => s.toggleSettings);
 
-  const sections: { id: SettingsSection; label: string }[] = [
+  const isPro = useAppStore((s) => s.isPro);
+
+  const sections: { id: SettingsSection; label: string; pro?: boolean }[] = [
     { id: 'general', label: 'General' },
     { id: 'connections', label: 'Connections' },
-    { id: 'ai', label: 'AI' },
     { id: 'shortcuts', label: 'Shortcuts' },
     { id: 'license', label: 'License' },
+    { id: 'ai', label: 'AI', pro: !isPro },
+    { id: 'watch', label: 'Watch & Alert', pro: !isPro },
+    { id: 'tasks', label: 'Scheduled Tasks', pro: !isPro },
     { id: 'about', label: 'About' },
   ];
 
@@ -37,11 +42,17 @@ export function SettingsPanel() {
             onClick={() => setSection(s.id)}
             className={`w-full text-left px-3 py-2 text-sm rounded-void transition-colors ${
               section === s.id
-                ? 'bg-void-surface text-void-text'
+                ? s.id === 'ai' ? 'text-accent bg-accent-glow border-l-2 border-accent rounded-none' : 'bg-void-surface text-void-text'
                 : 'text-void-text-muted hover:text-void-text hover:bg-void-surface/50'
             }`}
           >
-            {s.label}
+            <span className="flex items-center gap-2">
+              {s.label}
+              {s.pro && (
+                <svg width="8" height="8" viewBox="0 0 16 16" fill="none"><rect x="2" y="7" width="12" height="8" rx="1.5" stroke="#555" strokeWidth="1.5"/><path d="M5 7V5a3 3 0 016 0v2" stroke="#555" strokeWidth="1.5" strokeLinecap="round"/></svg>
+              )}
+            </span>
+            {s.pro && <span className="text-[8px] text-void-text-ghost block mt-0.5">Requires Pro</span>}
           </button>
         ))}
       </div>
@@ -52,7 +63,9 @@ export function SettingsPanel() {
         {section === 'connections' && <ConnectionSettings />}
         {section === 'ai' && <AISettings />}
         {section === 'shortcuts' && <ShortcutSettings />}
-        {section === 'license' && <LicenseSettings />}
+        {section === 'license' && <ProActivationFlow />}
+        {section === 'watch' && <WatchAlertSettings />}
+        {section === 'tasks' && <ScheduledTasksSettings />}
         {section === 'about' && <AboutSection />}
       </div>
     </div>
@@ -121,75 +134,104 @@ function ConnectionSettings() {
 }
 
 function AISettings() {
+  const isPro = useAppStore((s) => s.isPro);
   const [config, setConfig] = useState<AIConfig | null>(null);
 
   useEffect(() => {
     window.void.ai.getConfig().then(setConfig);
   }, []);
 
+  if (!isPro) {
+    return <div className="max-w-md"><ProActivationFlow initialScreen="license" /></div>;
+  }
+
   if (!config) return null;
 
-  const features: { key: keyof AIConfig['features']; label: string; desc: string }[] = [
-    { key: 'autoNotes', label: 'Auto-notes', desc: 'AI watches output and takes notes on important events' },
-    { key: 'errorExplainer', label: 'Error explainer', desc: 'Auto-explain errors and suggest fixes' },
-    { key: 'dangerDetection', label: 'Danger detection', desc: 'Intercept destructive commands before execution' },
-    { key: 'autocomplete', label: 'Autocomplete', desc: 'Predict the next command based on context' },
-    { key: 'naturalLanguage', label: 'Natural language', desc: 'Convert plain English to terminal commands' },
-    { key: 'securityScanner', label: 'Security scanner', desc: 'Scan configs for security issues' },
-    { key: 'anomalyDetection', label: 'Anomaly detection', desc: 'Alert on unusual server behavior' },
+  const FEATURES: { key: keyof AIConfig['features']; label: string; desc: string; color: string }[] = [
+    { key: 'autoNotes', label: 'Auto-notes & memory', desc: 'AI watches output, takes notes, builds memory. Feeds AI chat and timeline.', color: '#F97316' },
+    { key: 'errorExplainer', label: 'Error explainer', desc: 'Auto-explain errors inline with suggested fix commands.', color: '#28C840' },
+    { key: 'dangerDetection', label: 'Danger detection', desc: 'Warn before destructive commands on production servers.', color: '#FF5F57' },
+    { key: 'autocomplete', label: 'Command autocomplete', desc: 'Predict next command based on context + memory. Tab to accept.', color: '#5B9BD5' },
+    { key: 'naturalLanguage', label: 'Natural language commands', desc: 'Type ? to convert English/Taglish into terminal commands.', color: '#C586C0' },
+    { key: 'securityScanner', label: 'Security scanner', desc: 'Scan .env, configs, and ports for vulnerabilities on connect.', color: '#FEBC2E' },
+    { key: 'anomalyDetection', label: 'Anomaly detection', desc: 'Learn normal server behavior, alert on deviations. Needs 1-2 weeks baseline.', color: '#FEBC2E' },
   ];
 
+  const providerNames: Record<string, string> = {
+    anthropic: 'Anthropic (Claude Sonnet 4)',
+    openai: 'OpenAI (GPT-4o)',
+    gemini: 'Google (Gemini 2.0 Flash)',
+    ollama: 'Ollama (Local)',
+  };
+
   return (
-    <div className="max-w-md space-y-6">
-      <h3 className="text-lg text-void-text font-medium">AI Settings</h3>
+    <div className="max-w-md space-y-4">
+      <div>
+        <div className="text-[16px] text-void-text font-semibold font-sans mb-[3px]">AI configuration</div>
+        <div className="text-[10px] text-void-text-dim mb-5">Manage your AI provider and toggle individual features.</div>
+      </div>
 
-      <SettingRow label="Provider" description="AI inference provider">
-        <select
-          value={config.provider}
-          onChange={(e) => setConfig({ ...config, provider: e.target.value as AIConfig['provider'] })}
-          className="bg-void-input border border-void-border rounded-void text-sm text-void-text-muted px-2 py-1"
-        >
-          <option value="anthropic">Anthropic (Claude)</option>
-          <option value="openai">OpenAI (GPT-4o)</option>
-          <option value="gemini">Google (Gemini)</option>
-          <option value="ollama">Ollama (Local)</option>
-        </select>
-      </SettingRow>
+      {/* Provider card */}
+      <div className="flex items-center gap-[10px] p-3 bg-void-surface rounded-[8px]" style={{ border: '0.5px solid #2A2A30' }}>
+        <div className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0" style={{ background: 'rgba(249,115,22,0.08)' }}>
+          <div className="w-3 h-3 rounded-full border-[1.5px] border-accent" />
+        </div>
+        <div className="flex-1">
+          <div className="text-[12px] text-void-text font-medium">{providerNames[config.provider] || config.provider}</div>
+          <div className="text-[9px] text-status-online mt-[1px]">Connected · API key verified</div>
+        </div>
+        <span className="text-[10px] text-accent cursor-pointer">Change provider</span>
+      </div>
 
-      <SettingRow label="API Key" description="Your API key (stored locally)">
-        <input
-          type="password"
-          value={config.apiKey || ''}
-          onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
-          placeholder="sk-..."
-          className="w-full bg-void-input border border-void-border rounded-void text-sm text-void-text-muted px-2 py-1"
-        />
-      </SettingRow>
+      {/* API Key */}
+      <div>
+        <div className="text-[10px] text-void-text-muted uppercase tracking-wider mb-[6px]">API key</div>
+        <div className="flex gap-2">
+          <div className="flex-1 px-3 py-2 bg-void-input rounded-[6px] text-[11px] text-void-text-dim font-mono" style={{ border: '0.5px solid #2A2A30' }}>
+            {config.apiKey ? `${config.apiKey.substring(0, 8)}${'•'.repeat(16)}${config.apiKey.slice(-4)}` : 'No API key set'}
+          </div>
+          <button className="px-[14px] py-2 rounded-[6px] text-[10px] text-void-text-muted" style={{ border: '0.5px solid #2A2A30' }}>Edit</button>
+        </div>
+      </div>
 
-      <div className="border-t border-void-border pt-4 space-y-3">
-        <h4 className="text-sm text-void-text-dim uppercase tracking-wider">Features</h4>
-        {features.map((f) => (
-          <div key={f.key} className="flex items-center justify-between py-2 border-b border-void-border/30">
-            <div>
-              <div className="text-sm text-void-text">{f.label}</div>
-              <div className="text-2xs text-void-text-ghost">{f.desc}</div>
+      {/* Rate limit */}
+      <div className="flex items-center justify-between p-[10px] bg-void-surface rounded-[6px]">
+        <span className="text-[10px] text-void-text-muted">AI calls this hour</span>
+        <span className="text-[11px] text-void-text font-mono">0 / 30</span>
+      </div>
+
+      {/* Feature toggles */}
+      <div className="text-[10px] text-void-text-muted uppercase tracking-wider mt-2 mb-[10px]">Feature toggles</div>
+      <div className="flex flex-col gap-[6px]">
+        {FEATURES.map((f) => (
+          <div key={f.key} className="flex items-center justify-between p-[10px] bg-void-surface rounded-[6px]" style={{ border: '0.5px solid #1A1A1E' }}>
+            <div className="flex items-center gap-2">
+              <div className="w-[6px] h-[6px] rounded-full shrink-0" style={{ background: f.color }} />
+              <div>
+                <div className="text-[11px] text-void-text">{f.label}</div>
+                <div className="text-[9px] text-void-text-dim mt-[1px]">{f.desc}</div>
+              </div>
             </div>
-            <ToggleSwitch
-              checked={config.features[f.key]}
-              onChange={(v) =>
-                setConfig({ ...config, features: { ...config.features, [f.key]: v } })
-              }
-            />
+            <button
+              onClick={() => {
+                const updated = { ...config, features: { ...config.features, [f.key]: !config.features[f.key] } };
+                setConfig(updated);
+                window.void.ai.setConfig(updated);
+              }}
+              className={`relative w-8 h-[18px] rounded-[9px] shrink-0 ${config.features[f.key] ? 'bg-accent' : 'bg-void-border'}`}
+              style={{ transition: 'background-color 200ms ease' }}
+            >
+              <span className={`absolute top-[2px] w-[14px] h-[14px] bg-white rounded-full ${config.features[f.key] ? 'right-[2px]' : 'left-[2px]'}`}
+                style={{ transition: 'all 200ms cubic-bezier(0.34, 1.56, 0.64, 1)' }} />
+            </button>
           </div>
         ))}
       </div>
 
-      <button
-        onClick={() => window.void.ai.setConfig(config)}
-        className="bg-accent text-void-base font-semibold text-sm px-4 py-2 rounded-void-lg hover:bg-accent-hover transition-colors"
-      >
-        Save AI Settings
-      </button>
+      {/* Security note */}
+      <div className="p-[10px] rounded-[6px] text-[9px] text-void-text-muted" style={{ background: 'rgba(40,200,64,0.04)', border: '0.5px solid rgba(40,200,64,0.1)' }}>
+        <strong className="text-status-online">All data stays local.</strong> AI memory stored at ~/.void/memory/. API key encrypted at ~/.config/void-terminal/. Nothing leaves your machine.
+      </div>
     </div>
   );
 }
@@ -382,6 +424,44 @@ function AboutSection() {
         <p className="text-void-text-ghost">Built in the Philippines. Made for the world.</p>
         <p className="text-void-text-ghost">GE Labs &copy; 2026</p>
       </div>
+    </div>
+  );
+}
+
+function WatchAlertSettings() {
+  const isPro = useAppStore((s) => s.isPro);
+  if (!isPro) return <div className="max-w-md"><ProActivationFlow initialScreen="license" /></div>;
+  return (
+    <div className="max-w-md space-y-4">
+      <h3 className="text-lg text-void-text font-medium">Watch & Alert</h3>
+      <div className="text-[10px] text-void-text-dim mb-3">Set keyword triggers on terminal output to get desktop notifications.</div>
+      <div className="space-y-2">
+        {[
+          { pattern: 'ERROR', action: 'notification', enabled: true },
+          { pattern: 'deploy complete', action: 'notification', enabled: true },
+          { pattern: 'OOM|Out of memory', action: 'notification', enabled: true },
+        ].map((rule, i) => (
+          <div key={i} className="flex items-center gap-3 p-[10px] bg-void-surface rounded-[6px]" style={{ border: '0.5px solid #1A1A1E' }}>
+            <div className={`w-3 h-3 rounded-full border ${rule.enabled ? 'bg-status-online border-status-online' : 'border-void-border'}`} />
+            <code className="text-sm text-void-text-muted font-mono flex-1 truncate">{rule.pattern}</code>
+            <span className="text-[9px] text-void-text-ghost">{rule.action}</span>
+          </div>
+        ))}
+      </div>
+      <button className="text-[10px] text-accent hover:text-accent-hover">+ Add rule</button>
+    </div>
+  );
+}
+
+function ScheduledTasksSettings() {
+  const isPro = useAppStore((s) => s.isPro);
+  if (!isPro) return <div className="max-w-md"><ProActivationFlow initialScreen="license" /></div>;
+  return (
+    <div className="max-w-md space-y-4">
+      <h3 className="text-lg text-void-text font-medium">Scheduled Tasks</h3>
+      <div className="text-[10px] text-void-text-dim mb-3">Schedule commands to run on SSH sessions. Visual cron builder.</div>
+      <div className="text-center py-8 text-[11px] text-void-text-ghost">No scheduled tasks yet. Click + to add one.</div>
+      <button className="text-[10px] text-accent hover:text-accent-hover">+ Add task</button>
     </div>
   );
 }

@@ -11,6 +11,8 @@ export interface Tab {
   connectionConfig?: SSHConfig;
   browserUrl?: string;
   connected: boolean;
+  connecting?: boolean;
+  connectionError?: string;
   lastActivity: number;
   disconnectedAt?: number;
   scrollbackPreserved?: boolean;

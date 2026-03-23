@@ -11,6 +11,8 @@ export function useSSH() {
         type: 'ssh',
         title: `${config.username}@${config.host}`,
         connectionConfig: config,
+        connecting: true,
+        connectionError: undefined,
       });
 
       const result = await window.void.ssh.connect(config);
@@ -19,20 +21,19 @@ export function useSSH() {
         updateTab(tabId, {
           sessionId: result.sessionId,
           connected: true,
+          connecting: false,
+          connectionError: undefined,
           lastActivity: Date.now(),
         });
 
-        // Listen for close
         window.void.ssh.onClose(result.sessionId, () => {
           updateTab(tabId, { connected: false });
         });
 
-        // Listen for errors
         window.void.ssh.onError(result.sessionId, () => {
           updateTab(tabId, { connected: false });
         });
 
-        // Update last connected on saved connection
         if (config.host) {
           const saved = useAppStore.getState().savedConnections;
           const match = saved.find(
@@ -42,6 +43,11 @@ export function useSSH() {
             window.void.connections.update(match.id, { lastConnected: Date.now() });
           }
         }
+      } else {
+        updateTab(tabId, {
+          connecting: false,
+          connectionError: result.error || 'Connection failed',
+        });
       }
 
       return result;

@@ -24,138 +24,133 @@
   --error: #FF5F57;
   --info: #5B9BD5;
   --ai: #C586C0;
-
-  /* Easing functions from spec */
-  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --ease-enter: cubic-bezier(0, 0, 0.2, 1);
-  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body, #root {
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-  background: var(--base);
-  color: var(--text);
+  height: 100%; width: 100%; overflow: hidden;
+  background: var(--base); color: var(--text);
   font-family: 'DM Sans', 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Scrollbar */
+/* ═══ SCROLLBAR ═══ */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
 ::selection { background: rgba(249, 115, 22, 0.25); }
 
-/* xterm.js */
+/* ═══ XTERM.JS ═══ */
 .xterm { padding: 14px 16px; }
 .xterm-viewport { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 .xterm-viewport::-webkit-scrollbar { width: 5px; }
 .xterm-viewport::-webkit-scrollbar-track { background: transparent; }
 .xterm-viewport::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-/* Inputs */
+/* ═══ INPUTS ═══ */
 input, textarea { outline: none; font-family: inherit; }
 input::placeholder, textarea::placeholder { color: var(--text-dim); }
 
-/* Focus */
+/* ═══ FOCUS ═══ */
 button:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
 button:focus:not(:focus-visible) { outline: none; }
 
-/* Button press — spec: scale(0.97) on active */
-button:active {
-  transform: scale(0.97);
-  transition: transform 100ms ease;
+/* ═══════════════════════════════════════════ */
+/* CSS @KEYFRAMES — looping animations       */
+/* ═══════════════════════════════════════════ */
+
+@keyframes void-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
-/* Transitions — spec: prefer CSS transitions, nothing > 300ms */
-button, input, textarea, select {
-  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+@keyframes void-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
 }
 
-/* Status dot transition */
-.status-dot {
-  transition: background-color 300ms ease;
+@keyframes void-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
-/* Sidebar slide-in from right */
-@keyframes slideInRight {
-  from { transform: translateX(220px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-@keyframes slideOutRight {
-  from { transform: translateX(0); opacity: 1; }
-  to { transform: translateX(220px); opacity: 0; }
+@keyframes void-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
-/* Sidebar slide-in from left */
-@keyframes slideInLeft {
-  from { transform: translateX(-240px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-
-/* Command palette */
-@keyframes paletteIn {
-  from { opacity: 0; transform: scale(0.95) translateY(8px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-/* AI inline suggestion */
-@keyframes aiSuggestIn {
-  from { opacity: 0; transform: translateY(4px); max-height: 0; }
-  to { opacity: 1; transform: translateY(0); max-height: 200px; }
-}
-
-/* Danger shake */
-@keyframes dangerShake {
+@keyframes void-shake {
   0%, 100% { transform: translateX(0); }
   25% { transform: translateX(-4px); }
   75% { transform: translateX(4px); }
 }
 
-/* Note card enter */
-@keyframes noteIn {
-  from { opacity: 0; transform: translateY(-8px); max-height: 0; }
-  to { opacity: 1; transform: translateY(0); max-height: 200px; }
+@keyframes void-border-pulse {
+  0%, 100% { border-color: rgba(26, 26, 30, 1); }
+  50% { border-color: rgba(254, 188, 46, 0.35); }
 }
 
-/* Tab enter */
-@keyframes tabIn {
-  from { opacity: 0; transform: translateX(8px); }
-  to { opacity: 1; transform: translateX(0); }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* Recording pulse */
-@keyframes recPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-
-/* Reconnecting pulse */
-@keyframes reconnectPulse {
+@keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
 
-/* AI active pulse */
-@keyframes aiPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+/* ═══ ANIMATION UTILITY CLASSES ═══ */
+.void-spin { animation: void-spin 1s linear infinite; }
+.void-spin-slow { animation: void-spin 1.5s linear infinite; }
+.void-pulse { animation: void-pulse 1.5s ease-in-out infinite; }
+.void-pulse-slow { animation: void-pulse 2s ease-in-out infinite; }
+.void-blink { animation: void-blink 1s step-end infinite; }
+.void-shimmer {
+  background: linear-gradient(90deg, var(--border) 25%, #3a3a42 50%, var(--border) 75%);
+  background-size: 200% 100%;
+  animation: void-shimmer 1.5s ease-in-out infinite;
 }
+.void-shake { animation: void-shake 0.3s ease; }
+.void-border-pulse { animation: void-border-pulse 2s ease-in-out 1; }
 
-/* Reduced motion */
+/* ═══ CSS TRANSITIONS (no Framer needed) ═══ */
+.t-color { transition: color 0.15s ease; }
+.t-bg { transition: background-color 0.15s ease; }
+.t-border { transition: border-color 0.15s ease; }
+.t-opacity { transition: opacity 0.2s ease; }
+.t-transform { transition: transform 0.1s ease; }
+
+/* Button hover/active */
+button { transition: background-color 0.15s ease, transform 0.1s ease, border-color 0.15s ease, color 0.15s ease; }
+button:active { transform: scale(0.97); }
+
+/* Input focus */
+.void-input { border: 0.5px solid var(--border); transition: border-color 0.15s ease; }
+.void-input:focus { border-color: rgba(249,115,22,0.5); outline: none; }
+.void-input.error { border-color: var(--error); }
+
+/* Ghost text */
+.ghost-text { opacity: 0; transition: opacity 0.3s ease; font-style: italic; color: var(--text-ghost); }
+.ghost-text.visible { opacity: 0.4; }
+.ghost-text.accepted { opacity: 1; color: var(--text); font-style: normal; transition: opacity 0.15s; }
+.ghost-text.dismissed { opacity: 0; transition: opacity 0.05s; }
+
+/* Tab dot */
+.tab-dot { transition: background-color 0.3s ease; }
+
+/* Terminal output dim */
+.terminal-output { transition: opacity 0.3s ease; }
+.terminal-output.dimmed { opacity: 0.25; }
+
+/* ═══ REDUCED MOTION — CRITICAL ═══ */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
-    animation-duration: 0ms !important;
-    transition-duration: 0ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

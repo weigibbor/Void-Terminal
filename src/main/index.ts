@@ -28,6 +28,7 @@ function createWindow(): BrowserWindow {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      webviewTag: true,
     },
   });
 
@@ -232,9 +233,14 @@ function registerIPCHandlers(): void {
     return process.platform;
   });
 
-  ipcMain.on('app:relaunch', () => {
-    app.relaunch();
-    app.exit(0);
+  ipcMain.on('app:relaunch', async () => {
+    // Re-init pro bridge with new license
+    await pro.initProBridge();
+    pro.initAIEngine();
+    if (mainWindow) {
+      pro.initAIWatcher(memoryStore, mainWindow);
+      mainWindow.webContents.reload();
+    }
   });
 }
 
@@ -276,7 +282,5 @@ app.whenReady().then(async () => {
 
 app.on('window-all-closed', () => {
   memoryStore?.close();
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  app.quit();
 });

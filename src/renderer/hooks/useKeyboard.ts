@@ -86,6 +86,20 @@ export function useKeyboard() {
         return;
       }
 
+      // Cmd+Shift+F — SFTP sidebar (placeholder)
+      if (meta && shift && e.key === 'F') {
+        e.preventDefault();
+        // TODO: toggle SFTP sidebar
+        return;
+      }
+
+      // Cmd+Shift+V — AI Clipboard (placeholder)
+      if (meta && shift && e.key === 'V') {
+        e.preventDefault();
+        // TODO: toggle AI clipboard overlay
+        return;
+      }
+
       // Cmd+Shift+S — Workspaces
       if (meta && shift && e.key === 'S') {
         e.preventDefault();

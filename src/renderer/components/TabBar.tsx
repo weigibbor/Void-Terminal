@@ -34,22 +34,32 @@ function TabItem({ tab, isActive }: { tab: Tab; isActive: boolean }) {
         if (e.button === 1) { e.preventDefault(); closeTab(tab.id); }
       }}
     >
-      {/* Status dot */}
+      {/* Status dot / spinner */}
       {tab.type !== 'new-connection' && (
-        <span
-          className={`w-[6px] h-[6px] rounded-full shrink-0 ${
-            tab.connected ? 'bg-status-online'
-            : tab.disconnectedAt ? 'bg-void-text-ghost'
-            : 'bg-void-text-dim'
-          }`}
-          style={{ transition: 'background-color 300ms ease' }}
-        />
+        tab.connecting ? (
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="shrink-0 animate-spin" style={{ animationDuration: '1s' }}>
+            <circle cx="12" cy="12" r="8" stroke="#2A2A30" strokeWidth="2" />
+            <path d="M12 4a8 8 0 018 8" stroke="#FEBC2E" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        ) : (
+          <span
+            className={`w-[6px] h-[6px] rounded-full shrink-0 ${
+              tab.connected ? 'bg-status-online'
+              : tab.connectionError ? 'bg-status-error'
+              : tab.disconnectedAt ? 'bg-void-text-ghost'
+              : 'bg-void-text-dim'
+            }`}
+            style={{ transition: 'background-color 300ms ease' }}
+          />
+        )
       )}
 
       {/* Title */}
       <span className={`text-[12px] font-mono truncate max-w-[140px] ${
-        isActive ? 'text-void-text' : 'text-[#666]'
-      }`}>
+        tab.connecting ? 'text-status-warning'
+        : tab.connectionError ? 'text-status-error'
+        : isActive ? 'text-void-text' : 'text-[#666]'
+      }`} style={{ transition: 'color 200ms ease' }}>
         {tab.title}
       </span>
 
@@ -59,7 +69,14 @@ function TabItem({ tab, isActive }: { tab: Tab; isActive: boolean }) {
       )}
 
       {/* Offline badge */}
-      {!tab.connected && tab.disconnectedAt && (
+      {/* Connection state badges */}
+      {tab.connectionError && (
+        <span className="text-[9px] text-status-error px-[6px] py-[1px] rounded-[3px]"
+          style={{ background: 'rgba(255,95,87,0.08)' }}>
+          failed
+        </span>
+      )}
+      {!tab.connected && tab.disconnectedAt && !tab.connectionError && (
         <span className="text-[9px] text-status-error px-[6px] py-[1px] rounded-[3px]"
           style={{ background: 'rgba(255,95,87,0.08)' }}>
           offline
