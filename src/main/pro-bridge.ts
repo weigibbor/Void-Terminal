@@ -2,7 +2,8 @@
 // Lives in the PUBLIC repo. Dynamically imports @void/pro.
 // If @void/pro is not installed, all functions return graceful fallbacks.
 
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, app } from 'electron';
+import path from 'path';
 
 let proModule: any = null;
 let proAvailable = false;
@@ -17,7 +18,14 @@ let aiWatcher: any = null;
 
 export async function initProBridge(): Promise<boolean> {
   try {
-    proModule = require('@void/pro');
+    // Try normal require first (dev mode with symlink)
+    try {
+      proModule = require('@void/pro');
+    } catch {
+      // In packaged app, pro files are in extraResources/pro/
+      const resourcesPath = path.join(process.resourcesPath || app.getAppPath(), 'pro');
+      proModule = require(resourcesPath);
+    }
     proAvailable = true;
 
     licenseManager = new proModule.LicenseManager();
