@@ -4,7 +4,6 @@ import { useAppStore, getPaneLabel } from '../stores/app-store';
 import { SearchBar } from './SearchBar';
 import { MultiLineInput } from './MultiLineInput';
 import { ContextMenu } from './ContextMenu';
-import { DeployCopilot } from './pro/DeployCopilot';
 import type { ContextMenuItem } from './ContextMenu';
 import type { Tab } from '../types';
 
@@ -369,9 +368,6 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
           </div>
         </div>
       )}
-
-      {/* Deploy copilot */}
-      {isFocused && <DeployCopilot onRunCommand={sendToSession} />}
 
       {/* Scroll to bottom */}
       {isScrolledUp && !isDisconnected && (

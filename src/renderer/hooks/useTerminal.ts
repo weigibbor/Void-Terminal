@@ -233,7 +233,10 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter }: Us
     let rafPending = false;
     const flushWrite = () => {
       if (writeBuffer && terminalRef.current) {
+        const buf = terminalRef.current.buffer.active;
+        const wasAtBottom = buf.baseY <= buf.viewportY + 1;
         terminalRef.current.write(writeBuffer);
+        if (wasAtBottom) terminalRef.current.scrollToBottom();
         writeBuffer = '';
       }
       rafPending = false;

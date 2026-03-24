@@ -30,7 +30,7 @@ export const TERMINAL_OPTIONS = {
   lineHeight: 1.2,
   letterSpacing: 0,
   cursorStyle: 'block' as const,
-  cursorBlink: true,
+  cursorBlink: false,
   cursorWidth: 2,
   scrollback: 10000,
   allowProposedApi: true,
