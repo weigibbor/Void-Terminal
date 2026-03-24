@@ -127,6 +127,33 @@ export function App() {
     });
   }, []);
 
+  // Listen for electron-updater events
+  useEffect(() => {
+    const unsubs: (() => void)[] = [];
+    const app = window.void.app as any;
+
+    unsubs.push(app.onUpdaterAvailable?.((data: any) => {
+      useAppStore.setState({
+        updateStatus: 'available', updateVersion: data.version,
+        updateDismissed: localStorage.getItem('void-update-dismissed') === data.version,
+      });
+    }) || (() => {}));
+
+    unsubs.push(app.onUpdaterProgress?.((data: any) => {
+      useAppStore.setState({ updateStatus: 'downloading', downloadProgress: data.percent });
+    }) || (() => {}));
+
+    unsubs.push(app.onUpdaterDownloaded?.((data: any) => {
+      useAppStore.setState({ updateStatus: 'ready', downloadProgress: 100, updateVersion: data.version });
+    }) || (() => {}));
+
+    unsubs.push(app.onUpdaterError?.((data: any) => {
+      useAppStore.setState({ updateStatus: 'failed', updateError: data.message });
+    }) || (() => {}));
+
+    return () => unsubs.forEach(u => u());
+  }, []);
+
   // Listen for license expiry — immediately lock Pro features
   useEffect(() => {
     return (window.void.license as any).onExpired?.((data: any) => {

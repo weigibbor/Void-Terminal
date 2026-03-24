@@ -22,27 +22,18 @@ export function UpdateBar() {
     useAppStore.setState({ patchNotesOpen: true, patchNotesMode: mode });
   };
 
-  const startDownload = () => {
+  const startDownload = async () => {
     useAppStore.setState({ updateStatus: 'downloading', downloadProgress: 0 });
-    // Simulate download for now — in production, this would use electron-updater
-    let p = 0;
-    const interval = setInterval(() => {
-      p += Math.random() * 15;
-      if (p >= 100) {
-        p = 100;
-        clearInterval(interval);
-        useAppStore.setState({ updateStatus: 'ready', downloadProgress: 100 });
-      }
-      useAppStore.setState({ downloadProgress: Math.min(100, Math.round(p)) });
-    }, 500);
+    // Use electron-updater for real auto-download
+    const result = await (window.void.app as any).updaterDownload?.();
+    if (result && !result.success) {
+      useAppStore.setState({ updateStatus: 'failed', updateError: result.error || 'Download failed' });
+    }
   };
 
   const installUpdate = () => {
-    // Mark as dismissed so it doesn't loop after reload
-    localStorage.setItem('void-update-dismissed', version || '');
-    useAppStore.setState({ updateDismissed: true, updateStatus: 'idle' });
-    // Open download page for manual update
-    window.open(`https://github.com/weigibbor/Void-Terminal/releases/tag/v${version}`, '_blank');
+    // Quit and install the downloaded update
+    (window.void.app as any).updaterInstall?.();
   };
 
   const dismiss = () => {
@@ -154,7 +145,7 @@ export function UpdateBar() {
         </div>
         <div className="flex items-center gap-[6px]">
           <button onClick={dismiss} className="text-[10px] text-void-text-dim hover:text-void-text-muted bg-transparent border-none cursor-pointer font-sans">Later</button>
-          <button onClick={installUpdate} className="px-[14px] py-[4px] rounded-[5px] text-[10px] font-semibold cursor-pointer font-sans border-none" style={{ background: '#28C840', color: 'var(--base)' }}>Download update</button>
+          <button onClick={installUpdate} className="px-[14px] py-[4px] rounded-[5px] text-[10px] font-semibold cursor-pointer font-sans border-none" style={{ background: '#28C840', color: 'var(--base)' }}>Restart & update</button>
         </div>
       </div>
     );

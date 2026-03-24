@@ -8,6 +8,7 @@ import { MemoryStore } from './memory-store';
 import * as pro from './pro-bridge';
 import { SFTPUploadManager } from './sftp-upload-manager';
 import { isMac } from './utils/platform';
+import { initAutoUpdater } from './auto-updater';
 
 let mainWindow: BrowserWindow | null = null;
 const allWindows = new Set<BrowserWindow>();
@@ -502,6 +503,9 @@ app.whenReady().then(async () => {
       watcher.feed(sessionId, data, server);
     });
   }
+
+  // Auto-updater (checks GitHub Releases for new versions)
+  initAutoUpdater(mainWindow);
 
   // Periodic license enforcement (every 6 hours)
   pro.enforceLicenseExpiry(mainWindow);

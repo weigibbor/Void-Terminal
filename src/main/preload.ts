@@ -164,6 +164,13 @@ contextBridge.exposeInMainWorld('void', {
     restart: () => ipcRenderer.send("app:relaunch"),
     getFilePath: (file: File) => webUtils.getPathForFile(file),
     checkForUpdates: (currentVersion: string) => ipcRenderer.invoke('app:checkUpdates', currentVersion),
+    updaterCheck: () => ipcRenderer.invoke('updater:check'),
+    updaterDownload: () => ipcRenderer.invoke('updater:download'),
+    updaterInstall: () => ipcRenderer.send('updater:install'),
+    onUpdaterAvailable: (cb: (data: any) => void) => { const h = (_e: unknown, d: any) => cb(d); ipcRenderer.on('updater:available', h); return () => ipcRenderer.removeListener('updater:available', h); },
+    onUpdaterProgress: (cb: (data: any) => void) => { const h = (_e: unknown, d: any) => cb(d); ipcRenderer.on('updater:progress', h); return () => ipcRenderer.removeListener('updater:progress', h); },
+    onUpdaterDownloaded: (cb: (data: any) => void) => { const h = (_e: unknown, d: any) => cb(d); ipcRenderer.on('updater:downloaded', h); return () => ipcRenderer.removeListener('updater:downloaded', h); },
+    onUpdaterError: (cb: (data: any) => void) => { const h = (_e: unknown, d: any) => cb(d); ipcRenderer.on('updater:error', h); return () => ipcRenderer.removeListener('updater:error', h); },
     detachTab: (tabData: any, screenX: number, screenY: number) => ipcRenderer.invoke('app:detachTab', tabData, screenX, screenY),
     onReceiveTab: (cb: (tabData: any) => void) => {
       const handler = (_e: unknown, data: any) => cb(data);
