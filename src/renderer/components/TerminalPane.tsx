@@ -63,18 +63,23 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
     return () => { onScroll.dispose(); onWrite.dispose(); };
   }, [terminalRef.current]);
 
-  // Listen for AI error explanations — once dismissed, don't show same error again
+  // Listen for AI error explanations — once dismissed, don't show again
   const dismissedErrorsRef = useRef(new Set<string>());
+  const lastDismissTimeRef = useRef(0);
   useEffect(() => {
     if (!isPro) return;
     return window.void.ai.onErrorExplanation?.((data: any) => {
       if (!data?.explanation) return;
-      // Don't show if this exact explanation was already dismissed
-      const key = data.explanation.substring(0, 50);
+      // Don't show within 60 seconds of last dismiss
+      if (Date.now() - lastDismissTimeRef.current < 60000) return;
+      // Don't show if already showing one
+      if (aiExplanation) return;
+      // Don't show if this explanation was dismissed before
+      const key = data.explanation.substring(0, 80);
       if (dismissedErrorsRef.current.has(key)) return;
       setAiExplanation({ explanation: data.explanation, suggestedCommand: data.suggestedCommand });
     });
-  }, [isPro]);
+  }, [isPro, aiExplanation]);
 
   // Listen for port detection from watcher
   useEffect(() => {
@@ -332,7 +337,8 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
           suggestedCommand={aiExplanation.suggestedCommand}
           onRun={(cmd) => { sendToSession(cmd); setAiExplanation(null); }}
           onDismiss={() => {
-            if (aiExplanation) dismissedErrorsRef.current.add(aiExplanation.explanation.substring(0, 50));
+            if (aiExplanation) dismissedErrorsRef.current.add(aiExplanation.explanation.substring(0, 80));
+            lastDismissTimeRef.current = Date.now();
             setAiExplanation(null);
           }}
         />
