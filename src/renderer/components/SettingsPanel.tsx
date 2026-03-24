@@ -369,7 +369,7 @@ function AISettings() {
 
       {/* Security note */}
       <div className="p-[10px] rounded-[6px] text-[9px] text-void-text-muted" style={{ background: 'rgba(40,200,64,0.04)', border: '0.5px solid rgba(40,200,64,0.1)' }}>
-        <strong className="text-status-online">All data stays local.</strong> AI memory stored at ~/.void/memory/. API key encrypted at ~/.config/void-terminal/. Nothing leaves your machine.
+        <strong className="text-status-online">All data stays local.</strong> AI memory stored at ~/.void/memory/. API key encrypted at ~/.void/. AI calls go directly to your provider — nothing is sent to Void Terminal servers.
       </div>
     </div>
   );
