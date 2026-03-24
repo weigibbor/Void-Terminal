@@ -1,6 +1,6 @@
 {
   "name": "void-terminal",
-  "version": "0.1.9",
+  "version": "0.2.0",
   "description": "The terminal that thinks. AI-powered SSH client.",
   "author": "GE Labs <dev@gelabs.dev>",
   "license": "MIT",

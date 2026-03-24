@@ -23,17 +23,31 @@ export function UpdateBar() {
   };
 
   const startDownload = async () => {
-    useAppStore.setState({ updateStatus: 'downloading', downloadProgress: 0 });
-    // Use electron-updater for real auto-download
-    const result = await (window.void.app as any).updaterDownload?.();
-    if (result && !result.success) {
-      useAppStore.setState({ updateStatus: 'failed', updateError: result.error || 'Download failed' });
+    const platform = await window.void.app.getPlatform();
+    if (platform === 'darwin') {
+      // macOS: open GitHub Releases for manual DMG download (zip auto-install breaks code signing)
+      window.open(`https://github.com/weigibbor/Void-Terminal/releases/tag/v${version}`, '_blank');
+      dismiss();
+    } else {
+      // Windows: auto-download via electron-updater
+      useAppStore.setState({ updateStatus: 'downloading', downloadProgress: 0 });
+      const result = await (window.void.app as any).updaterDownload?.();
+      if (result && !result.success) {
+        useAppStore.setState({ updateStatus: 'failed', updateError: result.error || 'Download failed' });
+      }
     }
   };
 
-  const installUpdate = () => {
-    // Quit and install the downloaded update
-    (window.void.app as any).updaterInstall?.();
+  const installUpdate = async () => {
+    const platform = await window.void.app.getPlatform();
+    if (platform === 'darwin') {
+      // macOS: open GitHub Releases
+      window.open(`https://github.com/weigibbor/Void-Terminal/releases/tag/v${version}`, '_blank');
+      dismiss();
+    } else {
+      // Windows: quit and install
+      (window.void.app as any).updaterInstall?.();
+    }
   };
 
   const dismiss = () => {
@@ -44,7 +58,7 @@ export function UpdateBar() {
   const retry = async () => {
     useAppStore.setState({ updateStatus: 'idle', updateError: null });
     try {
-      const data = await window.void.app.checkForUpdates('0.1.9');
+      const data = await window.void.app.checkForUpdates('0.2.0');
       if (data.error) throw new Error(data.error);
       if (data.update) {
         useAppStore.setState({
@@ -93,10 +107,11 @@ export function UpdateBar() {
         {/* Actions */}
         <div className="flex items-center gap-[6px]">
           <button onClick={() => openPatchNotes('preview')} className="text-[10px] text-void-text-dim hover:text-void-text-muted bg-transparent border-none cursor-pointer font-sans">What's new?</button>
-          <span className="text-[10px] text-void-text-dim font-sans flex items-center gap-[4px]">
-            <svg width="10" height="10" viewBox="0 0 16 16" fill="none" className="animate-spin" style={{ animationDuration: '1.2s' }}><circle cx="8" cy="8" r="5.5" stroke="#2A2A30" strokeWidth="1.5" /><path d="M8 2.5a5.5 5.5 0 014.5 2.5" stroke="#F97316" strokeWidth="1.5" strokeLinecap="round" /></svg>
-            Downloading...
-          </span>
+          <button onClick={startDownload}
+            className="px-[14px] py-[4px] rounded-[5px] text-[10px] font-semibold cursor-pointer font-sans border-none"
+            style={{ background: required ? '#FEBC2E' : '#F97316', color: 'var(--base)' }}>
+            Download
+          </button>
           {!required && <button onClick={dismiss} className="text-[14px] text-void-text-ghost hover:text-void-text-muted bg-transparent border-none cursor-pointer leading-none px-1">×</button>}
         </div>
       </motion.div>

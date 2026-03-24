@@ -15,7 +15,9 @@ export function initAutoUpdater(window: BrowserWindow): void {
     console.error('[Updater] Failed to set feed URL:', err);
   }
 
-  autoUpdater.autoDownload = true;
+  // macOS: don't auto-download (zip extraction breaks code signature)
+  // Windows: auto-download works fine
+  autoUpdater.autoDownload = process.platform !== 'darwin';
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.allowDowngrade = false;
 
