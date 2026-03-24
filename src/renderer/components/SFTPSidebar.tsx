@@ -20,7 +20,7 @@ function formatSize(b: number): string {
   if (b < 1024) return `${b}b`; if (b < 1048576) return `${(b/1024).toFixed(1)}kb`; return `${(b/1048576).toFixed(1)}mb`;
 }
 
-export function SFTPSidebar() {
+export function SFTPSidebar({ width = 240 }: { width?: number }) {
   const sftpCollapsed = useAppStore((s) => s.sftpCollapsed);
   const collapseSFTP = useAppStore((s) => s.collapseSFTP);
   const tabs = useAppStore((s) => s.tabs);
@@ -146,7 +146,7 @@ export function SFTPSidebar() {
 
   // Expanded state
   return (
-    <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 240, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
+    <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
       transition={{ duration: duration.smooth, ease: easing.enter }}
       className="bg-void-input flex flex-col shrink-0 overflow-hidden" style={{ borderRight: '0.5px solid #2A2A30' }}
       onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}

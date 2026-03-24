@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAppStore } from './stores/app-store';
 import { useKeyboard } from './hooks/useKeyboard';
@@ -40,6 +40,30 @@ export function App() {
   const setActiveModal = useAppStore((s) => s.setActiveModal);
 
   const [showProWelcome, setShowProWelcome] = useState(false);
+  const [sftpWidth, setSftpWidth] = useState(() => parseInt(localStorage.getItem('void-sftp-width') || '240'));
+  const sftpDragRef = useRef(false);
+
+  const handleSftpDrag = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    sftpDragRef.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    const onMove = (ev: MouseEvent) => {
+      const newWidth = Math.max(180, Math.min(500, ev.clientX));
+      setSftpWidth(newWidth);
+      localStorage.setItem('void-sftp-width', String(newWidth));
+      window.dispatchEvent(new Event('resize'));
+    };
+    const onUp = () => {
+      sftpDragRef.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, []);
 
   useEffect(() => {
     loadSavedConnections();
@@ -158,10 +182,26 @@ export function App() {
       )}
 
       <div className="flex-1 flex min-h-0">
-        {/* SFTP sidebar — LEFT */}
+        {/* SFTP sidebar — LEFT (resizable) */}
         <AnimatePresence>
-          {sftpOpen && <SFTPSidebar />}
+          {sftpOpen && <SFTPSidebar width={sftpWidth} />}
         </AnimatePresence>
+
+        {/* SFTP resize divider */}
+        {sftpOpen && (
+          <div
+            className="shrink-0 cursor-col-resize"
+            style={{ width: '6px', zIndex: 20, position: 'relative' }}
+            onMouseDown={handleSftpDrag}
+          >
+            <div style={{
+              position: 'absolute', width: '1px', height: '100%',
+              left: '50%', transform: 'translateX(-50%)',
+              background: sftpDragRef.current ? '#F97316' : '#2A2A30',
+              transition: 'background 150ms',
+            }} />
+          </div>
+        )}
 
         <motion.div className="flex-1 flex min-h-0 overflow-hidden" layout transition={{ duration: duration.smooth, ease: easing.standard }}>
           {settingsOpen ? (
