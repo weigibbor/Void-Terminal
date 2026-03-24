@@ -54,14 +54,15 @@ export function BrowserPane({ tab }: { tab: Tab }) {
       </div>
 
       {/* Webview */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0" style={{ position: 'relative' }}>
         {tab.browserUrl ? (
           <webview
             src={tab.browserUrl}
-            className="w-full h-full"
             // @ts-expect-error webview is an Electron-specific element
+            style={{ width: '100%', height: '100%', display: 'inline-flex' }}
             allowpopups="true"
-            webpreferences="allowRunningInsecureContent=true"
+            partition="persist:browser"
+            webpreferences="allowRunningInsecureContent=true, contextIsolation=false"
           />
         ) : (
           <div className="flex items-center justify-center h-full text-void-text-ghost text-sm">

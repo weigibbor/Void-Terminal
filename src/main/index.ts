@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, session } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { SSHManager } from './ssh-manager';
@@ -55,9 +55,14 @@ function createWindow(options?: { width?: number; height?: number; x?: number; y
     delete headers['Content-Security-Policy'];
     callback({ cancel: false, responseHeaders: headers });
   });
-  // Allow all permissions in webview (camera, mic, etc. for dev testing)
+  // Allow all permissions in webview
   win.webContents.session.setPermissionRequestHandler((_webContents, _permission, callback) => {
     callback(true);
+  });
+
+  // Allow webview to navigate to any URL
+  win.webContents.on('will-attach-webview', (_event, webPreferences, _params) => {
+    webPreferences.allowRunningInsecureContent = true;
   });
 
   win.once('ready-to-show', () => {
@@ -495,6 +500,20 @@ function registerIPCHandlers(): void {
 }
 
 app.whenReady().then(async () => {
+  // Set up browser webview partition — allow all URLs including IPs
+  const browserSession = session.fromPartition('persist:browser');
+  browserSession.webRequest.onHeadersReceived((details, callback) => {
+    const headers = { ...details.responseHeaders };
+    delete headers['x-frame-options'];
+    delete headers['X-Frame-Options'];
+    delete headers['content-security-policy'];
+    delete headers['Content-Security-Policy'];
+    callback({ cancel: false, responseHeaders: headers });
+  });
+  browserSession.setPermissionRequestHandler((_webContents, _permission, callback) => {
+    callback(true);
+  });
+
   // Initialize stores
   connectionStore = new ConnectionStore();
   memoryStore = new MemoryStore();
