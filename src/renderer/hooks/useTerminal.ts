@@ -24,10 +24,6 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter }: Us
   const sessionTypeRef = useRef(sessionType);
   const onDataRef = useRef(onData);
   const commandBufferRef = useRef('');
-  const pendingDangerRef = useRef<{ command: string; resolve: (send: boolean) => void } | null>(null);
-  const ghostTextRef = useRef('');
-  const ghostDecorRef = useRef<any>(null);
-  const autocompleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const commandHistoryRef = useRef<string[]>([]);
   const onShiftEnterRef = useRef(onShiftEnter);
   sessionIdRef.current = sessionId;
@@ -55,46 +51,6 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter }: Us
     fitAddonRef.current = fitAddon;
     searchAddonRef.current = searchAddon;
 
-    // Ghost text helpers
-    const clearGhostText = () => {
-      if (ghostTextRef.current) {
-        // Erase the ghost text by writing backspaces + spaces
-        const len = ghostTextRef.current.length;
-        terminal.write('\x1b[0m' + '\b \b'.repeat(len));
-        ghostTextRef.current = '';
-      }
-    };
-
-    const showGhostText = (suggestion: string) => {
-      if (!suggestion || suggestion === 'null') return;
-      clearGhostText();
-      ghostTextRef.current = suggestion;
-      // Write in very dim color (gray)
-      terminal.write(`\x1b[90m${suggestion}\x1b[0m`);
-      // Move cursor back to where it was
-      terminal.write(`\x1b[${suggestion.length}D`);
-    };
-
-    const requestAutocomplete = () => {
-      if (autocompleteTimerRef.current) clearTimeout(autocompleteTimerRef.current);
-      autocompleteTimerRef.current = setTimeout(async () => {
-        const { isPro } = useAppStore.getState();
-        if (!isPro) return;
-        const cmd = commandBufferRef.current;
-        if (cmd.length < 2) return;
-        try {
-          const suggestion = await window.void.ai.autocomplete(cmd, commandHistoryRef.current);
-          if (suggestion && suggestion !== 'null' && suggestion.startsWith(cmd)) {
-            // Only show the part after what's already typed
-            const remaining = suggestion.substring(cmd.length);
-            if (remaining && commandBufferRef.current === cmd) {
-              showGhostText(remaining);
-            }
-          }
-        } catch { /* ignore */ }
-      }, 600);
-    };
-
     const sendData = (data: string) => {
       const sid = sessionIdRef.current;
       const stype = sessionTypeRef.current;
@@ -120,61 +76,35 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter }: Us
       }
     };
 
-    // Handle user input — send immediately, process async
+    // Handle user input — zero overhead, send immediately like native terminal
     terminal.onData((data) => {
-      // Tab — accept ghost text
-      if (data === '\t' && ghostTextRef.current) {
-        const ghost = ghostTextRef.current;
-        clearGhostText();
-        commandBufferRef.current += ghost;
-        sendData(ghost);
-        onDataRef.current?.(data);
-        return;
-      }
-
-      if (ghostTextRef.current) clearGhostText();
-
-      // SEND IMMEDIATELY — zero delay, no processing before this
+      // Send to SSH/PTY immediately — no processing before this
       sendData(data);
 
-      // All processing below is async — never blocks the keystroke
-      queueMicrotask(() => {
-        if (data === '\r') {
-          const command = commandBufferRef.current.trim();
-          if (command) commandHistoryRef.current.push(command);
-          commandBufferRef.current = '';
+      // Lightweight buffer tracking (no API calls, no timers)
+      if (data === '\r') {
+        const command = commandBufferRef.current.trim();
+        if (command) commandHistoryRef.current.push(command);
+        commandBufferRef.current = '';
 
-          const { isPro } = useAppStore.getState();
-
-          // NLP ? prefix
-          if (isPro && command.startsWith('?') && command.length > 1) {
-            const query = command.substring(1).trim();
-            window.void.ai.naturalLanguage(query, sessionIdRef.current || 'local').then((result: any) => {
-              if (result?.command) {
-                terminal.write(`\r\n\x1b[36m  → ${result.command}\x1b[0m`);
-                terminal.write(`\r\n\x1b[90m    ${result.explanation}\x1b[0m\r\n`);
-              }
-            });
-          }
-
-          // Danger check
-          if (isPro && command.length > 2) {
-            window.void.ai.checkDanger(command, sessionIdRef.current || 'local').then((result: any) => {
-              if (result?.isDangerous) {
-                terminal.write(`\r\n\x1b[31m  ⚠ DANGER: ${result.reason}\x1b[0m\r\n`);
-              }
-            });
-          }
-        } else if (data === '\x7f') {
-          commandBufferRef.current = commandBufferRef.current.slice(0, -1);
-        } else if (data === '\x03') {
-          commandBufferRef.current = '';
-        } else if (data.length === 1 && data.charCodeAt(0) >= 32) {
-          commandBufferRef.current += data;
-          const { isPro } = useAppStore.getState();
-          if (isPro) requestAutocomplete();
+        // NLP ? prefix — only feature that runs on Enter
+        const { isPro } = useAppStore.getState();
+        if (isPro && command.startsWith('?') && command.length > 1) {
+          const query = command.substring(1).trim();
+          window.void.ai.naturalLanguage(query, sessionIdRef.current || 'local').then((result: any) => {
+            if (result?.command) {
+              terminal.write(`\r\n\x1b[36m  → ${result.command}\x1b[0m`);
+              terminal.write(`\r\n\x1b[90m    ${result.explanation}\x1b[0m\r\n`);
+            }
+          });
         }
-      });
+      } else if (data === '\x7f') {
+        commandBufferRef.current = commandBufferRef.current.slice(0, -1);
+      } else if (data === '\x03') {
+        commandBufferRef.current = '';
+      } else if (data.length === 1 && data.charCodeAt(0) >= 32) {
+        commandBufferRef.current += data;
+      }
 
       onDataRef.current?.(data);
     });

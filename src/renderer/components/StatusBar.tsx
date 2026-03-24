@@ -18,7 +18,7 @@ export function StatusBar() {
   const pausedCount = pausedTabs.length;
 
   useEffect(() => {
-    const interval = setInterval(() => setElapsed(Date.now() - sessionStartTime), 1000);
+    const interval = setInterval(() => setElapsed(Date.now() - sessionStartTime), 30000);
     return () => clearInterval(interval);
   }, [sessionStartTime]);
 
@@ -74,7 +74,7 @@ export function StatusBar() {
         {isPro && (
           aiConfigured ? (
             <span className="flex items-center gap-[5px] text-accent">
-              <span className="inline-block w-[5px] h-[5px] rounded-full bg-accent void-pulse-slow" />
+              <span className="inline-block w-[5px] h-[5px] rounded-full bg-accent" />
               AI watching
             </span>
           ) : (
@@ -96,7 +96,7 @@ export function StatusBar() {
             className="flex items-center gap-[4px] text-[#C586C0] cursor-pointer"
             onClick={() => useAppStore.getState().toggleBroadcast()}
           >
-            <span className="inline-block w-[5px] h-[5px] rounded-full bg-[#C586C0] void-pulse-slow" />
+            <span className="inline-block w-[5px] h-[5px] rounded-full bg-[#C586C0]" />
             BROADCAST
           </span>
         )}

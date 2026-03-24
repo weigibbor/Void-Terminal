@@ -291,9 +291,9 @@ export class SSHManager {
         }
       });
     };
-    // Initial probe after 1s, then every 15s
-    setTimeout(probe, 1000);
-    session.latencyTimer = setInterval(probe, 15000);
+    // Initial probe after 3s, then every 60s (saves energy vs 15s)
+    setTimeout(probe, 3000);
+    session.latencyTimer = setInterval(probe, 60000);
   }
 
   private stopLatencyProbe(session: SSHSession): void {

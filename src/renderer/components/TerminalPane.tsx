@@ -1,10 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTerminal } from '../hooks/useTerminal';
 import { useAppStore, getPaneLabel } from '../stores/app-store';
 import { SearchBar } from './SearchBar';
 import { MultiLineInput } from './MultiLineInput';
 import { ContextMenu } from './ContextMenu';
-import { AIInlineSuggestion } from './pro/AIInlineSuggestion';
 import { DeployCopilot } from './pro/DeployCopilot';
 import type { ContextMenuItem } from './ContextMenu';
 import type { Tab } from '../types';
@@ -29,7 +28,6 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
   const [searchOpen, setSearchOpen] = useState(false);
   const [multiLineOpen, setMultiLineOpen] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
-  const [aiExplanation, setAiExplanation] = useState<{ explanation: string; suggestedCommand?: string } | null>(null);
   const [detectedPort, setDetectedPort] = useState<number | null>(null);
   const isPro = useAppStore((s) => s.isPro);
 
@@ -63,30 +61,7 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
     return () => { onScroll.dispose(); onWrite.dispose(); };
   }, [terminalRef.current]);
 
-  // Re-fit terminal when AI card appears/disappears to prevent dual cursor
-  useEffect(() => {
-    setTimeout(() => fit(), 50);
-  }, [aiExplanation, fit]);
-
-  // Listen for AI error explanations — once dismissed, don't show again
-  const dismissedErrorsRef = useRef(new Set<string>());
-  const lastDismissTimeRef = useRef(0);
-  useEffect(() => {
-    if (!isPro) return;
-    return window.void.ai.onErrorExplanation?.((data: any) => {
-      if (!data?.explanation) return;
-      // Check if user disabled error suggestions
-      if (localStorage.getItem('void-ai-error-suggestions') === 'false') return;
-      // Don't show within 60 seconds of last dismiss
-      if (Date.now() - lastDismissTimeRef.current < 60000) return;
-      // Don't show if already showing one
-      if (aiExplanation) return;
-      // Don't show if this explanation was dismissed before
-      const key = data.explanation.substring(0, 80);
-      if (dismissedErrorsRef.current.has(key)) return;
-      setAiExplanation({ explanation: data.explanation, suggestedCommand: data.suggestedCommand });
-    });
-  }, [isPro, aiExplanation]);
+  // AI error explainer removed — energy optimization
 
   // Listen for port detection from watcher
   useEffect(() => {
@@ -337,19 +312,7 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
         </div>
       )}
 
-      {/* AI error explainer */}
-      {aiExplanation && isPro && (
-        <AIInlineSuggestion
-          explanation={aiExplanation.explanation}
-          suggestedCommand={aiExplanation.suggestedCommand}
-          onRun={(cmd) => { sendToSession(cmd); setAiExplanation(null); }}
-          onDismiss={() => {
-            if (aiExplanation) dismissedErrorsRef.current.add(aiExplanation.explanation.substring(0, 80));
-            lastDismissTimeRef.current = Date.now();
-            setAiExplanation(null);
-          }}
-        />
-      )}
+      {/* AI error explainer removed — energy optimization */}
 
       {/* Multi-line input (Shift+Enter) */}
       <MultiLineInput

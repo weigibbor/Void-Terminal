@@ -80,7 +80,7 @@ export function App() {
   useEffect(() => {
     const checkUpdate = async () => {
       try {
-        const currentVersion = '0.1.7';
+        const currentVersion = '0.1.8';
         const data = await window.void.app.checkForUpdates(currentVersion);
         if (data.update) {
           const lastSeen = localStorage.getItem('last-seen-changelog');
@@ -106,8 +106,7 @@ export function App() {
       } catch { /* offline, skip */ }
     };
     checkUpdate();
-    const interval = setInterval(checkUpdate, 6 * 60 * 60 * 1000);
-    return () => clearInterval(interval);
+    // No interval — main process auto-updater handles periodic checks
   }, []);
 
   // Listen for detached tabs from other windows
@@ -235,7 +234,7 @@ export function App() {
           </div>
         )}
 
-        <motion.div className="flex-1 flex min-h-0 overflow-hidden" layout transition={{ duration: duration.smooth, ease: easing.standard }}>
+        <div className="flex-1 flex min-h-0 overflow-hidden">
           {settingsOpen ? (
             <SettingsPanel />
           ) : tabs.length === 0 ? (
@@ -243,7 +242,7 @@ export function App() {
           ) : (
             <SplitView />
           )}
-        </motion.div>
+        </div>
 
         {/* Right sidebar — Notes / AI Chat tabbed panel */}
         <AnimatePresence mode="wait">
