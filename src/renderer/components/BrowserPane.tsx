@@ -7,9 +7,12 @@ export function BrowserPane({ tab }: { tab: Tab }) {
   const [urlInput, setUrlInput] = useState(tab.browserUrl || '');
 
   const navigate = (url: string) => {
-    let normalized = url;
-    if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('about:')) {
-      normalized = `https://${url}`;
+    let normalized = url.trim();
+    if (!normalized.startsWith('http://') && !normalized.startsWith('https://') && !normalized.startsWith('about:')) {
+      // Use http:// for IPs and localhost (dev servers), https:// for domains
+      const isIP = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/.test(normalized);
+      const isLocalhost = normalized.startsWith('localhost') || normalized.startsWith('127.0.0.1');
+      normalized = (isIP || isLocalhost) ? `http://${normalized}` : `https://${normalized}`;
     }
     updateTab(tab.id, { browserUrl: normalized });
     setUrlInput(normalized);
