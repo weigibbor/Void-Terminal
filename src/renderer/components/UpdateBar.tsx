@@ -44,7 +44,7 @@ export function UpdateBar() {
   const retry = async () => {
     useAppStore.setState({ updateStatus: 'idle', updateError: null });
     try {
-      const data = await window.void.app.checkForUpdates('0.1.6');
+      const data = await window.void.app.checkForUpdates('0.1.7');
       if (data.error) throw new Error(data.error);
       if (data.update) {
         useAppStore.setState({
@@ -93,11 +93,10 @@ export function UpdateBar() {
         {/* Actions */}
         <div className="flex items-center gap-[6px]">
           <button onClick={() => openPatchNotes('preview')} className="text-[10px] text-void-text-dim hover:text-void-text-muted bg-transparent border-none cursor-pointer font-sans">What's new?</button>
-          <button onClick={startDownload}
-            className="px-[14px] py-[4px] rounded-[5px] text-[10px] font-semibold cursor-pointer font-sans border-none"
-            style={{ background: required ? '#FEBC2E' : '#F97316', color: 'var(--base)' }}>
-            {required ? 'Update now' : 'Download'}
-          </button>
+          <span className="text-[10px] text-void-text-dim font-sans flex items-center gap-[4px]">
+            <svg width="10" height="10" viewBox="0 0 16 16" fill="none" className="animate-spin" style={{ animationDuration: '1.2s' }}><circle cx="8" cy="8" r="5.5" stroke="#2A2A30" strokeWidth="1.5" /><path d="M8 2.5a5.5 5.5 0 014.5 2.5" stroke="#F97316" strokeWidth="1.5" strokeLinecap="round" /></svg>
+            Downloading...
+          </span>
           {!required && <button onClick={dismiss} className="text-[14px] text-void-text-ghost hover:text-void-text-muted bg-transparent border-none cursor-pointer leading-none px-1">×</button>}
         </div>
       </motion.div>

@@ -587,7 +587,7 @@ function AboutSection() {
     setChecking(true);
     useAppStore.setState({ updateStatus: 'idle', updateError: null });
     try {
-      const data = await (window as any).void.app.checkForUpdates('0.1.6');
+      const data = await (window as any).void.app.checkForUpdates('0.1.7');
       if (data.error) throw new Error(data.error);
       setLastChecked(new Date());
       if (data.update) {
@@ -628,7 +628,7 @@ function AboutSection() {
         <div>
           <div className="text-[16px] text-void-text font-bold font-mono" style={{ letterSpacing: '-0.5px' }}>void terminal</div>
           <div className="flex items-center gap-2 mt-[2px] text-[12px] text-void-text-dim font-mono">
-            v0.1.6
+            v0.1.7
             {isPro && <span className="text-[8px] font-bold text-accent px-2 py-[2px] rounded-[4px]" style={{ background: 'rgba(249,115,22,0.08)', border: '0.5px solid rgba(249,115,22,0.15)' }}>PRO</span>}
             <span className="text-[8px] font-bold text-status-online px-2 py-[2px] rounded-[4px]" style={{ background: 'rgba(40,200,64,0.06)', border: '0.5px solid rgba(40,200,64,0.1)' }}>STABLE</span>
           </div>
@@ -685,7 +685,7 @@ function AboutSection() {
           {updateStatus === 'available' ? (
             <button onClick={startDownload} className="px-[18px] py-[8px] rounded-[6px] text-[11px] font-semibold cursor-pointer font-sans border-none" style={{ background: '#F97316', color: 'var(--base)' }}>Download v{updateVersion}</button>
           ) : updateStatus === 'ready' ? (
-            <button onClick={() => window.void.app.restart()} className="px-[18px] py-[8px] rounded-[6px] text-[11px] font-semibold cursor-pointer font-sans border-none" style={{ background: '#28C840', color: 'var(--base)' }}>Restart now</button>
+            <button onClick={() => (window.void.app as any).updaterInstall?.()} className="px-[18px] py-[8px] rounded-[6px] text-[11px] font-semibold cursor-pointer font-sans border-none" style={{ background: '#28C840', color: 'var(--base)' }}>Restart & update</button>
           ) : updateStatus === 'downloading' ? (
             <button className="text-[10px] text-status-error bg-transparent border-none cursor-pointer font-sans" onClick={() => useAppStore.setState({ updateStatus: 'available' })}>Cancel</button>
           ) : (

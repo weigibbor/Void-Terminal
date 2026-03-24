@@ -1,6 +1,6 @@
 {
   "name": "void-terminal",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "The terminal that thinks. AI-powered SSH client.",
   "author": "GE Labs <dev@gelabs.dev>",
   "license": "MIT",
@@ -51,10 +51,11 @@
       "target": [
         {
           "target": "dmg",
-          "arch": [
-            "arm64",
-            "x64"
-          ]
+          "arch": ["arm64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["arm64"]
         }
       ],
       "icon": "build/icon.icns",

@@ -15,7 +15,7 @@ export function initAutoUpdater(window: BrowserWindow): void {
     console.error('[Updater] Failed to set feed URL:', err);
   }
 
-  autoUpdater.autoDownload = false;
+  autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.allowDowngrade = false;
 
