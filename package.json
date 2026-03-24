@@ -1,6 +1,6 @@
 {
   "name": "void-terminal",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "The terminal that thinks. AI-powered SSH client.",
   "author": "GE Labs <dev@gelabs.dev>",
   "license": "MIT",
@@ -41,6 +41,10 @@
           "*.js",
           "*.d.ts"
         ]
+      },
+      {
+        "from": "build/app-update.yml",
+        "to": "app-update.yml"
       }
     ],
     "mac": {

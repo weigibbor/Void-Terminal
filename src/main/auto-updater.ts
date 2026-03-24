@@ -5,6 +5,16 @@ export function initAutoUpdater(window: BrowserWindow): void {
   // Don't check in dev mode
   if (process.env.VITE_DEV_SERVER_URL) return;
 
+  try {
+    autoUpdater.setFeedURL({
+      provider: 'github',
+      owner: 'weigibbor',
+      repo: 'Void-Terminal',
+    });
+  } catch (err) {
+    console.error('[Updater] Failed to set feed URL:', err);
+  }
+
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.allowDowngrade = false;
