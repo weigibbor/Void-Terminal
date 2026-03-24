@@ -62,7 +62,12 @@ export function initAutoUpdater(window: BrowserWindow): void {
 
   autoUpdater.on('error', (err) => {
     console.error('[Updater] Error:', err.message);
-    send('updater:error', { message: err.message });
+    // Don't show error to user for missing yml files or network issues during auto-check
+    // Only propagate errors during explicit user-triggered downloads
+    const isMissingYml = err.message?.includes('yml') || err.message?.includes('ENOENT') || err.message?.includes('404') || err.message?.includes('net::');
+    if (!isMissingYml) {
+      send('updater:error', { message: err.message });
+    }
   });
 
   // IPC handlers

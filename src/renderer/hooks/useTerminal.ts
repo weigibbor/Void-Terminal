@@ -298,9 +298,27 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter }: Us
       }
     };
 
+    // Batch writes with requestAnimationFrame to prevent scroll flicker
+    let writeBuffer = '';
+    let rafPending = false;
+    const flushWrite = () => {
+      if (writeBuffer && terminalRef.current) {
+        terminalRef.current.write(writeBuffer);
+        writeBuffer = '';
+      }
+      rafPending = false;
+    };
+    const batchWrite = (data: string) => {
+      writeBuffer += data;
+      if (!rafPending) {
+        rafPending = true;
+        requestAnimationFrame(flushWrite);
+      }
+    };
+
     if (sessionType === 'ssh') {
       unsub = window.void.ssh.onData(sessionId, (data) => {
-        terminalRef.current?.write(data);
+        batchWrite(data);
         checkWatchRules(data);
       });
       // Replay buffered data — watch rules suppressed during replay
@@ -311,7 +329,7 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter }: Us
       });
     } else {
       unsub = window.void.pty.onData(sessionId, (data) => {
-        terminalRef.current?.write(data);
+        batchWrite(data);
         checkWatchRules(data);
       });
     }

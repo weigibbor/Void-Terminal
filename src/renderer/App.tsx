@@ -80,7 +80,7 @@ export function App() {
   useEffect(() => {
     const checkUpdate = async () => {
       try {
-        const currentVersion = '0.1.5';
+        const currentVersion = '0.1.6';
         const data = await window.void.app.checkForUpdates(currentVersion);
         if (data.update) {
           const lastSeen = localStorage.getItem('last-seen-changelog');
@@ -133,6 +133,9 @@ export function App() {
     const app = window.void.app as any;
 
     unsubs.push(app.onUpdaterAvailable?.((data: any) => {
+      // Only set if custom API hasn't already detected this update
+      const current = useAppStore.getState();
+      if (current.updateStatus === 'available' && current.updateVersion === data.version) return; // already detected
       useAppStore.setState({
         updateStatus: 'available', updateVersion: data.version,
         updateDismissed: localStorage.getItem('void-update-dismissed') === data.version,

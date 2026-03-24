@@ -40,11 +40,32 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Generate latest.yml for electron-updater
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          EXE_FILE=$(ls release/*.exe | head -1)
+          EXE_NAME=$(basename "$EXE_FILE")
+          SHA512=$(sha512sum "$EXE_FILE" | cut -d' ' -f1)
+          SIZE=$(stat -c%s "$EXE_FILE" 2>/dev/null || stat -f%z "$EXE_FILE")
+          cat > release/latest.yml << EOF
+          version: ${VERSION}
+          files:
+            - url: ${EXE_NAME}
+              sha512: ${SHA512}
+              size: ${SIZE}
+          path: ${EXE_NAME}
+          sha512: ${SHA512}
+          releaseDate: $(date -u +%Y-%m-%dT%H:%M:%S.000Z)
+          EOF
+
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.version }}
-          files: release/*.exe
+          files: |
+            release/*.exe
+            release/latest.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

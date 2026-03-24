@@ -367,6 +367,26 @@ function AISettings() {
         ))}
       </div>
 
+      {/* Inline error suggestions toggle */}
+      <div className="flex items-center justify-between p-[10px] bg-void-surface rounded-[6px]" style={{ border: '0.5px solid #1A1A1E' }}>
+        <div>
+          <div className="text-[11px] text-void-text">Show inline error suggestions</div>
+          <div className="text-[9px] text-void-text-dim mt-[1px]">VOID AI cards that appear below the terminal when errors are detected</div>
+        </div>
+        <button
+          onClick={() => {
+            const current = localStorage.getItem('void-ai-error-suggestions') !== 'false';
+            localStorage.setItem('void-ai-error-suggestions', current ? 'false' : 'true');
+            saveConfig({ ...config });
+          }}
+          className={`relative w-8 h-[18px] rounded-[9px] shrink-0 ${localStorage.getItem('void-ai-error-suggestions') !== 'false' ? 'bg-accent' : 'bg-void-border'}`}
+          style={{ transition: 'background-color 200ms ease' }}
+        >
+          <span className={`absolute top-[2px] w-[14px] h-[14px] bg-white rounded-full ${localStorage.getItem('void-ai-error-suggestions') !== 'false' ? 'right-[2px]' : 'left-[2px]'}`}
+            style={{ transition: 'all 200ms cubic-bezier(0.34, 1.56, 0.64, 1)' }} />
+        </button>
+      </div>
+
       {/* Security note */}
       <div className="p-[10px] rounded-[6px] text-[9px] text-void-text-muted" style={{ background: 'rgba(40,200,64,0.04)', border: '0.5px solid rgba(40,200,64,0.1)' }}>
         <strong className="text-status-online">All data stays local.</strong> AI memory stored at ~/.void/memory/. API key encrypted at ~/.void/. AI calls go directly to your provider — nothing is sent to Void Terminal servers.
@@ -567,7 +587,7 @@ function AboutSection() {
     setChecking(true);
     useAppStore.setState({ updateStatus: 'idle', updateError: null });
     try {
-      const data = await (window as any).void.app.checkForUpdates('0.1.5');
+      const data = await (window as any).void.app.checkForUpdates('0.1.6');
       if (data.error) throw new Error(data.error);
       setLastChecked(new Date());
       if (data.update) {
@@ -608,7 +628,7 @@ function AboutSection() {
         <div>
           <div className="text-[16px] text-void-text font-bold font-mono" style={{ letterSpacing: '-0.5px' }}>void terminal</div>
           <div className="flex items-center gap-2 mt-[2px] text-[12px] text-void-text-dim font-mono">
-            v0.1.5
+            v0.1.6
             {isPro && <span className="text-[8px] font-bold text-accent px-2 py-[2px] rounded-[4px]" style={{ background: 'rgba(249,115,22,0.08)', border: '0.5px solid rgba(249,115,22,0.15)' }}>PRO</span>}
             <span className="text-[8px] font-bold text-status-online px-2 py-[2px] rounded-[4px]" style={{ background: 'rgba(40,200,64,0.06)', border: '0.5px solid rgba(40,200,64,0.1)' }}>STABLE</span>
           </div>

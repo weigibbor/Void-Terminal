@@ -37,7 +37,7 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
   const isDisconnected = !tab.connected && !!tab.disconnectedAt;
   const position = getPaneLabel(splitLayout, paneIndex);
 
-  const { containerRef, terminalRef, search, searchNext, searchPrev } = useTerminal({
+  const { containerRef, terminalRef, search, searchNext, searchPrev, fit } = useTerminal({
     sessionId: tab.sessionId,
     sessionType: tab.type === 'ssh' ? 'ssh' : 'local',
     onShiftEnter: () => setMultiLineOpen(true),
@@ -63,6 +63,11 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
     return () => { onScroll.dispose(); onWrite.dispose(); };
   }, [terminalRef.current]);
 
+  // Re-fit terminal when AI card appears/disappears to prevent dual cursor
+  useEffect(() => {
+    setTimeout(() => fit(), 50);
+  }, [aiExplanation, fit]);
+
   // Listen for AI error explanations — once dismissed, don't show again
   const dismissedErrorsRef = useRef(new Set<string>());
   const lastDismissTimeRef = useRef(0);
@@ -70,6 +75,8 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
     if (!isPro) return;
     return window.void.ai.onErrorExplanation?.((data: any) => {
       if (!data?.explanation) return;
+      // Check if user disabled error suggestions
+      if (localStorage.getItem('void-ai-error-suggestions') === 'false') return;
       // Don't show within 60 seconds of last dismiss
       if (Date.now() - lastDismissTimeRef.current < 60000) return;
       // Don't show if already showing one
