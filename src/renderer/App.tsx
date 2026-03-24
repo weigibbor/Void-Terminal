@@ -251,16 +251,9 @@ export function App() {
               animate={{ width: 260, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
-              onAnimationStart={() => {
-                // Trigger terminal re-fit during sidebar animation
-                const fire = () => window.dispatchEvent(new Event('resize'));
-                fire();
-                const t1 = setTimeout(fire, 50);
-                const t2 = setTimeout(fire, 100);
-                const t3 = setTimeout(fire, 150);
-                const t4 = setTimeout(fire, 200);
-                const t5 = setTimeout(fire, 280);
-                return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); clearTimeout(t5); };
+              onAnimationComplete={() => {
+                // Only fit terminal AFTER animation completes — prevents flicker
+                window.dispatchEvent(new Event('resize'));
               }}
               className="shrink-0 flex flex-col overflow-hidden"
               style={{ height: '100%', maxHeight: '100%', borderLeft: '0.5px solid #2A2A30', background: 'var(--input)' }}

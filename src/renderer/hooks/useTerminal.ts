@@ -256,19 +256,35 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter }: Us
 
     // Watch & Alert — match terminal output against saved rules
     let lastNotification = 0;
+    let lastMatchedPattern = '';
+    let suppressWatch = true; // suppress during initial buffer replay
+    // Unsuppress after 2s (buffer replay should be done by then)
+    setTimeout(() => { suppressWatch = false; }, 2000);
+
+    // Suppress watch during resize events
+    const handleResizeSuppress = () => {
+      suppressWatch = true;
+      setTimeout(() => { suppressWatch = false; }, 1000);
+    };
+    window.addEventListener('resize', handleResizeSuppress);
+
     const checkWatchRules = (data: string) => {
+      if (suppressWatch) return;
       const now = Date.now();
-      if (now - lastNotification < 5000) return; // throttle: max 1 notification per 5s
+      if (now - lastNotification < 30000) return; // throttle: max 1 notification per 30s
       try {
         const saved = localStorage.getItem('void-watch-rules');
         if (!saved) return;
         const rules = JSON.parse(saved);
         for (const rule of rules) {
           if (!rule.enabled) continue;
+          // Don't repeat the same pattern notification
+          if (rule.pattern === lastMatchedPattern && now - lastNotification < 120000) continue;
           try {
             const regex = new RegExp(rule.pattern, 'i');
             if (regex.test(data)) {
               lastNotification = now;
+              lastMatchedPattern = rule.pattern;
               new Notification('Void Terminal — Watch Alert', { body: `Pattern matched: ${rule.pattern}`, silent: false });
               break;
             }
@@ -282,6 +298,7 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter }: Us
         terminalRef.current?.write(data);
         checkWatchRules(data);
       });
+      // Replay buffered data — watch rules suppressed during replay
       window.void.ssh.getBuffer(sessionId).then((buffered) => {
         if (buffered && terminalRef.current) {
           terminalRef.current.write(buffered);
@@ -308,7 +325,10 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter }: Us
       } catch { /* ignore */ }
     }
 
-    return unsub;
+    return () => {
+      unsub?.();
+      window.removeEventListener('resize', handleResizeSuppress);
+    };
   }, [sessionId, sessionType]);
 
   const search = (query: string, options?: { regex?: boolean; caseSensitive?: boolean }) => {

@@ -46,6 +46,19 @@ function createWindow(options?: { width?: number; height?: number; x?: number; y
   win.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
     callback({ cancel: false, requestHeaders: details.requestHeaders });
   });
+  // Remove response headers that block content loading in webview
+  win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    const headers = { ...details.responseHeaders };
+    delete headers['x-frame-options'];
+    delete headers['X-Frame-Options'];
+    delete headers['content-security-policy'];
+    delete headers['Content-Security-Policy'];
+    callback({ cancel: false, responseHeaders: headers });
+  });
+  // Allow all permissions in webview (camera, mic, etc. for dev testing)
+  win.webContents.session.setPermissionRequestHandler((_webContents, _permission, callback) => {
+    callback(true);
+  });
 
   win.once('ready-to-show', () => {
     win.show();
