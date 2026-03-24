@@ -1,5 +1,5 @@
 import { autoUpdater } from 'electron-updater';
-import { BrowserWindow, ipcMain } from 'electron';
+import { BrowserWindow, ipcMain, app } from 'electron';
 
 export function initAutoUpdater(window: BrowserWindow): void {
   // Don't check in dev mode
@@ -95,7 +95,9 @@ export function initAutoUpdater(window: BrowserWindow): void {
   }, 5000);
 
   // Check every 6 hours
-  setInterval(() => {
+  const checkInterval = setInterval(() => {
     autoUpdater.checkForUpdates().catch(() => {});
   }, 6 * 60 * 60 * 1000);
+
+  app.on('before-quit', () => clearInterval(checkInterval));
 }

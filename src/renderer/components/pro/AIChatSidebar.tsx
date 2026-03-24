@@ -8,6 +8,7 @@ interface ChatMessage {
 }
 
 // Persist messages outside component so they survive tab switches
+const MAX_MESSAGES = 200;
 let persistedMessages: ChatMessage[] = [];
 
 export function AIChatSidebar() {
@@ -19,7 +20,7 @@ export function AIChatSidebar() {
 
   // Sync to persisted store
   useEffect(() => {
-    persistedMessages = messages;
+    persistedMessages = messages.length > MAX_MESSAGES ? messages.slice(-MAX_MESSAGES) : messages;
   }, [messages]);
 
   // Auto-scroll to bottom on new messages

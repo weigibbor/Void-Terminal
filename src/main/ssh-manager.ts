@@ -104,6 +104,7 @@ export class SSHManager {
           stream.on('data', (data: Buffer) => {
             const str = data.toString();
             session.dataBuffer.push(str);
+            if (session.dataBuffer.length > 5000) session.dataBuffer = session.dataBuffer.slice(-2500);
             this.send(`ssh:data:${sessionId}`, str);
             this.outputCallback?.(sessionId, str, config.host);
           });

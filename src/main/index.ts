@@ -547,13 +547,14 @@ app.whenReady().then(async () => {
 
   // Periodic license enforcement (every 6 hours)
   pro.enforceLicenseExpiry(mainWindow);
-  setInterval(() => {
+  const licenseInterval = setInterval(() => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       pro.enforceLicenseExpiry(mainWindow);
     }
   }, 6 * 60 * 60 * 1000);
 
   mainWindow.on('close', () => {
+    clearInterval(licenseInterval);
     sshManager?.destroyAll();
     ptyManager?.destroyAll();
   });

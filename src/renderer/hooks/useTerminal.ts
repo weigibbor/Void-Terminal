@@ -232,14 +232,17 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter }: Us
     window.addEventListener('resize', debouncedFit);
 
     // Fit again after a short delay (catches layout shifts after mount)
-    setTimeout(debouncedFit, 100);
-    setTimeout(debouncedFit, 300);
-    setTimeout(debouncedFit, 600);
+    const fitT1 = setTimeout(debouncedFit, 100);
+    const fitT2 = setTimeout(debouncedFit, 300);
+    const fitT3 = setTimeout(debouncedFit, 600);
 
     return () => {
       resizeObserver.disconnect();
       window.removeEventListener('resize', debouncedFit);
       if (fitTimer) clearTimeout(fitTimer);
+      clearTimeout(fitT1);
+      clearTimeout(fitT2);
+      clearTimeout(fitT3);
       terminal.dispose();
       terminalRef.current = null;
       fitAddonRef.current = null;
@@ -268,29 +271,31 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter }: Us
     };
     window.addEventListener('resize', handleResizeSuppress);
 
+    // Cache parsed rules + compiled regexes (don't parse localStorage on every SSH packet)
+    let cachedRules: { pattern: string; regex: RegExp; enabled: boolean }[] = [];
+    try {
+      const saved = localStorage.getItem('void-watch-rules');
+      if (saved) {
+        cachedRules = JSON.parse(saved)
+          .filter((r: any) => r.enabled)
+          .map((r: any) => { try { return { pattern: r.pattern, regex: new RegExp(r.pattern, 'i'), enabled: true }; } catch { return null; } })
+          .filter(Boolean);
+      }
+    } catch { /* no rules */ }
+
     const checkWatchRules = (data: string) => {
-      if (suppressWatch) return;
+      if (suppressWatch || cachedRules.length === 0) return;
       const now = Date.now();
-      if (now - lastNotification < 30000) return; // throttle: max 1 notification per 30s
-      try {
-        const saved = localStorage.getItem('void-watch-rules');
-        if (!saved) return;
-        const rules = JSON.parse(saved);
-        for (const rule of rules) {
-          if (!rule.enabled) continue;
-          // Don't repeat the same pattern notification
-          if (rule.pattern === lastMatchedPattern && now - lastNotification < 120000) continue;
-          try {
-            const regex = new RegExp(rule.pattern, 'i');
-            if (regex.test(data)) {
-              lastNotification = now;
-              lastMatchedPattern = rule.pattern;
-              new Notification('Void Terminal — Watch Alert', { body: `Pattern matched: ${rule.pattern}`, silent: false });
-              break;
-            }
-          } catch { /* invalid regex */ }
+      if (now - lastNotification < 30000) return;
+      for (const rule of cachedRules) {
+        if (rule.pattern === lastMatchedPattern && now - lastNotification < 120000) continue;
+        if (rule.regex.test(data)) {
+          lastNotification = now;
+          lastMatchedPattern = rule.pattern;
+          new Notification('Void Terminal — Watch Alert', { body: `Pattern matched: ${rule.pattern}`, silent: false });
+          break;
         }
-      } catch { /* no rules */ }
+      }
     };
 
     if (sessionType === 'ssh') {

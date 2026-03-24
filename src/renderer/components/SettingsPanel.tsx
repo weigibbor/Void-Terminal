@@ -567,7 +567,7 @@ function AboutSection() {
     setChecking(true);
     useAppStore.setState({ updateStatus: 'idle', updateError: null });
     try {
-      const data = await (window as any).void.app.checkForUpdates('0.1.4');
+      const data = await (window as any).void.app.checkForUpdates('0.1.5');
       if (data.error) throw new Error(data.error);
       setLastChecked(new Date());
       if (data.update) {
@@ -608,7 +608,7 @@ function AboutSection() {
         <div>
           <div className="text-[16px] text-void-text font-bold font-mono" style={{ letterSpacing: '-0.5px' }}>void terminal</div>
           <div className="flex items-center gap-2 mt-[2px] text-[12px] text-void-text-dim font-mono">
-            v0.1.4
+            v0.1.5
             {isPro && <span className="text-[8px] font-bold text-accent px-2 py-[2px] rounded-[4px]" style={{ background: 'rgba(249,115,22,0.08)', border: '0.5px solid rgba(249,115,22,0.15)' }}>PRO</span>}
             <span className="text-[8px] font-bold text-status-online px-2 py-[2px] rounded-[4px]" style={{ background: 'rgba(40,200,64,0.06)', border: '0.5px solid rgba(40,200,64,0.1)' }}>STABLE</span>
           </div>
