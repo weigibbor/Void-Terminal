@@ -77,7 +77,7 @@ export function ConnectionPanel({ tabId }: { tabId: string }) {
       privateKeyPath: authMethod === 'key' ? privateKeyPath : undefined,
       keepAlive, keepAliveInterval: 30, autoReconnect };
     setConnecting(true);
-    const result = await sshConnect(tabId, config);
+    const result = await sshConnect(tabId, config, alias || undefined);
     setConnecting(false);
     if (result.success) { await autoSave(config, alias || undefined); }
     else { setError(result.error || 'Connection failed.'); }
@@ -107,7 +107,7 @@ export function ConnectionPanel({ tabId }: { tabId: string }) {
       return;
     }
     setConnecting(true);
-    const result = await sshConnect(tabId, config);
+    const result = await sshConnect(tabId, config, conn.alias || undefined);
     setConnecting(false);
     if (result.success) {
       await window.void.connections.update(conn.id, { lastConnected: Date.now() });

@@ -6,10 +6,10 @@ export function useSSH() {
   const updateTab = useAppStore((s) => s.updateTab);
 
   const connect = useCallback(
-    async (tabId: string, config: SSHConfig) => {
+    async (tabId: string, config: SSHConfig, alias?: string) => {
       updateTab(tabId, {
         type: 'ssh',
-        title: `${config.username}@${config.host}`,
+        title: alias || `${config.username}@${config.host}`,
         connectionConfig: config,
         connecting: true,
         connectionError: undefined,
