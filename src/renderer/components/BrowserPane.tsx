@@ -66,11 +66,8 @@ export function BrowserPane({ tab }: { tab: Tab }) {
               }
             }}
             src={tab.browserUrl}
-            // @ts-expect-error webview is an Electron-specific element
             style={{ width: '100%', height: '100%', display: 'inline-flex' }}
-            allowpopups="true"
-            partition="persist:browser"
-            webpreferences="allowRunningInsecureContent=true, contextIsolation=false"
+            {...{ allowpopups: 'true', partition: 'persist:browser', webpreferences: 'allowRunningInsecureContent=true, contextIsolation=false' } as any}
           />
         ) : (
           <div className="flex items-center justify-center h-full text-void-text-ghost text-sm">
