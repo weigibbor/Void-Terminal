@@ -36,10 +36,16 @@ function createWindow(options?: { width?: number; height?: number; x?: number; y
       contextIsolation: true,
       nodeIntegration: false,
       webviewTag: true,
+      webSecurity: true,
     },
   });
 
   allWindows.add(win);
+
+  // Allow webview to load any URL (for browser pane)
+  win.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
+    callback({ cancel: false, requestHeaders: details.requestHeaders });
+  });
 
   win.once('ready-to-show', () => {
     win.show();

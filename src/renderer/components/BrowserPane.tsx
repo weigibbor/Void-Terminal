@@ -60,7 +60,8 @@ export function BrowserPane({ tab }: { tab: Tab }) {
             src={tab.browserUrl}
             className="w-full h-full"
             // @ts-expect-error webview is an Electron-specific element
-            allowpopups="false"
+            allowpopups="true"
+            webpreferences="allowRunningInsecureContent=true"
           />
         ) : (
           <div className="flex items-center justify-center h-full text-void-text-ghost text-sm">
