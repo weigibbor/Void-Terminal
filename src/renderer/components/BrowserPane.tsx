@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAppStore } from '../stores/app-store';
 import type { Tab } from '../types';
 
@@ -57,6 +57,14 @@ export function BrowserPane({ tab }: { tab: Tab }) {
       <div className="flex-1 min-h-0" style={{ position: 'relative' }}>
         {tab.browserUrl ? (
           <webview
+            ref={(el: any) => {
+              if (el && !el._zoomFixed) {
+                el._zoomFixed = true;
+                el.addEventListener('dom-ready', () => {
+                  try { el.setZoomFactor(1.0); } catch {}
+                });
+              }
+            }}
             src={tab.browserUrl}
             // @ts-expect-error webview is an Electron-specific element
             style={{ width: '100%', height: '100%', display: 'inline-flex' }}
