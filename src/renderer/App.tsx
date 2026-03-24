@@ -84,13 +84,15 @@ export function App() {
         const data = await window.void.app.checkForUpdates(currentVersion);
         if (data.update) {
           const lastSeen = localStorage.getItem('last-seen-changelog');
+          const dismissedVersion = localStorage.getItem('void-update-dismissed');
+          const wasDismissed = dismissedVersion === data.version;
           useAppStore.setState({
             updateStatus: 'available',
             updateVersion: data.version,
             updateChangelog: data.changelog || [],
             updateRequired: data.required || false,
             downloadSize: data.downloadSize || '',
-            updateDismissed: false,
+            updateDismissed: wasDismissed,
           });
           if (lastSeen && lastSeen !== data.version) {
             setTimeout(() => {

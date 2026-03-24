@@ -38,10 +38,15 @@ export function UpdateBar() {
   };
 
   const installUpdate = () => {
-    window.void.app.restart();
+    // Mark as dismissed so it doesn't loop after reload
+    localStorage.setItem('void-update-dismissed', version || '');
+    useAppStore.setState({ updateDismissed: true, updateStatus: 'idle' });
+    // Open download page for manual update
+    window.open(`https://github.com/weigibbor/Void-Terminal/releases/tag/v${version}`, '_blank');
   };
 
   const dismiss = () => {
+    localStorage.setItem('void-update-dismissed', version || '');
     useAppStore.setState({ updateDismissed: true });
   };
 
@@ -149,7 +154,7 @@ export function UpdateBar() {
         </div>
         <div className="flex items-center gap-[6px]">
           <button onClick={dismiss} className="text-[10px] text-void-text-dim hover:text-void-text-muted bg-transparent border-none cursor-pointer font-sans">Later</button>
-          <button onClick={installUpdate} className="px-[14px] py-[4px] rounded-[5px] text-[10px] font-semibold cursor-pointer font-sans border-none" style={{ background: '#28C840', color: 'var(--base)' }}>Restart now</button>
+          <button onClick={installUpdate} className="px-[14px] py-[4px] rounded-[5px] text-[10px] font-semibold cursor-pointer font-sans border-none" style={{ background: '#28C840', color: 'var(--base)' }}>Download update</button>
         </div>
       </div>
     );
