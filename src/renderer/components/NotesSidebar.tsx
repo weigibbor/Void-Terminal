@@ -133,6 +133,13 @@ export function NotesSidebar() {
               <span className="text-[9px] text-void-text-ghost uppercase tracking-wider font-mono">{note.type}</span>
               <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
+                  onClick={() => navigator.clipboard.writeText(note.content)}
+                  className="text-[11px] text-void-text-ghost hover:text-accent bg-transparent border-none cursor-pointer"
+                  title="Copy note"
+                >
+                  📋
+                </button>
+                <button
                   onClick={() => handleTogglePin(note)}
                   className="text-[11px] text-void-text-ghost hover:text-accent bg-transparent border-none cursor-pointer"
                   title={note.pinned ? 'Unpin' : 'Pin'}
@@ -147,7 +154,7 @@ export function NotesSidebar() {
                 </button>
               </div>
             </div>
-            <p className="text-[12px] text-void-text-muted whitespace-pre-wrap break-words leading-relaxed font-sans">
+            <p className="text-[12px] text-void-text-muted whitespace-pre-wrap break-words leading-relaxed font-sans select-text cursor-text">
               {note.content}
             </p>
             {note.aiGenerated && (

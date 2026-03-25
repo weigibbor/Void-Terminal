@@ -226,7 +226,68 @@ export function CommandPalette() {
         category: 'Pro',
         action: () => store.setActiveModal('ssl-checker'),
       },
+      // Phase 8
+      {
+        id: 'kubernetes',
+        label: 'Kubernetes pods',
+        category: 'Pro',
+        action: () => store.setActiveModal('kubernetes'),
+      },
+      {
+        id: 'disk-usage',
+        label: 'Disk usage map',
+        category: 'Pro',
+        action: () => store.setActiveModal('disk-usage'),
+      },
+      {
+        id: 'file-diff',
+        label: 'File diff viewer',
+        category: 'Pro',
+        action: () => store.setActiveModal('file-diff'),
+      },
+      {
+        id: 'nginx',
+        label: 'Nginx virtual hosts',
+        category: 'Pro',
+        action: () => store.setActiveModal('nginx'),
+      },
       // Phase 10-11
+      {
+        id: 'collab',
+        label: 'Share terminal session',
+        category: 'Pro',
+        action: () => store.setActiveModal('collab'),
+      },
+      {
+        id: 'team-activity',
+        label: 'Team activity feed',
+        category: 'Teams',
+        action: () => store.setActiveModal('team-activity'),
+      },
+      {
+        id: 'analytics',
+        label: 'Usage analytics',
+        category: 'Pro',
+        action: () => store.setActiveModal('analytics'),
+      },
+      {
+        id: 'migration',
+        label: 'Import connections (migration wizard)',
+        category: 'Connection',
+        action: () => store.setActiveModal('migration'),
+      },
+      {
+        id: 'tutorial',
+        label: 'Interactive tutorial',
+        category: 'Help',
+        action: () => store.setActiveModal('tutorial'),
+      },
+      {
+        id: 'theme-marketplace',
+        label: 'Theme marketplace',
+        category: 'Settings',
+        action: () => store.setActiveModal('theme-marketplace'),
+      },
       {
         id: 'webhooks',
         label: 'Alert webhooks (Slack/Discord)',

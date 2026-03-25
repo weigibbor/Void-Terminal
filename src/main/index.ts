@@ -572,8 +572,8 @@ function registerIPCHandlers(): void {
     return pro.aiNaturalLanguage(query, server);
   });
 
-  ipcMain.handle('ai:chat', async (_event, message: string, history) => {
-    return pro.aiChat(message, history);
+  ipcMain.handle('ai:chat', async (_event, message: string, history, terminalContext?: string, serverInfo?: string) => {
+    return pro.aiChat(message, history, terminalContext, serverInfo);
   });
 
   ipcMain.handle('ai:getConfig', async () => {

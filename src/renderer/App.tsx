@@ -36,6 +36,16 @@ import { NetworkMonitor } from './components/pro/NetworkMonitor';
 import { SSLChecker } from './components/pro/SSLChecker';
 import { AlertWebhooks } from './components/pro/AlertWebhooks';
 import { CommandTimeline } from './components/pro/CommandTimeline';
+import { KubernetesPanel } from './components/pro/KubernetesPanel';
+import { DiskUsageMap } from './components/pro/DiskUsageMap';
+import { FileDiffViewer } from './components/pro/FileDiffViewer';
+import { NginxViewer } from './components/pro/NginxViewer';
+import { CollaborativeTerminal } from './components/pro/CollaborativeTerminal';
+import { TeamActivityFeed } from './components/pro/TeamActivityFeed';
+import { AnalyticsDashboard } from './components/pro/AnalyticsDashboard';
+import { MigrationWizard } from './components/pro/MigrationWizard';
+import { InteractiveTutorial } from './components/pro/InteractiveTutorial';
+import { ThemeMarketplace } from './components/pro/ThemeMarketplace';
 import { KeyboardOverlay } from './components/KeyboardOverlay';
 import { TipOfTheDay } from './components/TipOfTheDay';
 
@@ -87,7 +97,18 @@ export function App() {
     const savedTheme = localStorage.getItem('void-theme');
     if (savedTheme) applyTheme(savedTheme);
 
-    loadSavedConnections();
+    loadSavedConnections().then(() => {
+      // Auto-detect SSH config on first launch
+      const hasImported = localStorage.getItem('void-ssh-config-imported');
+      if (!hasImported) {
+        (window as any).void.ssh.parseConfig?.().then((entries: any[]) => {
+          if (entries && entries.length > 0) {
+            localStorage.setItem('void-ssh-config-imported', 'true');
+            // Don't auto-import, just mark as detected — user can import from connection panel
+          }
+        }).catch(() => {});
+      }
+    });
     loadLicense().then(() => {
       const flag = localStorage.getItem('void-first-pro-launch');
       if (flag) {
@@ -394,6 +415,36 @@ export function App() {
         )}
         {activeModal === 'command-timeline' && (
           <CommandTimeline onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal === 'kubernetes' && (
+          <KubernetesPanel onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal === 'disk-usage' && (
+          <DiskUsageMap onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal === 'file-diff' && (
+          <FileDiffViewer onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal === 'nginx' && (
+          <NginxViewer onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal === 'collab' && (
+          <CollaborativeTerminal onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal === 'team-activity' && (
+          <TeamActivityFeed onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal === 'analytics' && (
+          <AnalyticsDashboard onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal === 'migration' && (
+          <MigrationWizard onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal === 'tutorial' && (
+          <InteractiveTutorial onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal === 'theme-marketplace' && (
+          <ThemeMarketplace onClose={() => setActiveModal(null)} />
         )}
       </AnimatePresence>
 

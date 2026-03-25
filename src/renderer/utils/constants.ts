@@ -21,7 +21,7 @@ export const THEMES: Record<string, AppTheme> = {
   dark: {
     name: 'Dark',
     terminal: {
-      background: '#141418', foreground: '#E8E6E0', cursor: '#F97316', cursorAccent: '#141418',
+      background: '#141418', foreground: '#E8E6E0', cursor: '#C8C8C8', cursorAccent: '#141418',
       selectionBackground: '#F9731630',
       black: '#0A0A0D', red: '#FF5F57', green: '#28C840', yellow: '#FEBC2E',
       blue: '#5B9BD5', magenta: '#C586C0', cyan: '#56B6C2', white: '#E8E6E0',
@@ -33,7 +33,7 @@ export const THEMES: Record<string, AppTheme> = {
   light: {
     name: 'Light',
     terminal: {
-      background: '#FAFAFA', foreground: '#1A1A1A', cursor: '#F97316', cursorAccent: '#FAFAFA',
+      background: '#FAFAFA', foreground: '#1A1A1A', cursor: '#333333', cursorAccent: '#FAFAFA',
       selectionBackground: '#F9731630',
       black: '#1A1A1A', red: '#D32F2F', green: '#388E3C', yellow: '#F9A825',
       blue: '#1976D2', magenta: '#7B1FA2', cyan: '#0097A7', white: '#FAFAFA',
@@ -63,8 +63,8 @@ export const TERMINAL_OPTIONS = {
   fontSize: 13,
   lineHeight: 1.2,
   letterSpacing: 0,
-  cursorStyle: 'block' as const,
-  cursorBlink: false,
+  cursorStyle: 'bar' as const,
+  cursorBlink: true,
   cursorWidth: 2,
   scrollback: 10000,
   allowProposedApi: true,

@@ -39,15 +39,8 @@ export function UpdateBar() {
   };
 
   const installUpdate = async () => {
-    const platform = await window.void.app.getPlatform();
-    if (platform === 'darwin') {
-      // macOS: open GitHub Releases
-      window.open(`https://github.com/weigibbor/Void-Terminal/releases/tag/v${version}`, '_blank');
-      dismiss();
-    } else {
-      // Windows: quit and install
-      (window.void.app as any).updaterInstall?.();
-    }
+    // Windows only — macOS users download DMG manually and never reach this state
+    (window.void.app as any).updaterInstall?.();
   };
 
   const dismiss = () => {
@@ -143,7 +136,7 @@ export function UpdateBar() {
     );
   }
 
-  // State 3: Ready to install
+  // State 3: Ready to install (Windows only — macOS goes straight to GitHub Releases)
   if (status === 'ready') {
     return (
       <div className="flex items-center gap-[10px] px-4 py-[8px] text-[11px] shrink-0"

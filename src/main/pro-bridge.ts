@@ -183,11 +183,13 @@ export async function aiNaturalLanguage(
 export async function aiChat(
   message: string,
   history: { role: string; content: string }[],
+  terminalContext?: string,
+  serverInfo?: string,
 ): Promise<string> {
   if (!licenseActive || !aiEngine) {
     return 'AI Chat is a Pro feature. Go to Settings > License to activate.';
   }
-  return aiEngine.chat(message, history);
+  return aiEngine.chat(message, history, terminalContext, serverInfo);
 }
 
 export function getAIConfig(): any {

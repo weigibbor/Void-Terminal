@@ -148,8 +148,8 @@ contextBridge.exposeInMainWorld('void', {
       ipcRenderer.invoke('ai:autocomplete', context, history),
     naturalLanguage: (query: string, server: string) =>
       ipcRenderer.invoke('ai:naturalLanguage', query, server),
-    chat: (message: string, history: { role: string; content: string }[]) =>
-      ipcRenderer.invoke('ai:chat', message, history),
+    chat: (message: string, history: { role: string; content: string }[], terminalContext?: string, serverInfo?: string) =>
+      ipcRenderer.invoke('ai:chat', message, history, terminalContext, serverInfo),
     getConfig: () => ipcRenderer.invoke('ai:getConfig'),
     setConfig: (config: unknown) => ipcRenderer.invoke('ai:setConfig', config),
   },
