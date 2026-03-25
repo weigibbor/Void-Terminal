@@ -51,7 +51,7 @@ export function UpdateBar() {
   const retry = async () => {
     useAppStore.setState({ updateStatus: 'idle', updateError: null });
     try {
-      const data = await window.void.app.checkForUpdates('1.0.0');
+      const data = await window.void.app.checkForUpdates('1.1.0');
       if (data.error) throw new Error(data.error);
       if (data.update) {
         useAppStore.setState({
