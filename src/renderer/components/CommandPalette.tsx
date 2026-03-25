@@ -244,19 +244,29 @@ export function CommandPalette() {
         id: 'template-web',
         label: 'Template: Web Server (nginx/apache)',
         category: 'Template',
-        action: () => { const id = store.addTab('new-connection'); },
+        action: () => {
+          store.addTab('new-connection');
+          // Store template hint for ConnectionPanel to pick up
+          localStorage.setItem('void-template', JSON.stringify({ alias: 'web-server', username: 'root', port: '22', group: 'Web Servers', startupCommand: 'cd /var/www && ls -la' }));
+        },
       },
       {
         id: 'template-db',
         label: 'Template: Database Server (MySQL/PostgreSQL)',
         category: 'Template',
-        action: () => { const id = store.addTab('new-connection'); },
+        action: () => {
+          store.addTab('new-connection');
+          localStorage.setItem('void-template', JSON.stringify({ alias: 'db-server', username: 'root', port: '22', group: 'Databases', startupCommand: 'mysql -u root -p || psql -U postgres' }));
+        },
       },
       {
         id: 'template-docker',
         label: 'Template: Docker Host',
         category: 'Template',
-        action: () => { const id = store.addTab('new-connection'); },
+        action: () => {
+          store.addTab('new-connection');
+          localStorage.setItem('void-template', JSON.stringify({ alias: 'docker-host', username: 'root', port: '22', group: 'Docker', startupCommand: 'docker ps' }));
+        },
       },
     ];
 

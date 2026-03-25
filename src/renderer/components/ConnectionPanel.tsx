@@ -34,6 +34,7 @@ export function ConnectionPanel({ tabId }: { tabId: string }) {
   const [alias, setAlias] = useState('');
   const [connGroup, setConnGroup] = useState('');
   const [tabColor, setTabColor] = useState('');
+  const [startupCmd, setStartupCmd] = useState('');
   const [browserUrl, setBrowserUrl] = useState('');
   const [importEntries, setImportEntries] = useState<any[]>([]);
   const [importSelected, setImportSelected] = useState<Set<number>>(new Set());
@@ -51,7 +52,23 @@ export function ConnectionPanel({ tabId }: { tabId: string }) {
   const { connect: sshConnect } = useSSH();
   const { create: ptyCreate } = usePTY();
 
-  useEffect(() => { loadSavedConnections(); }, []);
+  useEffect(() => {
+    loadSavedConnections();
+    // Check for template pre-fill from command palette
+    const tpl = localStorage.getItem('void-template');
+    if (tpl) {
+      try {
+        const t = JSON.parse(tpl);
+        if (t.alias) setAlias(t.alias);
+        if (t.username) setUsername(t.username);
+        if (t.port) setPort(t.port);
+        if (t.group) setConnGroup(t.group);
+        setView('form');
+        setDirection(1);
+      } catch {}
+      localStorage.removeItem('void-template');
+    }
+  }, []);
 
   const hasSaved = savedConnections.length > 0;
   const FREE_LIMIT = 10;
@@ -94,7 +111,7 @@ export function ConnectionPanel({ tabId }: { tabId: string }) {
       keepAlive, keepAliveInterval: 30, autoReconnect, agentForward,
       jumpHost: useJumpHost && jumpHost ? { host: jumpHost, port: parseInt(jumpPort) || 22, username: jumpUser, authMethod: jumpAuth, privateKeyPath: jumpAuth === 'key' ? jumpKeyPath : undefined } : undefined };
     setConnecting(true);
-    const result = await sshConnect(tabId, config, alias || undefined);
+    const result = await sshConnect(tabId, config, alias || undefined, startupCmd || undefined);
     setConnecting(false);
     if (result.success) { if (tabColor) updateTab(tabId, { color: tabColor }); await autoSave(config, alias || undefined); }
     else { setError(result.error || 'Connection failed.'); }
@@ -146,7 +163,7 @@ export function ConnectionPanel({ tabId }: { tabId: string }) {
     exit: (d: number) => ({ x: d > 0 ? -20 : 20, opacity: 0 }),
   };
 
-  const formProps = { connType, setConnType, host, setHost, port, setPort, username, setUsername, password, setPassword, privateKeyPath, setPrivateKeyPath, authMethod, setAuthMethod, keepAlive, setKeepAlive, autoReconnect, setAutoReconnect, agentForward, setAgentForward, useJumpHost, setUseJumpHost, jumpHost, setJumpHost, jumpPort, setJumpPort, jumpUser, setJumpUser, jumpAuth, setJumpAuth, jumpKeyPath, setJumpKeyPath, alias, setAlias, connGroup, setConnGroup, tabColor, setTabColor, browserUrl, setBrowserUrl, error, connecting, handleConnect, inputClass, labelClass, savedConnections };
+  const formProps = { connType, setConnType, host, setHost, port, setPort, username, setUsername, password, setPassword, privateKeyPath, setPrivateKeyPath, authMethod, setAuthMethod, keepAlive, setKeepAlive, autoReconnect, setAutoReconnect, agentForward, setAgentForward, useJumpHost, setUseJumpHost, jumpHost, setJumpHost, jumpPort, setJumpPort, jumpUser, setJumpUser, jumpAuth, setJumpAuth, jumpKeyPath, setJumpKeyPath, alias, setAlias, connGroup, setConnGroup, tabColor, setTabColor, startupCmd, setStartupCmd, browserUrl, setBrowserUrl, error, connecting, handleConnect, inputClass, labelClass, savedConnections };
 
   return (
     <div className="flex-1 h-full overflow-y-auto bg-void-elevated" style={{ borderTop: '0.5px solid var(--border)' }}>
@@ -338,7 +355,7 @@ export function ConnectionPanel({ tabId }: { tabId: string }) {
 
 const TAB_COLORS = ['#FF5F57', '#F97316', '#FEBC2E', '#28C840', '#5B9BD5', '#C586C0'];
 
-function SSHForm({ connType, setConnType, host, setHost, port, setPort, username, setUsername, password, setPassword, privateKeyPath, setPrivateKeyPath, authMethod, setAuthMethod, keepAlive, setKeepAlive, autoReconnect, setAutoReconnect, agentForward, setAgentForward, useJumpHost, setUseJumpHost, jumpHost, setJumpHost, jumpPort, setJumpPort, jumpUser, setJumpUser, jumpAuth, setJumpAuth, jumpKeyPath, setJumpKeyPath, alias, setAlias, connGroup, setConnGroup, tabColor, setTabColor, browserUrl, setBrowserUrl, error, connecting, handleConnect, inputClass, labelClass, savedConnections }: any) {
+function SSHForm({ connType, setConnType, host, setHost, port, setPort, username, setUsername, password, setPassword, privateKeyPath, setPrivateKeyPath, authMethod, setAuthMethod, keepAlive, setKeepAlive, autoReconnect, setAutoReconnect, agentForward, setAgentForward, useJumpHost, setUseJumpHost, jumpHost, setJumpHost, jumpPort, setJumpPort, jumpUser, setJumpUser, jumpAuth, setJumpAuth, jumpKeyPath, setJumpKeyPath, alias, setAlias, connGroup, setConnGroup, tabColor, setTabColor, startupCmd, setStartupCmd, browserUrl, setBrowserUrl, error, connecting, handleConnect, inputClass, labelClass, savedConnections }: any) {
   return (
     <div style={{ borderTop: '0.5px solid rgba(42,42,48,0.5)', paddingTop: '16px' }}>
       <div className="flex gap-2 mb-4">
@@ -412,7 +429,7 @@ function SSHForm({ connType, setConnType, host, setHost, port, setPort, username
           </div>
           <div>
             <label className={labelClass}>Startup command (optional)</label>
-            <input type="text" value={(formProps as any).startupCmd || ''} onChange={e => (formProps as any).setStartupCmd?.(e.target.value)}
+            <input type="text" value={startupCmd} onChange={e => setStartupCmd(e.target.value)}
               placeholder="e.g. cd /app && source .env" className={inputClass} style={{ border: '0.5px solid var(--border)' }} />
           </div>
         </div>

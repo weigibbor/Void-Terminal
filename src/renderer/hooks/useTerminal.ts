@@ -5,6 +5,7 @@ import { SearchAddon } from '@xterm/addon-search';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { TERMINAL_THEME, TERMINAL_OPTIONS } from '../utils/constants';
 import { useAppStore } from '../stores/app-store';
+import { fireWebhook } from '../utils/webhooks';
 import '@xterm/xterm/css/xterm.css';
 
 interface UseTerminalOptions {
@@ -248,6 +249,7 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter, onMu
           lastNotification = now;
           lastMatchedPattern = rule.pattern;
           new Notification('Void Terminal — Watch Alert', { body: `Pattern matched: ${rule.pattern}`, silent: false });
+          fireWebhook('watch-alert', { pattern: rule.pattern, server: sessionIdRef.current });
           break;
         }
       }
@@ -281,8 +283,11 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter, onMu
         if (elapsed > 10000 && /[\$#>]\s*$/.test(data)) {
           const cmd = lastCommandRef.current;
           commandStartRef.current = 0;
-          if (document.hidden && cmd) {
-            new Notification('Void Terminal', { body: `Done: ${cmd.substring(0, 80)}`, silent: false });
+          if (cmd) {
+            fireWebhook('command-done', { command: cmd, elapsed, server: sessionIdRef.current });
+            if (document.hidden) {
+              new Notification('Void Terminal', { body: `Done: ${cmd.substring(0, 80)}`, silent: false });
+            }
           }
         }
       }

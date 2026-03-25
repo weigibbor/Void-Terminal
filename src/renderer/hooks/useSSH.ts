@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useAppStore } from '../stores/app-store';
+import { fireWebhook, logTeamActivity, logAnalytics } from '../utils/webhooks';
 import type { SSHConfig } from '../types';
 
 export function useSSH() {
@@ -26,8 +27,11 @@ export function useSSH() {
           lastActivity: Date.now(),
         });
 
-        // Log health event
+        // Log health event + webhook + team activity
         (window as any).void.health?.log(tabId, config.host, 'connected');
+        fireWebhook('connect', { host: config.host, user: config.username });
+        logTeamActivity('connected', config.host, `${config.username}@${config.host}`);
+        logAnalytics('session_start', config.host);
 
         // Run startup command after short delay (let shell initialize)
         if (startupCommand) {
@@ -36,14 +40,20 @@ export function useSSH() {
           }, 500);
         }
 
+        const connectTime = Date.now();
         window.void.ssh.onClose(result.sessionId, () => {
           updateTab(tabId, { connected: false });
           (window as any).void.health?.log(tabId, config.host, 'disconnected');
+          fireWebhook('disconnect', { host: config.host, duration: Date.now() - connectTime });
+          logTeamActivity('disconnected', config.host);
+          logAnalytics('session_end', config.host, Date.now() - connectTime);
         });
 
-        window.void.ssh.onError(result.sessionId, () => {
+        window.void.ssh.onError(result.sessionId, (err: string) => {
           updateTab(tabId, { connected: false });
           (window as any).void.health?.log(tabId, config.host, 'error');
+          fireWebhook('error', { host: config.host, error: err });
+          logTeamActivity('error', config.host, err);
         });
 
         if (config.host) {
