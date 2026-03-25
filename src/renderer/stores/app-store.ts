@@ -198,6 +198,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   closeTab: (id) => {
+    // Prevent closing pinned tabs
+    const tab = get().tabs.find(t => t.id === id);
+    if (tab?.pinned) return;
     set((state) => {
       const tabs = state.tabs.filter((t) => t.id !== id);
       let { activeTabId, paneTabIds } = state;

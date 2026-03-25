@@ -137,12 +137,12 @@ function TabItem({ tab, isActive, onContextMenu, onReorder }: { tab: Tab; isActi
 
       {/* Close button */}
       <span
-        className={`flex items-center justify-center w-[18px] h-[18px] rounded-[4px] text-[13px] text-void-text-ghost transition-all cursor-pointer hover:bg-void-surface ${
-          isActive ? 'opacity-60 hover:opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100'
+        className={`flex items-center justify-center w-[18px] h-[18px] rounded-[4px] text-[13px] transition-all cursor-pointer hover:bg-void-surface ${
+          tab.pinned ? 'text-accent opacity-60' : `text-void-text-ghost ${isActive ? 'opacity-60 hover:opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100'}`
         }`}
-        onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }}
+        onClick={(e) => { e.stopPropagation(); if (!tab.pinned) closeTab(tab.id); }}
       >
-        ✕
+        {tab.pinned ? '📌' : '✕'}
       </span>
     </div>
   );
@@ -165,6 +165,7 @@ export function TabBar() {
     });
   };
   const closeTab = useAppStore((s) => s.closeTab);
+  const updateTab = useAppStore((s) => s.updateTab);
   const disconnectTab = useAppStore((s) => s.disconnectTab);
   const reconnectTab = useAppStore((s) => s.reconnectTab);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; tab: Tab } | null>(null);
@@ -184,7 +185,11 @@ export function TabBar() {
 
     if (items.length > 0) items.push({ label: '', separator: true });
 
-    items.push({ label: 'Close tab', shortcut: '⌘W', action: () => closeTab(tab.id) });
+    items.push({
+      label: tab.pinned ? 'Unpin tab' : 'Pin tab',
+      action: () => updateTab(tab.id, { pinned: !tab.pinned }),
+    });
+    items.push({ label: 'Close tab', shortcut: '⌘W', disabled: tab.pinned, action: () => closeTab(tab.id) });
     items.push({
       label: 'Close other tabs',
       disabled: tabs.length <= 1,

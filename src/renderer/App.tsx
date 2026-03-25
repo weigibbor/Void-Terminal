@@ -26,6 +26,14 @@ import { ServerDashboard } from './components/pro/ServerDashboard';
 import { CronViewer } from './components/pro/CronViewer';
 import { CommandRunner } from './components/pro/CommandRunner';
 import { HealthDashboard } from './components/pro/HealthDashboard';
+import { DockerPanel } from './components/pro/DockerPanel';
+import { ServiceViewer } from './components/pro/ServiceViewer';
+import { GitWidget } from './components/pro/GitWidget';
+import { EnvDiffViewer } from './components/pro/EnvDiffViewer';
+import { ProcessMonitor } from './components/pro/ProcessMonitor';
+import { LogViewer } from './components/pro/LogViewer';
+import { NetworkMonitor } from './components/pro/NetworkMonitor';
+import { SSLChecker } from './components/pro/SSLChecker';
 
 export function App() {
   useKeyboard();
@@ -348,6 +356,34 @@ export function App() {
         )}
         {activeModal === 'health-dashboard' && (
           <HealthDashboard onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal === 'docker' && (
+          <div className="fixed inset-0 z-40 flex items-end justify-end" style={{ background: 'rgba(0,0,0,0.3)' }} onClick={() => setActiveModal(null)}>
+            <div className="h-full" style={{ width: '380px' }} onClick={e => e.stopPropagation()}>
+              <DockerPanel onClose={() => setActiveModal(null)} />
+            </div>
+          </div>
+        )}
+        {activeModal === 'services' && (
+          <ServiceViewer onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal === 'git-status' && (
+          <GitWidget onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal === 'env-diff' && (
+          <EnvDiffViewer onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal === 'process-monitor' && (
+          <ProcessMonitor onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal === 'log-viewer' && (
+          <LogViewer onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal === 'network-monitor' && (
+          <NetworkMonitor onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal === 'ssl-checker' && (
+          <SSLChecker onClose={() => setActiveModal(null)} />
         )}
       </AnimatePresence>
 

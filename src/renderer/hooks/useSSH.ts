@@ -6,7 +6,7 @@ export function useSSH() {
   const updateTab = useAppStore((s) => s.updateTab);
 
   const connect = useCallback(
-    async (tabId: string, config: SSHConfig, alias?: string) => {
+    async (tabId: string, config: SSHConfig, alias?: string, startupCommand?: string) => {
       updateTab(tabId, {
         type: 'ssh',
         title: alias || `${config.username}@${config.host}`,
@@ -28,6 +28,13 @@ export function useSSH() {
 
         // Log health event
         (window as any).void.health?.log(tabId, config.host, 'connected');
+
+        // Run startup command after short delay (let shell initialize)
+        if (startupCommand) {
+          setTimeout(() => {
+            window.void.ssh.write(result.sessionId!, startupCommand + '\r');
+          }, 500);
+        }
 
         window.void.ssh.onClose(result.sessionId, () => {
           updateTab(tabId, { connected: false });

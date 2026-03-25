@@ -175,6 +175,76 @@ export function CommandPalette() {
         category: 'Pro',
         action: () => store.setActiveModal('health-dashboard'),
       },
+      // Phase 7 — DevOps
+      {
+        id: 'docker',
+        label: 'Docker containers',
+        category: 'Pro',
+        action: () => store.setActiveModal('docker'),
+      },
+      {
+        id: 'services',
+        label: 'Services (systemd/PM2)',
+        category: 'Pro',
+        action: () => store.setActiveModal('services'),
+      },
+      {
+        id: 'git-status',
+        label: 'Git status',
+        category: 'Pro',
+        action: () => store.setActiveModal('git-status'),
+      },
+      {
+        id: 'env-diff',
+        label: 'Environment diff (.env compare)',
+        category: 'Pro',
+        action: () => store.setActiveModal('env-diff'),
+      },
+      // Phase 8 — Monitoring
+      {
+        id: 'process-monitor',
+        label: 'Process monitor (htop)',
+        category: 'Pro',
+        action: () => store.setActiveModal('process-monitor'),
+      },
+      {
+        id: 'log-viewer',
+        label: 'Log tail viewer',
+        category: 'Pro',
+        action: () => store.setActiveModal('log-viewer'),
+      },
+      {
+        id: 'network-monitor',
+        label: 'Network monitor',
+        category: 'Pro',
+        action: () => store.setActiveModal('network-monitor'),
+      },
+      // Phase 9 — Security
+      {
+        id: 'ssl-checker',
+        label: 'SSL certificate checker',
+        category: 'Pro',
+        action: () => store.setActiveModal('ssl-checker'),
+      },
+      // Connection templates
+      {
+        id: 'template-web',
+        label: 'Template: Web Server (nginx/apache)',
+        category: 'Template',
+        action: () => { const id = store.addTab('new-connection'); },
+      },
+      {
+        id: 'template-db',
+        label: 'Template: Database Server (MySQL/PostgreSQL)',
+        category: 'Template',
+        action: () => { const id = store.addTab('new-connection'); },
+      },
+      {
+        id: 'template-docker',
+        label: 'Template: Docker Host',
+        category: 'Template',
+        action: () => { const id = store.addTab('new-connection'); },
+      },
     ];
 
     // Add saved connections as quick-connect actions

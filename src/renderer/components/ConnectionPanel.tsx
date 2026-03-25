@@ -124,7 +124,7 @@ export function ConnectionPanel({ tabId }: { tabId: string }) {
       return;
     }
     setConnecting(true);
-    const result = await sshConnect(tabId, config, conn.alias || undefined);
+    const result = await sshConnect(tabId, config, conn.alias || undefined, conn.startupCommand);
     setConnecting(false);
     if (result.success) {
       if (conn.color) updateTab(tabId, { color: conn.color });
@@ -409,6 +409,11 @@ function SSHForm({ connType, setConnType, host, setHost, port, setPort, username
               ))}
               {tabColor && <button onClick={() => setTabColor('')} className="text-[9px] text-void-text-ghost bg-transparent border-none cursor-pointer ml-1">Clear</button>}
             </div>
+          </div>
+          <div>
+            <label className={labelClass}>Startup command (optional)</label>
+            <input type="text" value={(formProps as any).startupCmd || ''} onChange={e => (formProps as any).setStartupCmd?.(e.target.value)}
+              placeholder="e.g. cd /app && source .env" className={inputClass} style={{ border: '0.5px solid #2A2A30' }} />
           </div>
         </div>
       )}

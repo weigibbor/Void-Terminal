@@ -17,6 +17,7 @@ export interface Tab {
   disconnectedAt?: number;
   scrollbackPreserved?: boolean;
   color?: string;
+  pinned?: boolean;
 }
 
 export interface SSHConfig {
@@ -55,6 +56,8 @@ export interface SavedConnection {
   group?: string;
   color?: string;
   lastConnected?: number;
+  startupCommand?: string;
+  pinned?: boolean;
   createdAt: number;
 }
 

@@ -27,6 +27,8 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter, onMu
   const onDataRef = useRef(onData);
   const commandBufferRef = useRef('');
   const commandHistoryRef = useRef<string[]>([]);
+  const commandStartRef = useRef(0);
+  const lastCommandRef = useRef('');
   const onShiftEnterRef = useRef(onShiftEnter);
   const onMultiLinePasteRef = useRef(onMultiLinePaste);
   sessionIdRef.current = sessionId;
@@ -101,7 +103,11 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter, onMu
       // Lightweight buffer tracking (no API calls, no timers)
       if (data === '\r') {
         const command = commandBufferRef.current.trim();
-        if (command) commandHistoryRef.current.push(command);
+        if (command) {
+          commandHistoryRef.current.push(command);
+          commandStartRef.current = Date.now();
+          lastCommandRef.current = command;
+        }
         commandBufferRef.current = '';
 
         // NLP ? prefix — only feature that runs on Enter
@@ -268,10 +274,25 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter, onMu
       }
     };
 
+    // Notify when long-running command finishes (>10s, app in background)
+    const checkCommandDone = (data: string) => {
+      if (commandStartRef.current > 0 && localStorage.getItem('void-cmd-notify') !== 'false') {
+        const elapsed = Date.now() - commandStartRef.current;
+        if (elapsed > 10000 && /[\$#>]\s*$/.test(data)) {
+          const cmd = lastCommandRef.current;
+          commandStartRef.current = 0;
+          if (document.hidden && cmd) {
+            new Notification('Void Terminal', { body: `Done: ${cmd.substring(0, 80)}`, silent: false });
+          }
+        }
+      }
+    };
+
     if (sessionType === 'ssh') {
       unsub = window.void.ssh.onData(sessionId, (data) => {
         batchWrite(data);
         checkWatchRules(data);
+        checkCommandDone(data);
       });
       // Replay buffered data — watch rules suppressed during replay
       window.void.ssh.getBuffer(sessionId).then((buffered) => {
@@ -283,6 +304,7 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter, onMu
       unsub = window.void.pty.onData(sessionId, (data) => {
         batchWrite(data);
         checkWatchRules(data);
+        checkCommandDone(data);
       });
     }
 
