@@ -34,6 +34,10 @@ import { ProcessMonitor } from './components/pro/ProcessMonitor';
 import { LogViewer } from './components/pro/LogViewer';
 import { NetworkMonitor } from './components/pro/NetworkMonitor';
 import { SSLChecker } from './components/pro/SSLChecker';
+import { AlertWebhooks } from './components/pro/AlertWebhooks';
+import { CommandTimeline } from './components/pro/CommandTimeline';
+import { KeyboardOverlay } from './components/KeyboardOverlay';
+import { TipOfTheDay } from './components/TipOfTheDay';
 
 export function App() {
   useKeyboard();
@@ -385,10 +389,18 @@ export function App() {
         {activeModal === 'ssl-checker' && (
           <SSLChecker onClose={() => setActiveModal(null)} />
         )}
+        {activeModal === 'webhooks' && (
+          <AlertWebhooks onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal === 'command-timeline' && (
+          <CommandTimeline onClose={() => setActiveModal(null)} />
+        )}
       </AnimatePresence>
 
       {/* Patch notes modal */}
       <PatchNotesModal />
+      <KeyboardOverlay />
+      <TipOfTheDay />
 
       {/* AI Clipboard overlay */}
       <AIClipboardOverlay

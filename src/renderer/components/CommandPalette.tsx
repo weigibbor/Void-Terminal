@@ -226,6 +226,19 @@ export function CommandPalette() {
         category: 'Pro',
         action: () => store.setActiveModal('ssl-checker'),
       },
+      // Phase 10-11
+      {
+        id: 'webhooks',
+        label: 'Alert webhooks (Slack/Discord)',
+        category: 'Pro',
+        action: () => store.setActiveModal('webhooks'),
+      },
+      {
+        id: 'command-timeline',
+        label: 'Command history timeline',
+        category: 'Pro',
+        action: () => store.setActiveModal('command-timeline'),
+      },
       // Connection templates
       {
         id: 'template-web',
