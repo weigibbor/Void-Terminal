@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -17,10 +17,10 @@ export function generateSSHKeyPair(
   const keyPath = path.join(sshDir, keyName);
   const commentArg = comment || 'void-terminal';
 
-  const algorithm = type === 'ed25519' ? '-t ed25519' : '-t rsa -b 4096';
-  execSync(`ssh-keygen ${algorithm} -f "${keyPath}" -N "" -C "${commentArg}"`, {
-    stdio: 'ignore',
-  });
+  const args = type === 'ed25519'
+    ? ['-t', 'ed25519', '-f', keyPath, '-N', '', '-C', commentArg]
+    : ['-t', 'rsa', '-b', '4096', '-f', keyPath, '-N', '', '-C', commentArg];
+  execFileSync('ssh-keygen', args, { stdio: 'ignore' });
 
   const publicKey = fs.readFileSync(`${keyPath}.pub`, 'utf-8').trim();
   return { publicKey, privateKeyPath: keyPath };
@@ -28,7 +28,7 @@ export function generateSSHKeyPair(
 
 export function getKeyFingerprint(keyPath: string): string {
   try {
-    const result = execSync(`ssh-keygen -lf "${keyPath}"`, { encoding: 'utf-8' });
+    const result = execFileSync('ssh-keygen', ['-lf', keyPath], { encoding: 'utf-8' });
     return result.trim();
   } catch {
     return 'Unable to read fingerprint';

@@ -122,7 +122,10 @@ function Section({ label, count, color, dotColor, items }: { label: string; coun
       {items.map((item, i) => (
         <div key={i} className="flex items-start gap-2 py-[5px] text-[12px] text-void-text-muted leading-[1.4] font-sans">
           <div className="w-[5px] h-[5px] rounded-full shrink-0 mt-[6px]" style={{ background: dotColor }} />
-          <span dangerouslySetInnerHTML={{ __html: item.text.replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--text);font-weight:500">$1</strong>').replace(/`(.*?)`/g, '<code style="font-family:JetBrains Mono,monospace;font-size:10px;color:#F97316;background:var(--elevated);padding:1px 5px;border-radius:3px">$1</code>') }} />
+          <span dangerouslySetInnerHTML={{ __html: item.text
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') // sanitize first
+            .replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--text);font-weight:500">$1</strong>')
+            .replace(/`(.*?)`/g, '<code style="font-family:JetBrains Mono,monospace;font-size:10px;color:#F97316;background:var(--elevated);padding:1px 5px;border-radius:3px">$1</code>') }} />
         </div>
       ))}
     </div>

@@ -80,7 +80,8 @@ export function LogViewer({ onClose }: { onClose: () => void }) {
           style={{ scrollbarWidth: 'thin', scrollbarColor: '#2A2A30 transparent' }}>
           {loading ? 'Loading...' : filtered.map((line, i) => {
             const level = getLevel(line);
-            const highlighted = search ? line.replace(new RegExp(`(${search})`, 'gi'), '█$1█') : line;
+            const safeSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const highlighted = safeSearch ? line.replace(new RegExp(`(${safeSearch})`, 'gi'), '█$1█') : line;
             return <div key={i} style={{ color: levelColor(level) }}>{highlighted}</div>;
           })}
         </pre>

@@ -55,18 +55,21 @@ function createWindow(options?: { width?: number; height?: number; x?: number; y
     const headers = { ...details.responseHeaders };
     delete headers['x-frame-options'];
     delete headers['X-Frame-Options'];
-    delete headers['content-security-policy'];
-    delete headers['Content-Security-Policy'];
+    // Only remove CSP in dev mode for HMR
+    if (process.env.VITE_DEV_SERVER_URL) {
+      delete headers['content-security-policy'];
+      delete headers['Content-Security-Policy'];
+    }
     callback({ cancel: false, responseHeaders: headers });
   });
-  // Allow all permissions in webview
+  // Allow permissions in webview (for BrowserPane)
   win.webContents.session.setPermissionRequestHandler((_webContents, _permission, callback) => {
     callback(true);
   });
 
-  // Allow webview to navigate to any URL
+  // Webview security — only allow insecure content in dev
   win.webContents.on('will-attach-webview', (_event, webPreferences, _params) => {
-    webPreferences.allowRunningInsecureContent = true;
+    webPreferences.allowRunningInsecureContent = !!process.env.VITE_DEV_SERVER_URL;
   });
 
   win.once('ready-to-show', () => {
