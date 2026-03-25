@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useAppStore } from './stores/app-store';
 import { useKeyboard } from './hooks/useKeyboard';
 import { easing, duration } from './utils/motion';
+import { applyTheme } from './components/SettingsPanel';
 import { TitleBar } from './components/TitleBar';
 import { TabBar } from './components/TabBar';
 import { SplitView } from './components/SplitView';
@@ -21,6 +22,10 @@ import { SecurityReport } from './components/pro/SecurityReport';
 import { AIClipboardOverlay } from './components/pro/AIClipboardOverlay';
 import { UpdateBar } from './components/UpdateBar';
 import { PatchNotesModal } from './components/PatchNotesModal';
+import { ServerDashboard } from './components/pro/ServerDashboard';
+import { CronViewer } from './components/pro/CronViewer';
+import { CommandRunner } from './components/pro/CommandRunner';
+import { HealthDashboard } from './components/pro/HealthDashboard';
 
 export function App() {
   useKeyboard();
@@ -66,6 +71,10 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    // Apply saved theme
+    const savedTheme = localStorage.getItem('void-theme');
+    if (savedTheme) applyTheme(savedTheme);
+
     loadSavedConnections();
     loadLicense().then(() => {
       const flag = localStorage.getItem('void-first-pro-launch');
@@ -75,6 +84,21 @@ export function App() {
       }
     });
   }, [loadSavedConnections, loadLicense]);
+
+  // Receive detached tab from another window
+  useEffect(() => {
+    return window.void.app.onReceiveTab((tabData: any) => {
+      if (!tabData?.id) return;
+      const store = useAppStore.getState();
+      store.receiveDetachedTab(tabData);
+      // Replay SSH buffer so terminal shows existing content
+      if (tabData.sessionId) {
+        window.void.ssh.getBuffer(tabData.sessionId).then((buf: string) => {
+          // Buffer will be replayed by useTerminal hook when it mounts
+        });
+      }
+    });
+  }, []);
 
   // Check for updates on launch + every 6 hours
   useEffect(() => {
@@ -235,9 +259,7 @@ export function App() {
         )}
 
         <div className="flex-1 flex min-h-0 overflow-hidden">
-          {settingsOpen ? (
-            <SettingsPanel />
-          ) : tabs.length === 0 ? (
+          {tabs.length === 0 ? (
             <WelcomeScreen />
           ) : (
             <SplitView />
@@ -314,6 +336,18 @@ export function App() {
       <AnimatePresence>
         {activeModal === 'security-scan' && (
           <SecurityReport issues={[]} server="scan" onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal === 'server-dashboard' && (
+          <ServerDashboard onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal === 'cron-viewer' && (
+          <CronViewer onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal === 'command-runner' && (
+          <CommandRunner onClose={() => setActiveModal(null)} />
+        )}
+        {activeModal === 'health-dashboard' && (
+          <HealthDashboard onClose={() => setActiveModal(null)} />
         )}
       </AnimatePresence>
 

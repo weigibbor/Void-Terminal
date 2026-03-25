@@ -1,4 +1,4 @@
-export type TabType = 'ssh' | 'local' | 'browser' | 'new-connection';
+export type TabType = 'ssh' | 'local' | 'browser' | 'new-connection' | 'settings';
 export type SplitLayout = 'single' | '2-col' | '3-col' | '2+1-grid' | '1+2-grid';
 export type NoteType = 'pinned' | 'note' | 'warning' | 'quickref';
 export type PanePosition = 'L' | 'R' | 'C' | 'TL' | 'TR' | 'B' | 'T' | 'BL' | 'BR';
@@ -16,7 +16,7 @@ export interface Tab {
   lastActivity: number;
   disconnectedAt?: number;
   scrollbackPreserved?: boolean;
-  latency?: number | null;
+  color?: string;
 }
 
 export interface SSHConfig {
@@ -29,6 +29,15 @@ export interface SSHConfig {
   keepAlive: boolean;
   keepAliveInterval: number;
   autoReconnect: boolean;
+  agentForward?: boolean;
+  jumpHost?: {
+    host: string;
+    port: number;
+    username: string;
+    authMethod: 'key' | 'password';
+    password?: string;
+    privateKeyPath?: string;
+  };
 }
 
 export interface SavedConnection {

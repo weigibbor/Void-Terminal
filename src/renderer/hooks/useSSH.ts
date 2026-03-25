@@ -26,12 +26,17 @@ export function useSSH() {
           lastActivity: Date.now(),
         });
 
+        // Log health event
+        (window as any).void.health?.log(tabId, config.host, 'connected');
+
         window.void.ssh.onClose(result.sessionId, () => {
           updateTab(tabId, { connected: false });
+          (window as any).void.health?.log(tabId, config.host, 'disconnected');
         });
 
         window.void.ssh.onError(result.sessionId, () => {
           updateTab(tabId, { connected: false });
+          (window as any).void.health?.log(tabId, config.host, 'error');
         });
 
         if (config.host) {

@@ -180,11 +180,22 @@ export function ProActivationFlow({ initialScreen = 'license', onComplete }: { i
         {/* Upgrade CTA */}
         <div className="p-[14px] rounded-[8px]" style={{ background: 'rgba(249,115,22,0.04)', border: '0.5px solid rgba(249,115,22,0.1)' }}>
           <div className="text-[12px] text-accent font-semibold font-sans mb-[5px]">Upgrade to Pro</div>
-          <div className="text-[9px] text-[#666] leading-relaxed mb-[10px]">Unlock 8 AI features, unlimited connections, workspaces, broadcast mode, audit log, and more.</div>
+          <div className="text-[9px] text-[#666] leading-relaxed mb-[10px]">Unlock NLP commands, AI Chat, unlimited connections, workspaces, broadcast mode, and more.</div>
           <div className="flex gap-3">
             <div className="text-center"><div className="text-[18px] text-void-text font-bold">$12</div><div className="text-[9px] text-void-text-dim">/month</div></div>
             <div style={{ width: '0.5px', background: '#2A2A30' }} />
             <div className="text-center"><div className="text-[18px] text-void-text font-bold">$120</div><div className="text-[9px] text-void-text-dim">/year (save 17%)</div></div>
+          </div>
+        </div>
+
+        {/* Referral */}
+        <div className="mt-4 pt-4" style={{ borderTop: '0.5px solid #2A2A30' }}>
+          <div className="text-[11px] text-void-text font-medium font-sans mb-1">Refer a Friend</div>
+          <div className="text-[9px] text-void-text-ghost mb-2">Invite a friend — both of you get 1 month free Pro.</div>
+          <div className="flex items-center gap-2 p-[10px] rounded-[6px]" style={{ background: 'var(--elevated, #141418)', border: '0.5px solid #2A2A30' }}>
+            <code className="text-[10px] text-accent font-mono flex-1 truncate">voidterminal.dev/ref/YOUR_CODE</code>
+            <button onClick={() => navigator.clipboard.writeText('https://voidterminal.dev/ref/REFERRAL')}
+              className="text-[9px] text-void-text-ghost hover:text-accent bg-transparent border-none cursor-pointer font-mono">Copy</button>
           </div>
         </div>
       </div>

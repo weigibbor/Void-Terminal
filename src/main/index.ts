@@ -8,6 +8,9 @@ import { MemoryStore } from './memory-store';
 import * as pro from './pro-bridge';
 import { SFTPUploadManager } from './sftp-upload-manager';
 import { isMac } from './utils/platform';
+import { TunnelManager } from './tunnel-manager';
+import { parseSSHConfig } from './utils/ssh-config-parser';
+import { encryptString, decryptString } from './utils/crypto';
 import { initAutoUpdater } from './auto-updater';
 
 let mainWindow: BrowserWindow | null = null;
@@ -15,6 +18,7 @@ const allWindows = new Set<BrowserWindow>();
 let sshManager: SSHManager;
 let ptyManager: PTYManager;
 let uploadManager: SFTPUploadManager;
+let tunnelManager: TunnelManager;
 let connectionStore: ConnectionStore;
 let memoryStore: MemoryStore;
 
@@ -124,14 +128,36 @@ function registerIPCHandlers(): void {
     return sshManager.disconnect(sessionId);
   });
 
+  ipcMain.handle('ssh:exec', async (_event, sessionId: string, command: string) => {
+    if (!sshManager) return { stdout: '', stderr: 'No SSH manager', code: -1 };
+    return sshManager.exec(sessionId, command);
+  });
+
+  ipcMain.handle('ssh:parseConfig', async () => {
+    return parseSSHConfig();
+  });
+
   ipcMain.handle('ssh:getBuffer', async (_event, sessionId: string) => {
     if (!sshManager) return '';
     return sshManager.getBuffer(sessionId);
   });
 
-  ipcMain.handle('ssh:getLatency', async (_event, sessionId: string) => {
-    if (!sshManager) return null;
-    return sshManager.getLatency(sessionId);
+  // --- Tunnels ---
+  ipcMain.handle('tunnel:create', async (_event, sessionId: string, type: string, localPort: number, remoteHost: string, remotePort: number) => {
+    const client = sshManager?.getClient(sessionId);
+    if (!client) return { success: false, error: 'No SSH session' };
+    if (type === 'local') {
+      return tunnelManager.createLocalForward(client, localPort, remoteHost, remotePort);
+    }
+    return { success: false, error: 'Only LOCAL tunnels supported currently' };
+  });
+
+  ipcMain.handle('tunnel:list', async () => {
+    return tunnelManager.listTunnels().map(t => ({ id: t.id, type: t.type, localPort: t.localPort, remoteHost: t.remoteHost, remotePort: t.remotePort, active: t.active }));
+  });
+
+  ipcMain.handle('tunnel:close', async (_event, id: string) => {
+    return tunnelManager.closeTunnel(id);
   });
 
   // --- PTY ---
@@ -170,7 +196,106 @@ function registerIPCHandlers(): void {
     connectionStore.delete(id);
   });
 
+  // --- Connection Backup/Restore ---
+  const backupPath = path.join(app.getPath('home'), '.void', 'connections.backup.enc');
+
+  ipcMain.handle('connections:backup', async (_event, passphrase: string) => {
+    try {
+      const connections = connectionStore.list();
+      const json = JSON.stringify(connections);
+      const encrypted = encryptString(json, passphrase);
+      fs.writeFileSync(backupPath, encrypted, 'utf-8');
+      return { success: true, path: backupPath, count: connections.length };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('connections:restore', async (_event, passphrase: string) => {
+    try {
+      if (!fs.existsSync(backupPath)) return { success: false, error: 'No backup file found' };
+      const encrypted = fs.readFileSync(backupPath, 'utf-8');
+      const json = decryptString(encrypted, passphrase);
+      const connections = JSON.parse(json);
+      for (const conn of connections) {
+        connectionStore.save(conn);
+      }
+      return { success: true, count: connections.length };
+    } catch {
+      return { success: false, error: 'Wrong passphrase or corrupted backup' };
+    }
+  });
+
+  ipcMain.handle('connections:hasBackup', async () => {
+    return fs.existsSync(backupPath);
+  });
+
+  ipcMain.handle('connections:exportEncrypted', async (_event, connectionIds: string[], passphrase: string) => {
+    try {
+      const all = connectionStore.list();
+      const selected = connectionIds.length > 0 ? all.filter((c: any) => connectionIds.includes(c.id)) : all;
+      const exportData = {
+        version: 1,
+        exported_at: Date.now(),
+        connections: selected.map((c: any) => ({
+          ...c,
+          password: c.password ? undefined : undefined,
+          password_encrypted: c.password ? encryptString(c.password, passphrase) : undefined,
+        })),
+      };
+      return { success: true, data: JSON.stringify(exportData, null, 2) };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('connections:importEncrypted', async (_event, jsonStr: string, passphrase: string) => {
+    try {
+      const data = JSON.parse(jsonStr);
+      if (data.version !== 1 || !Array.isArray(data.connections)) {
+        return { success: false, error: 'Invalid format' };
+      }
+      let imported = 0;
+      for (const conn of data.connections) {
+        const password = conn.password_encrypted ? decryptString(conn.password_encrypted, passphrase) : undefined;
+        connectionStore.save({
+          alias: conn.alias, host: conn.host, port: conn.port, username: conn.username,
+          authMethod: conn.authMethod, password, privateKeyPath: conn.privateKeyPath,
+          keepAlive: conn.keepAlive ?? true, keepAliveInterval: conn.keepAliveInterval ?? 30,
+          autoReconnect: conn.autoReconnect ?? true, group: conn.group, color: conn.color,
+        });
+        imported++;
+      }
+      return { success: true, count: imported };
+    } catch {
+      return { success: false, error: 'Wrong passphrase or invalid data' };
+    }
+  });
+
   // --- SFTP (uses SSH client's SFTP subsystem) ---
+  // --- Local filesystem ---
+  ipcMain.handle('fs:readdir', async (_event, dirPath: string) => {
+    try {
+      const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+      const result = entries.map(e => ({
+        name: e.name,
+        type: e.isDirectory() ? 'directory' : 'file',
+        size: e.isFile() ? (fs.statSync(path.join(dirPath, e.name)).size || 0) : 0,
+      }));
+      result.sort((a, b) => {
+        if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+      return { success: true, entries: result };
+    } catch (e: any) {
+      return { success: false, error: e.message, entries: [] };
+    }
+  });
+
+  ipcMain.handle('fs:homedir', async () => {
+    return require('os').homedir();
+  });
+
   ipcMain.handle('sftp:readdir', async (_event, sessionId: string, dirPath: string) => {
     if (!sshManager) return { success: false, error: 'Not ready' };
     const client = sshManager.getClient(sessionId);
@@ -373,6 +498,53 @@ function registerIPCHandlers(): void {
     memoryStore.incrementSnippetRunCount(id);
   });
 
+  // --- Health ---
+  ipcMain.handle('health:log', async (_event, connectionId: string, host: string, eventType: string) => {
+    memoryStore.logHealthEvent(connectionId, host, eventType);
+  });
+
+  ipcMain.handle('health:events', async (_event, connectionId?: string) => {
+    return memoryStore.getHealthEvents(connectionId);
+  });
+
+  ipcMain.handle('health:summary', async () => {
+    return memoryStore.getHealthSummary();
+  });
+
+  // --- Recordings ---
+  ipcMain.handle('recordings:list', async () => {
+    return memoryStore.listRecordings();
+  });
+
+  ipcMain.handle('recordings:save', async (_event, recording) => {
+    return memoryStore.saveRecording(recording);
+  });
+
+  ipcMain.handle('recordings:get', async (_event, id: string) => {
+    return memoryStore.getRecording(id);
+  });
+
+  ipcMain.handle('recordings:delete', async (_event, id: string) => {
+    memoryStore.deleteRecording(id);
+  });
+
+  // --- Bookmarks ---
+  ipcMain.handle('bookmarks:list', async (_event, server?: string) => {
+    return memoryStore.listBookmarks(server);
+  });
+
+  ipcMain.handle('bookmarks:save', async (_event, bookmark) => {
+    return memoryStore.saveBookmark(bookmark);
+  });
+
+  ipcMain.handle('bookmarks:delete', async (_event, id: string) => {
+    memoryStore.deleteBookmark(id);
+  });
+
+  ipcMain.handle('bookmarks:incrementUsage', async (_event, id: string) => {
+    memoryStore.incrementBookmarkUsage(id);
+  });
+
   // --- AI (routed through pro-bridge) ---
   ipcMain.handle('ai:explain', async (_event, error: string, context: string) => {
     return pro.aiExplainError(error, context);
@@ -530,18 +702,9 @@ app.whenReady().then(async () => {
   sshManager = new SSHManager(mainWindow);
   ptyManager = new PTYManager(mainWindow);
   uploadManager = new SFTPUploadManager(mainWindow);
+  tunnelManager = new TunnelManager();
   (global as any).__sshManager = sshManager;
   sshManager.setAllWindows(allWindows);
-  pro.initAIWatcher(memoryStore, mainWindow);
-
-  // Feed SSH output to AI Watcher for event detection
-  const watcher = pro.getAIWatcher();
-  if (watcher) {
-    sshManager.onOutput((sessionId, data, server) => {
-      watcher.feed(sessionId, data, server);
-    });
-  }
-
   // Auto-updater (checks GitHub Releases for new versions)
   initAutoUpdater(mainWindow);
 

@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
+import { WebLinksAddon } from '@xterm/addon-web-links';
 import { TERMINAL_THEME, TERMINAL_OPTIONS } from '../utils/constants';
 import { useAppStore } from '../stores/app-store';
 import '@xterm/xterm/css/xterm.css';
@@ -11,9 +12,10 @@ interface UseTerminalOptions {
   sessionType: 'ssh' | 'local';
   onData?: (data: string) => void;
   onShiftEnter?: () => void;
+  onMultiLinePaste?: (text: string, send: (data: string) => void) => boolean;
 }
 
-export function useTerminal({ sessionId, sessionType, onData, onShiftEnter }: UseTerminalOptions) {
+export function useTerminal({ sessionId, sessionType, onData, onShiftEnter, onMultiLinePaste }: UseTerminalOptions) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -26,10 +28,12 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter }: Us
   const commandBufferRef = useRef('');
   const commandHistoryRef = useRef<string[]>([]);
   const onShiftEnterRef = useRef(onShiftEnter);
+  const onMultiLinePasteRef = useRef(onMultiLinePaste);
   sessionIdRef.current = sessionId;
   sessionTypeRef.current = sessionType;
   onDataRef.current = onData;
   onShiftEnterRef.current = onShiftEnter;
+  onMultiLinePasteRef.current = onMultiLinePaste;
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -46,6 +50,7 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter }: Us
 
     terminal.loadAddon(fitAddon);
     terminal.loadAddon(searchAddon);
+    terminal.loadAddon(new WebLinksAddon((_event, uri) => window.open(uri, '_blank')));
 
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
@@ -78,8 +83,20 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter }: Us
 
     // Handle user input — zero overhead, send immediately like native terminal
     terminal.onData((data) => {
+      // Detect multi-line paste (has newlines and more than 1 char)
+      if (data.length > 1 && (data.includes('\n') || data.includes('\r\n'))) {
+        const dontAsk = localStorage.getItem('void-paste-dont-ask');
+        if (dontAsk !== 'all' && onMultiLinePasteRef.current) {
+          const handled = onMultiLinePasteRef.current(data, sendData);
+          if (handled) return;
+        }
+      }
+
       // Send to SSH/PTY immediately — no processing before this
       sendData(data);
+
+      // Local echo disabled — needs proper terminal mode detection to work with TUI apps
+      // (vim, Claude Code, htop, etc. manage their own cursor, local echo writes to wrong position)
 
       // Lightweight buffer tracking (no API calls, no timers)
       if (data === '\r') {
@@ -201,17 +218,19 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter }: Us
     };
     window.addEventListener('resize', handleResizeSuppress);
 
-    // Cache parsed rules + compiled regexes (don't parse localStorage on every SSH packet)
+    // Cache parsed rules + compiled regexes (Pro only — don't parse localStorage on every SSH packet)
     let cachedRules: { pattern: string; regex: RegExp; enabled: boolean }[] = [];
-    try {
-      const saved = localStorage.getItem('void-watch-rules');
-      if (saved) {
-        cachedRules = JSON.parse(saved)
-          .filter((r: any) => r.enabled)
-          .map((r: any) => { try { return { pattern: r.pattern, regex: new RegExp(r.pattern, 'i'), enabled: true }; } catch { return null; } })
-          .filter(Boolean);
-      }
-    } catch { /* no rules */ }
+    if (useAppStore.getState().isPro) {
+      try {
+        const saved = localStorage.getItem('void-watch-rules');
+        if (saved) {
+          cachedRules = JSON.parse(saved)
+            .filter((r: any) => r.enabled)
+            .map((r: any) => { try { return { pattern: r.pattern, regex: new RegExp(r.pattern, 'i'), enabled: true }; } catch { return null; } })
+            .filter(Boolean);
+        }
+      } catch { /* no rules */ }
+    }
 
     const checkWatchRules = (data: string) => {
       if (suppressWatch || cachedRules.length === 0) return;
@@ -299,5 +318,10 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter }: Us
   const searchPrev = () => searchAddonRef.current?.findPrevious('');
   const fit = () => { try { fitAddonRef.current?.fit(); } catch {} };
 
-  return { containerRef, terminalRef, search, searchNext, searchPrev, fit };
+  const getLastCommand = () => {
+    const history = commandHistoryRef.current;
+    return history.length > 0 ? history[history.length - 1] : '';
+  };
+
+  return { containerRef, terminalRef, search, searchNext, searchPrev, fit, getLastCommand };
 }

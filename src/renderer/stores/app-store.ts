@@ -82,6 +82,7 @@ interface AppState {
   patchNotesMode: 'preview' | 'post-update';
 
   addTab: (type: TabType, config?: Partial<Tab>) => string;
+  receiveDetachedTab: (tabData: any) => void;
   closeTab: (id: string) => void;
   setActiveTab: (id: string) => void;
   updateTab: (id: string, data: Partial<Tab>) => void;
@@ -157,11 +158,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       title:
         type === 'new-connection'
           ? 'New Connection'
-          : type === 'local'
-            ? 'Local Shell'
-            : type === 'browser'
-              ? 'Browser'
-              : 'SSH',
+          : type === 'settings'
+            ? 'Settings'
+            : type === 'local'
+              ? 'Local Shell'
+              : type === 'browser'
+                ? 'Browser'
+                : 'SSH',
       connected: false,
       lastActivity: Date.now(),
       ...config,
@@ -174,6 +177,24 @@ export const useAppStore = create<AppState>((set, get) => ({
       return { tabs, activeTabId: id, paneTabIds };
     });
     return id;
+  },
+
+  receiveDetachedTab: (tabData) => {
+    const tab: Tab = {
+      id: tabData.id,
+      type: tabData.type || 'ssh',
+      title: tabData.title || 'Detached',
+      sessionId: tabData.sessionId,
+      connectionConfig: tabData.connectionConfig,
+      connected: !!tabData.sessionId,
+      lastActivity: Date.now(),
+      color: tabData.color,
+    };
+    set((state) => {
+      const paneTabIds = [...state.paneTabIds];
+      paneTabIds[state.focusedPaneIndex] = tab.id;
+      return { tabs: [...state.tabs, tab], activeTabId: tab.id, paneTabIds };
+    });
   },
 
   closeTab: (id) => {
@@ -440,7 +461,24 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   toggleSettings: () => {
-    set((state) => ({ settingsOpen: !state.settingsOpen, settingsSection: 'general' }));
+    const state = get();
+    // Check if settings tab already open
+    const existingTab = state.tabs.find(t => t.type === 'settings');
+    if (existingTab) {
+      // If it's the active tab, close it
+      if (state.activeTabId === existingTab.id) {
+        state.closeTab(existingTab.id);
+      } else {
+        set({ activeTabId: existingTab.id, settingsSection: 'general' });
+        const paneTabIds = [...state.paneTabIds];
+        paneTabIds[state.focusedPaneIndex] = existingTab.id;
+        set({ paneTabIds });
+      }
+    } else {
+      // Open new settings tab
+      const id = state.addTab('settings');
+      set({ settingsSection: 'general' });
+    }
   },
 
   swapPanes: (fromIndex, toIndex) => {
@@ -469,10 +507,17 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   openSettings: (section) => {
-    set((state) => ({
-      settingsOpen: section ? true : !state.settingsOpen,
-      settingsSection: section || 'general',
-    }));
+    const state = get();
+    const existingTab = state.tabs.find(t => t.type === 'settings');
+    if (existingTab) {
+      set({ activeTabId: existingTab.id, settingsSection: section || 'general' });
+      const paneTabIds = [...state.paneTabIds];
+      paneTabIds[state.focusedPaneIndex] = existingTab.id;
+      set({ paneTabIds });
+    } else {
+      const id = state.addTab('settings');
+      set({ settingsSection: section || 'general' });
+    }
   },
 
   setActiveModal: (modal) => {

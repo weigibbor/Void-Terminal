@@ -3,7 +3,11 @@ import { motion } from 'framer-motion';
 import { useAppStore } from '../stores/app-store';
 import { ContextMenu } from './ContextMenu';
 import type { ContextMenuItem } from './ContextMenu';
+import { FileEditor } from './FileEditor';
+import { FilePreviewModal } from './FilePreviewModal';
 import { easing, duration } from '../utils/motion';
+
+const DOTFILES = ['.bashrc', '.zshrc', '.profile', '.ssh/config', '.ssh/authorized_keys', '.gitconfig', '.env'];
 
 interface SFTPEntry { name: string; type: 'file' | 'directory'; size: number; }
 
@@ -35,9 +39,15 @@ export function SFTPSidebar({ width = 240 }: { width?: number }) {
   const [error, setError] = useState('');
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set());
   const [dragOver, setDragOver] = useState(false);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; entry: SFTPEntry } | null>(null);
   const [uploadProgress, setUploadProgress] = useState<{ name: string; percent: number } | null>(null);
+  const [editingFile, setEditingFile] = useState<{ path: string; name: string; content: string } | null>(null);
+  const [showDotfiles, setShowDotfiles] = useState(false);
+  const [previewFile, setPreviewFile] = useState<{ path: string; name: string } | null>(null);
+  const [sftpMode, setSftpMode] = useState<'remote' | 'local' | 'split'>('remote');
+  const [localPath, setLocalPath] = useState('');
+  const [localFiles, setLocalFiles] = useState<SFTPEntry[]>([]);
 
   const loadDir = useCallback(async (path: string) => {
     if (!sessionId) return;
@@ -57,6 +67,23 @@ export function SFTPSidebar({ width = 240 }: { width?: number }) {
     }
     setLoading(false);
   }, [sessionId]);
+
+  const loadLocalDir = useCallback(async (dirPath: string) => {
+    try {
+      const result = await (window as any).void.fs.readdir(dirPath);
+      if (result.success) {
+        setLocalFiles(result.entries);
+        setLocalPath(dirPath);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  // Init local path
+  useEffect(() => {
+    if (sftpMode !== 'remote' && !localPath) {
+      (window as any).void.fs.homedir().then((home: string) => loadLocalDir(home));
+    }
+  }, [sftpMode, localPath, loadLocalDir]);
 
   // Load home dir when SSH connects
   useEffect(() => {
@@ -191,12 +218,64 @@ export function SFTPSidebar({ width = 240 }: { width?: number }) {
           <span className="text-[12px] text-status-info font-medium font-sans">SFTP</span>
           {isSSH && <span className="text-[10px] text-status-online px-[8px] py-[2px] rounded-[3px]" style={{ background: 'rgba(40,200,64,0.08)', border: '0.5px solid rgba(40,200,64,0.12)' }}>connected</span>}
         </div>
-        <div className="flex gap-[8px] items-center">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="cursor-pointer hover:opacity-80" onClick={() => loadDir(currentPath)}><path d="M3 8a5 5 0 019-2M13 8a5 5 0 01-9 2" stroke="#555" strokeWidth="1.2" strokeLinecap="round"/></svg>
+        <div className="flex gap-[6px] items-center">
+          {(['remote', 'local', 'split'] as const).map(m => (
+            <button key={m} onClick={() => setSftpMode(m)}
+              className={`text-[9px] px-[6px] py-[2px] rounded-[3px] font-mono cursor-pointer ${sftpMode === m ? 'text-accent' : 'text-void-text-ghost'}`}
+              style={{ border: `0.5px solid ${sftpMode === m ? 'rgba(249,115,22,0.25)' : 'transparent'}` }}>
+              {m === 'remote' ? 'Remote' : m === 'local' ? 'Local' : 'Split'}
+            </button>
+          ))}
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="cursor-pointer hover:opacity-80" onClick={() => { loadDir(currentPath); if (localPath) loadLocalDir(localPath); }}><path d="M3 8a5 5 0 019-2M13 8a5 5 0 01-9 2" stroke="#555" strokeWidth="1.2" strokeLinecap="round"/></svg>
           <span onClick={collapseSFTP} className="text-[14px] text-void-text-dim cursor-pointer hover:text-void-text-muted">«</span>
         </div>
       </div>
 
+      {/* File editor overlay */}
+      {editingFile && (
+        <div className="absolute inset-0 z-10">
+          <FileEditor
+            fileName={editingFile.name}
+            content={editingFile.content}
+            onSave={async (content) => {
+              await (window as any).void.sftp.writeFile(sessionId, editingFile.path, content);
+            }}
+            onClose={() => setEditingFile(null)}
+          />
+        </div>
+      )}
+
+      {/* Dotfiles quick access */}
+      {isSSH && (
+        <details open={showDotfiles} onToggle={(e) => setShowDotfiles((e.target as HTMLDetailsElement).open)}>
+          <summary className="flex items-center gap-[6px] px-3 py-[6px] cursor-pointer select-none text-[10px] text-void-text-dim hover:text-void-text-muted" style={{ borderBottom: '0.5px solid rgba(42,42,48,0.3)' }}>
+            <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 2h5l4 4v8a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="#666" strokeWidth="1.2"/></svg>
+            Dotfiles
+          </summary>
+          <div className="py-1" style={{ borderBottom: '0.5px solid rgba(42,42,48,0.3)' }}>
+            {DOTFILES.map(df => (
+              <div key={df}
+                className="flex items-center gap-[6px] px-3 py-[4px] text-[11px] font-mono text-void-text-dim hover:text-void-text hover:bg-void-elevated cursor-pointer"
+                onClick={async () => {
+                  const homePath = currentPath.startsWith('/home') ? currentPath.split('/').slice(0, 3).join('/') : '/root';
+                  const fullPath = `${homePath}/${df}`;
+                  try {
+                    const result = await (window as any).void.sftp.readFile(sessionId, fullPath);
+                    if (result.success) {
+                      setEditingFile({ path: fullPath, name: df, content: result.content });
+                    }
+                  } catch { /* file may not exist */ }
+                }}>
+                <span className="text-[#FEBC2E]">.</span>{df.startsWith('.') ? df.slice(1) : df}
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+
+      {/* Remote file browser (Remote / Split mode) */}
+      {sftpMode !== 'local' && (
+      <>
       {/* Breadcrumb */}
       <div className="flex items-center gap-[4px] px-3 py-[8px] text-[11px] font-mono" style={{ borderBottom: '0.5px solid rgba(42,42,48,0.3)' }}>
         <span className="text-status-info cursor-pointer hover:underline" onClick={() => navigateTo('/')}>/</span>
@@ -241,21 +320,31 @@ export function SFTPSidebar({ width = 240 }: { width?: number }) {
           <div className="text-[11px] text-void-text-ghost font-sans mt-1">Drop files here to upload</div>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto py-1 text-[12px] font-mono" style={{ opacity: dragOver ? 0.3 : 1, transition: 'opacity 200ms ease' }}>
+        <div className={`${sftpMode === 'split' ? '' : 'flex-1'} overflow-y-auto py-1 text-[12px] font-mono`} style={{ opacity: dragOver ? 0.3 : 1, transition: 'opacity 200ms ease', maxHeight: sftpMode === 'split' ? '40vh' : undefined, scrollbarWidth: 'thin', scrollbarColor: '#2A2A30 transparent' }}>
           {files.map(e => (
             <div key={e.name}
               className="flex items-center gap-[8px] py-[6px] px-3 cursor-pointer group"
               style={{
                 color: e.type === 'directory' ? '#5B9BD5' : getFileColor(e.name),
-                background: selected === e.name ? 'rgba(91,155,213,0.06)' : undefined,
-                borderLeft: selected === e.name ? '2px solid #5B9BD5' : '2px solid transparent',
+                background: selected.has(e.name) ? 'rgba(91,155,213,0.06)' : undefined,
+                borderLeft: selected.has(e.name) ? '2px solid #5B9BD5' : '2px solid transparent',
               }}
               onContextMenu={(ev) => { ev.preventDefault(); setCtxMenu({ x: ev.clientX, y: ev.clientY, entry: e }); }}
-              onClick={() => {
+              onClick={(ev) => {
                 if (e.type === 'directory') {
                   navigateTo(currentPath === '/' ? `/${e.name}` : `${currentPath}/${e.name}`);
+                } else if (ev.metaKey || ev.ctrlKey) {
+                  const next = new Set(selected);
+                  next.has(e.name) ? next.delete(e.name) : next.add(e.name);
+                  setSelected(next);
                 } else {
-                  setSelected(e.name);
+                  setSelected(new Set([e.name]));
+                }
+              }}
+              onDoubleClick={() => {
+                if (e.type === 'file') {
+                  const fp = currentPath === '/' ? `/${e.name}` : `${currentPath}/${e.name}`;
+                  setPreviewFile({ path: fp, name: e.name });
                 }
               }}>
               {e.type === 'directory' ? (
@@ -277,6 +366,107 @@ export function SFTPSidebar({ width = 240 }: { width?: number }) {
               )}
             </div>
           ))}
+        </div>
+      )}
+      </>
+      )}
+
+      {/* Local file browser (Local / Split mode) */}
+      {(sftpMode === 'local' || sftpMode === 'split') && (
+        <>
+          <div className="flex items-center justify-between px-3 py-[6px]" style={{ borderTop: sftpMode === 'split' ? '1px solid #2A2A30' : undefined, borderBottom: '0.5px solid rgba(42,42,48,0.3)', background: 'rgba(249,115,22,0.02)' }}>
+            <span className="text-[9px] text-void-text-ghost uppercase tracking-[0.5px] font-mono">Local files</span>
+            {sftpMode === 'split' && sessionId && (
+              <div className="flex gap-[4px]">
+                <button onClick={async () => {
+                  if (!confirm(`Sync local → remote?\nUpload files from ${localPath} to ${currentPath}`)) return;
+                  for (const f of localFiles) {
+                    if (f.type === 'file') {
+                      const localFile = `${localPath}/${f.name}`;
+                      const remoteFile = currentPath === '/' ? `/${f.name}` : `${currentPath}/${f.name}`;
+                      const exists = files.some(rf => rf.name === f.name);
+                      if (!exists) await (window as any).void.sftp.upload(sessionId, localFile, remoteFile);
+                    }
+                  }
+                  loadDir(currentPath);
+                }} className="text-[8px] text-accent bg-transparent border-none cursor-pointer font-mono" title="Upload new local files to remote">
+                  Sync →
+                </button>
+                <button onClick={async () => {
+                  if (!confirm(`Sync remote → local?\nDownload files from ${currentPath} to ${localPath}`)) return;
+                  for (const f of files) {
+                    if (f.type === 'file') {
+                      const remoteFile = currentPath === '/' ? `/${f.name}` : `${currentPath}/${f.name}`;
+                      await (window as any).void.sftp.download(sessionId, remoteFile);
+                    }
+                  }
+                }} className="text-[8px] text-[#5B9BD5] bg-transparent border-none cursor-pointer font-mono" title="Download remote files to local">
+                  ← Sync
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-[4px] px-3 py-[6px] text-[10px] font-mono text-void-text-dim" style={{ borderBottom: '0.5px solid rgba(42,42,48,0.3)' }}>
+            {localPath.split('/').filter(Boolean).map((seg, i, arr) => (
+              <span key={i} className="flex items-center gap-[2px]">
+                {i > 0 && <span className="text-void-text-faint">/</span>}
+                <span className="text-accent cursor-pointer hover:underline" onClick={() => loadLocalDir('/' + arr.slice(0, i + 1).join('/'))}>{seg}</span>
+              </span>
+            ))}
+          </div>
+          <div className="flex-1 overflow-y-auto py-1 text-[12px] font-mono" style={{ maxHeight: sftpMode === 'split' ? '40%' : undefined, scrollbarWidth: 'thin', scrollbarColor: '#2A2A30 transparent' }}>
+            {localPath !== '/' && (
+              <div className="flex items-center gap-[8px] py-[5px] px-3 cursor-pointer hover:bg-void-elevated text-void-text-ghost"
+                onClick={() => { const parent = localPath.split('/').slice(0, -1).join('/') || '/'; loadLocalDir(parent); }}>
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 12V4M5 7l3-3 3 3" stroke="#666" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                ..
+              </div>
+            )}
+            {localFiles.map(e => (
+              <div key={e.name} className="flex items-center gap-[8px] py-[5px] px-3 cursor-pointer group hover:bg-void-elevated"
+                style={{ color: e.type === 'directory' ? '#F97316' : '#888' }}
+                draggable={e.type === 'file'}
+                onDragStart={(ev) => { ev.dataTransfer.setData('text/local-path', `${localPath}/${e.name}`); ev.dataTransfer.setData('text/file-name', e.name); }}
+                onClick={() => { if (e.type === 'directory') loadLocalDir(`${localPath}/${e.name}`); }}>
+                {e.type === 'directory' ? (
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4h5l2 2h5v7H2V4z" stroke="#F97316" strokeWidth="1.2"/></svg>
+                ) : (
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="#555" strokeWidth="1"/></svg>
+                )}
+                <span className="truncate">{e.name}</span>
+                {e.type === 'file' && <span className="text-[10px] text-void-text-ghost ml-auto">{formatSize(e.size)}</span>}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Batch actions bar */}
+      {selected.size > 1 && (
+        <div className="flex items-center justify-between px-3 py-[6px] shrink-0" style={{ borderTop: '0.5px solid rgba(42,42,48,0.3)', background: 'rgba(91,155,213,0.03)' }}>
+          <span className="text-[10px] text-[#5B9BD5] font-mono">{selected.size} selected</span>
+          <div className="flex gap-[6px]">
+            <button onClick={async () => {
+              for (const name of selected) {
+                const fp = currentPath === '/' ? `/${name}` : `${currentPath}/${name}`;
+                await (window as any).void.sftp.download(sessionId, fp);
+              }
+            }} className="text-[9px] px-2 py-[3px] rounded-[4px] text-[#5B9BD5] bg-transparent cursor-pointer font-mono" style={{ border: '0.5px solid rgba(91,155,213,0.2)' }}>
+              Download ({selected.size})
+            </button>
+            <button onClick={async () => {
+              if (!confirm(`Delete ${selected.size} files?`)) return;
+              for (const name of selected) {
+                const fp = currentPath === '/' ? `/${name}` : `${currentPath}/${name}`;
+                await (window as any).void.sftp.delete(sessionId, fp);
+              }
+              setSelected(new Set());
+              loadDir(currentPath);
+            }} className="text-[9px] px-2 py-[3px] rounded-[4px] text-status-error bg-transparent cursor-pointer font-mono" style={{ border: '0.5px solid rgba(255,95,87,0.2)' }}>
+              Delete ({selected.size})
+            </button>
+            <button onClick={() => setSelected(new Set())} className="text-[9px] text-void-text-ghost bg-transparent border-none cursor-pointer font-mono">Clear</button>
+          </div>
         </div>
       )}
 
@@ -322,6 +512,21 @@ export function SFTPSidebar({ width = 240 }: { width?: number }) {
           y={ctxMenu.y}
           items={getFileMenuItems(ctxMenu.entry)}
           onClose={() => setCtxMenu(null)}
+        />
+      )}
+
+      {/* File preview modal */}
+      {previewFile && sessionId && (
+        <FilePreviewModal
+          open={!!previewFile}
+          sessionId={sessionId}
+          filePath={previewFile.path}
+          fileName={previewFile.name}
+          onClose={() => setPreviewFile(null)}
+          onEdit={(content) => {
+            setEditingFile({ path: previewFile.path, name: previewFile.name, content });
+            setPreviewFile(null);
+          }}
         />
       )}
     </motion.div>

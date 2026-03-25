@@ -10,8 +10,6 @@ export function StatusBar() {
   const splitLayout = useAppStore((s) => s.splitLayout);
   const broadcastMode = useAppStore((s) => s.broadcastMode);
   const [elapsed, setElapsed] = useState(0);
-  const [aiConfigured, setAiConfigured] = useState(false);
-
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const connectedCount = tabs.filter((t) => t.connected).length;
   const pausedTabs = tabs.filter((t) => !t.connected && t.disconnectedAt);
@@ -21,14 +19,6 @@ export function StatusBar() {
     const interval = setInterval(() => setElapsed(Date.now() - sessionStartTime), 30000);
     return () => clearInterval(interval);
   }, [sessionStartTime]);
-
-  useEffect(() => {
-    if (isPro) {
-      window.void.ai.getConfig().then((config: any) => {
-        setAiConfigured(!!config?.apiKey || config?.provider === 'ollama');
-      });
-    }
-  }, [isPro]);
 
   const splitLabel = splitLayout === '2-col' ? '2-col'
     : splitLayout === '3-col' ? '3-col'
@@ -58,35 +48,13 @@ export function StatusBar() {
           </span>
         )}
 
-        {/* Active connection + latency */}
+        {/* Active connection */}
         {activeTab?.connected && activeTab.connectionConfig && (
           <span>
             {activeTab.connectionConfig.username}@{activeTab.connectionConfig.host}
-            {activeTab.latency != null && (
-              <span className={activeTab.latency < 100 ? 'text-status-online' : activeTab.latency < 300 ? 'text-yellow-500' : 'text-status-error'}>
-                {' · '}{activeTab.latency}ms
-              </span>
-            )}
           </span>
         )}
 
-        {/* AI status (Pro) */}
-        {isPro && (
-          aiConfigured ? (
-            <span className="flex items-center gap-[5px] text-accent">
-              <span className="inline-block w-[5px] h-[5px] rounded-full bg-accent" />
-              AI watching
-            </span>
-          ) : (
-            <span
-              className="flex items-center gap-[5px] text-void-text-dim cursor-pointer hover:text-void-text-muted"
-              onClick={() => useAppStore.getState().openSettings('ai')}
-            >
-              <span className="inline-block w-[5px] h-[5px] rounded-full bg-void-text-dim" />
-              AI not configured
-            </span>
-          )
-        )}
       </div>
 
       <div className="flex items-center gap-[14px]">

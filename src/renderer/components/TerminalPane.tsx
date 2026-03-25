@@ -1,11 +1,20 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTerminal } from '../hooks/useTerminal';
 import { useAppStore, getPaneLabel } from '../stores/app-store';
 import { SearchBar } from './SearchBar';
 import { MultiLineInput } from './MultiLineInput';
 import { ContextMenu } from './ContextMenu';
 import type { ContextMenuItem } from './ContextMenu';
+import { UploadModal } from './UploadModal';
+import { PasteConfirmDialog } from './PasteConfirmDialog';
+import { FilePreviewModal } from './FilePreviewModal';
 import type { Tab } from '../types';
+
+interface DroppedFile {
+  name: string;
+  localPath: string;
+  size: number;
+}
 
 interface TerminalPaneProps {
   tab: Tab;
@@ -28,17 +37,53 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
   const [multiLineOpen, setMultiLineOpen] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
   const [detectedPort, setDetectedPort] = useState<number | null>(null);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [uploadModalFiles, setUploadModalFiles] = useState<DroppedFile[]>([]);
+  const [pasteText, setPasteText] = useState('');
+  const [pasteSend, setPasteSend] = useState<((data: string) => void) | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [previewFile, setPreviewFile] = useState<{ path: string; name: string } | null>(null);
+  const [recordEvents, setRecordEvents] = useState<{ t: number; type: string; data: string }[]>([]);
+  const recordStartRef = useRef(0);
   const isPro = useAppStore((s) => s.isPro);
 
   const updateTab = useAppStore((s) => s.updateTab);
   const isDisconnected = !tab.connected && !!tab.disconnectedAt;
   const position = getPaneLabel(splitLayout, paneIndex);
 
-  const { containerRef, terminalRef, search, searchNext, searchPrev, fit } = useTerminal({
+  const recordingRef = useRef(false);
+  recordingRef.current = recording;
+  const recordEventsRef = useRef(recordEvents);
+  recordEventsRef.current = recordEvents;
+
+  const { containerRef, terminalRef, search, searchNext, searchPrev, fit, getLastCommand } = useTerminal({
     sessionId: tab.sessionId,
     sessionType: tab.type === 'ssh' ? 'ssh' : 'local',
     onShiftEnter: () => setMultiLineOpen(true),
+    onMultiLinePaste: (text, send) => {
+      setPasteText(text);
+      setPasteSend(() => send);
+      return true;
+    },
+    onData: (data) => {
+      if (recordingRef.current) {
+        setRecordEvents(prev => [...prev, { t: Date.now() - recordStartRef.current, type: 'i', data }]);
+      }
+    },
   });
+
+  // Capture output for recording
+  useEffect(() => {
+    if (!recording || !tab.sessionId) return;
+    const unsub = tab.type === 'ssh'
+      ? window.void.ssh.onData(tab.sessionId, (data: string) => {
+          setRecordEvents(prev => [...prev, { t: Date.now() - recordStartRef.current, type: 'o', data }]);
+        })
+      : window.void.pty.onData(tab.sessionId, (data: string) => {
+          setRecordEvents(prev => [...prev, { t: Date.now() - recordStartRef.current, type: 'o', data }]);
+        });
+    return unsub;
+  }, [recording, tab.sessionId, tab.type]);
 
   useEffect(() => {
     if (activeTabId === tab.id && terminalRef.current) {
@@ -72,14 +117,6 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
       }
     });
   }, [isPro]);
-
-  // Listen for SSH latency updates
-  useEffect(() => {
-    if (tab.type !== 'ssh' || !tab.sessionId || !tab.connected) return;
-    return window.void.ssh.onLatency(tab.sessionId, (ms) => {
-      updateTab(tab.id, { latency: ms });
-    });
-  }, [tab.sessionId, tab.connected, tab.type, tab.id, updateTab]);
 
   const scrollToBottom = useCallback(() => {
     terminalRef.current?.scrollToBottom();
@@ -152,6 +189,28 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
         shortcut: '⇧↵',
         action: () => setMultiLineOpen(true),
       },
+      {
+        label: 'Preview file',
+        disabled: !hasSelection,
+        action: () => {
+          const sel = terminalRef.current?.getSelection()?.trim();
+          if (sel && /\.\w{1,5}$/.test(sel)) {
+            setPreviewFile({ path: sel.startsWith('/') ? sel : sel, name: sel.split('/').pop() || sel });
+          }
+        },
+      },
+      {
+        label: 'Bookmark last command',
+        action: () => {
+          const cmd = getLastCommand();
+          if (cmd) {
+            (window as any).void.bookmarks.save({
+              server: tab.connectionConfig?.host || 'local',
+              command: cmd,
+            });
+          }
+        },
+      },
       { label: '', separator: true },
       {
         label: 'Clear terminal',
@@ -184,6 +243,22 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
       onDrop={(e) => {
         e.preventDefault();
         setDragOver(false);
+        // File drop → open upload modal (SSH only)
+        if (e.dataTransfer.files.length > 0) {
+          if (tab.type === 'ssh' && tab.connected && tab.sessionId) {
+            const dropped: DroppedFile[] = [];
+            for (const file of Array.from(e.dataTransfer.files)) {
+              const localPath = (window as any).void.app.getFilePath?.(file) || (file as any).path;
+              if (localPath) dropped.push({ name: file.name, localPath, size: file.size });
+            }
+            if (dropped.length > 0) {
+              setUploadModalFiles(dropped);
+              setUploadModalOpen(true);
+            }
+          }
+          return;
+        }
+        // Pane swap
         const from = parseInt(e.dataTransfer.getData('text/pane-index'));
         if (!isNaN(from) && from !== paneIndex) swapPanes(from, paneIndex);
       }}
@@ -223,14 +298,44 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
             {position}{isFocused ? ' · FOCUS' : ''}
           </span>
 
+          {/* Record button */}
+          {tab.connected && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (recording) {
+                  // Stop recording — save
+                  const duration = Date.now() - recordStartRef.current;
+                  const data = JSON.stringify({ version: 1, startTime: recordStartRef.current, events: recordEvents });
+                  const title = `${tab.title} — ${new Date().toLocaleString()}`;
+                  (window as any).void.recordings.save({
+                    sessionId: tab.sessionId, server: tab.connectionConfig?.host,
+                    title, data, durationMs: duration,
+                  });
+                  setRecording(false);
+                  setRecordEvents([]);
+                } else {
+                  // Start recording
+                  recordStartRef.current = Date.now();
+                  setRecordEvents([]);
+                  setRecording(true);
+                }
+              }}
+              className="flex items-center gap-[3px] px-[6px] py-[2px] rounded-[3px]"
+              style={{ background: recording ? 'rgba(255,95,87,0.1)' : 'transparent', border: `0.5px solid ${recording ? 'rgba(255,95,87,0.2)' : 'transparent'}` }}
+              title={recording ? 'Stop recording' : 'Record session'}
+            >
+              <span className={`w-[6px] h-[6px] rounded-full ${recording ? 'bg-status-error' : 'bg-void-text-ghost'}`} />
+              {recording && <span className="text-[9px] text-status-error font-mono">REC</span>}
+            </button>
+          )}
+
           {/* Spacer */}
           <span className="flex-1" />
 
-          {/* Latency or offline status */}
+          {/* Connection status */}
           {tab.connected ? (
-            <span className="text-[10px] text-status-online font-mono">
-              {tab.latency != null ? `${tab.latency}ms` : 'connected'}
-            </span>
+            <span className="text-[10px] text-status-online font-mono">connected</span>
           ) : isDisconnected ? (
             <span className="text-[10px] text-status-error font-mono">offline</span>
           ) : null}
@@ -393,6 +498,48 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
           onClose={() => setCtxMenu(null)}
         />
       )}
+
+      {/* Smart paste dialog */}
+      <PasteConfirmDialog
+        open={!!pasteText}
+        text={pasteText}
+        onPasteAll={() => { pasteSend?.(pasteText); setPasteText(''); setPasteSend(null); }}
+        onPasteLineByLine={() => {
+          const lines = pasteText.split(/\r?\n/);
+          let i = 0;
+          const sendNext = () => {
+            if (i < lines.length && pasteSend) {
+              pasteSend(lines[i] + '\r');
+              i++;
+              setTimeout(sendNext, 100);
+            }
+          };
+          sendNext();
+          setPasteText('');
+          setPasteSend(null);
+        }}
+        onCancel={() => { setPasteText(''); setPasteSend(null); }}
+      />
+
+      {/* File preview modal */}
+      {previewFile && tab.sessionId && (
+        <FilePreviewModal
+          open={!!previewFile}
+          sessionId={tab.sessionId}
+          filePath={previewFile.path}
+          fileName={previewFile.name}
+          onClose={() => setPreviewFile(null)}
+        />
+      )}
+
+      {/* Upload modal (drag-drop files onto SSH terminal) */}
+      <UploadModal
+        open={uploadModalOpen}
+        files={uploadModalFiles}
+        sessionId={tab.sessionId || ''}
+        serverName={tab.title || tab.connectionConfig?.host || 'server'}
+        onClose={() => setUploadModalOpen(false)}
+      />
     </div>
   );
 }

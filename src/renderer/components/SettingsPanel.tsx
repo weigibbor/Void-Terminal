@@ -1,5 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useAppStore } from '../stores/app-store';
+import { THEMES } from '../utils/constants';
+import { getKeybindings, saveKeybindingOverride } from '../hooks/useKeyboard';
+
+export function applyTheme(themeId: string) {
+  const theme = THEMES[themeId];
+  if (!theme) return;
+  const root = document.documentElement;
+  root.style.setProperty('--base', theme.ui.base);
+  root.style.setProperty('--surface', theme.ui.surface);
+  root.style.setProperty('--elevated', theme.ui.elevated);
+  root.style.setProperty('--input', theme.ui.input);
+  root.style.setProperty('--border', theme.ui.border);
+  root.style.setProperty('--text', theme.ui.text);
+  root.style.setProperty('--muted', theme.ui.textMuted);
+  root.style.setProperty('--dim', theme.ui.textDim);
+  root.style.setProperty('--ghost', theme.ui.textGhost);
+  root.style.setProperty('--accent', theme.ui.accent);
+  root.setAttribute('data-theme', themeId);
+}
 import { ProActivationFlow } from './ProActivationFlow';
 import type { AIConfig } from '../types';
 
@@ -81,9 +100,7 @@ function GeneralSettings() {
   return (
     <div className="max-w-md space-y-6">
       <h3 className="text-lg text-void-text font-medium">General</h3>
-      <SettingRow label="Theme" description="Dark theme only for v1">
-        <span className="text-sm text-void-text-ghost">Dark</span>
-      </SettingRow>
+      <ThemePicker />
 
       {/* Terminal Font Size */}
       <div>
@@ -146,6 +163,7 @@ function GeneralSettings() {
           <option value="underline">Underline</option>
         </select>
       </SettingRow>
+      {/* Local echo disabled — needs terminal mode detection for TUI apps */}
       <SettingRow label="Scrollback" description="Lines of scrollback history">
         <input
           type="number"
@@ -153,6 +171,8 @@ function GeneralSettings() {
           className="w-24 bg-void-input border border-void-border rounded-void text-sm text-void-text-muted px-2 py-1"
         />
       </SettingRow>
+
+      <ConnectionBackup />
     </div>
   );
 }
@@ -212,13 +232,8 @@ function AISettings() {
   };
 
   const FEATURES: { key: keyof AIConfig['features']; label: string; desc: string; color: string }[] = [
-    { key: 'autoNotes', label: 'Auto-notes & memory', desc: 'AI watches output, takes notes, builds memory. Feeds AI chat and timeline.', color: '#F97316' },
-    { key: 'errorExplainer', label: 'Error explainer', desc: 'Auto-explain errors inline with suggested fix commands.', color: '#28C840' },
-    { key: 'dangerDetection', label: 'Danger detection', desc: 'Warn before destructive commands on production servers.', color: '#FF5F57' },
-    { key: 'autocomplete', label: 'Command autocomplete', desc: 'Predict next command based on context + memory. Tab to accept.', color: '#5B9BD5' },
-    { key: 'naturalLanguage', label: 'Natural language commands', desc: 'Type ? to convert English/Taglish into terminal commands.', color: '#C586C0' },
-    { key: 'securityScanner', label: 'Security scanner', desc: 'Scan .env, configs, and ports for vulnerabilities on connect.', color: '#FEBC2E' },
-    { key: 'anomalyDetection', label: 'Anomaly detection', desc: 'Learn normal server behavior, alert on deviations. Needs 1-2 weeks baseline.', color: '#FEBC2E' },
+    { key: 'naturalLanguage', label: 'NLP commands', desc: 'Type ? prefix to convert natural language into terminal commands.', color: '#C586C0' },
+    { key: 'chat', label: 'AI Chat', desc: 'Ask Void AI about your server, commands, errors — from the sidebar.', color: '#F97316' },
   ];
 
   const providerNames: Record<string, string> = {
@@ -375,34 +390,142 @@ function AISettings() {
   );
 }
 
+function ConnectionBackup() {
+  const [passphrase, setPassphrase] = useState('');
+  const [status, setStatus] = useState('');
+  const [hasBackup, setHasBackup] = useState(false);
+
+  useEffect(() => {
+    (window as any).void.connections.hasBackup().then((v: boolean) => setHasBackup(v));
+  }, []);
+
+  const doBackup = async () => {
+    if (!passphrase) { setStatus('Enter a passphrase'); return; }
+    const result = await (window as any).void.connections.backup(passphrase);
+    if (result.success) { setStatus(`Backed up ${result.count} connections`); setHasBackup(true); }
+    else setStatus(result.error);
+  };
+
+  const doRestore = async () => {
+    if (!passphrase) { setStatus('Enter your passphrase'); return; }
+    const result = await (window as any).void.connections.restore(passphrase);
+    if (result.success) setStatus(`Restored ${result.count} connections`);
+    else setStatus(result.error);
+  };
+
+  return (
+    <div className="mt-4 pt-4" style={{ borderTop: '0.5px solid var(--border, #2A2A30)' }}>
+      <div className="text-sm text-void-text font-medium mb-1">Connection Backup</div>
+      <div className="text-2xs text-void-text-ghost mb-3">Encrypt and backup your saved connections. Restore on any machine.</div>
+      <div className="flex gap-2 mb-2">
+        <input type="password" value={passphrase} onChange={e => setPassphrase(e.target.value)}
+          placeholder="Passphrase" className="flex-1 bg-void-input border border-void-border rounded-void text-sm text-void-text-muted px-2.5 py-1.5" />
+      </div>
+      <div className="flex gap-2">
+        <button onClick={doBackup} className="text-2xs bg-accent text-void-base px-3 py-1.5 rounded-void cursor-pointer">Backup now</button>
+        {hasBackup && <button onClick={doRestore} className="text-2xs text-void-text-muted px-3 py-1.5 rounded-void cursor-pointer" style={{ border: '0.5px solid var(--border, #2A2A30)' }}>Restore</button>}
+      </div>
+      {status && <div className="text-2xs text-void-text-dim mt-2">{status}</div>}
+    </div>
+  );
+}
+
+function LocalEchoToggle() {
+  const [enabled, setEnabled] = useState(() => localStorage.getItem('void-local-echo') === 'true');
+
+  return (
+    <SettingRow label="Local Echo" description="Show typed characters instantly on SSH (reduces perceived latency)">
+      <button
+        onClick={() => {
+          const next = !enabled;
+          localStorage.setItem('void-local-echo', next ? 'true' : 'false');
+          setEnabled(next);
+        }}
+        className={`w-9 h-5 rounded-full relative transition-colors ${enabled ? 'bg-accent' : 'bg-void-border'}`}
+      >
+        <div className={`absolute top-[2px] w-4 h-4 rounded-full bg-white transition-transform ${enabled ? 'translate-x-[18px]' : 'translate-x-[2px]'}`} />
+      </button>
+    </SettingRow>
+  );
+}
+
+function ThemePicker() {
+  const [activeTheme, setActiveTheme] = useState(() => localStorage.getItem('void-theme') || 'dark');
+
+  return (
+    <SettingRow label="Theme" description="Choose your color scheme">
+      <div className="flex gap-[6px]">
+        {Object.entries(THEMES).map(([id, theme]) => (
+          <button key={id}
+            onClick={() => {
+              applyTheme(id);
+              localStorage.setItem('void-theme', id);
+              setActiveTheme(id);
+            }}
+            className={`px-[10px] py-[4px] rounded-[5px] text-[11px] font-sans cursor-pointer border-none`}
+            style={{
+              border: `1.5px solid ${activeTheme === id ? '#F97316' : '#2A2A30'}`,
+              background: theme.ui.base,
+            }}>
+            <span style={{ color: theme.ui.text }}>{theme.name}</span>
+          </button>
+        ))}
+      </div>
+    </SettingRow>
+  );
+}
+
 function ShortcutSettings() {
-  const shortcuts = [
-    { key: 'Cmd+T', action: 'New tab' },
-    { key: 'Cmd+W', action: 'Close tab' },
-    { key: 'Cmd+K', action: 'Command palette' },
-    { key: 'Cmd+D', action: 'Split horizontal' },
-    { key: 'Cmd+Shift+D', action: 'Split grid' },
-    { key: 'Cmd+Shift+N', action: 'Toggle notes' },
-    { key: 'Cmd+L', action: 'AI chat' },
-    { key: 'Cmd+,', action: 'Settings' },
-    { key: 'Cmd+1-9', action: 'Switch tab' },
-    { key: 'Cmd+F', action: 'Search output' },
-    { key: 'Shift+Enter', action: 'Multi-line input' },
-    { key: 'Escape', action: 'Close overlay' },
-  ];
+  const [bindings, setBindings] = useState(() => getKeybindings());
+  const [capturing, setCapturing] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!capturing) return;
+    const handler = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.key === 'Escape') { setCapturing(null); return; }
+      if (['Meta', 'Control', 'Shift', 'Alt'].includes(e.key)) return;
+      const parts: string[] = [];
+      if (e.metaKey || e.ctrlKey) parts.push('cmd');
+      if (e.shiftKey) parts.push('shift');
+      parts.push(e.key.toLowerCase());
+      const keys = parts.join('+');
+      saveKeybindingOverride(capturing, keys);
+      setBindings(getKeybindings());
+      setCapturing(null);
+    };
+    window.addEventListener('keydown', handler, true);
+    return () => window.removeEventListener('keydown', handler, true);
+  }, [capturing]);
+
+  const formatKeys = (keys: string) => keys.split('+').map(k => k === 'cmd' ? '⌘' : k === 'shift' ? '⇧' : k === 'ctrl' ? '⌃' : k.toUpperCase()).join('');
 
   return (
     <div className="max-w-md space-y-4">
       <h3 className="text-lg text-void-text font-medium">Keyboard Shortcuts</h3>
+      <p className="text-[10px] text-void-text-dim">Click a shortcut to rebind. Press Escape to cancel.</p>
       <div className="space-y-1">
-        {shortcuts.map((s) => (
-          <div key={s.key} className="flex items-center justify-between py-2 border-b border-void-border/20">
-            <span className="text-sm text-void-text-muted">{s.action}</span>
-            <kbd className="text-2xs text-void-text-ghost bg-void-surface px-2 py-0.5 rounded font-mono">
-              {s.key}
-            </kbd>
+        {bindings.map((kb: any) => (
+          <div key={kb.id} className="flex items-center justify-between py-2 border-b border-void-border/20">
+            <span className="text-sm text-void-text-muted">{kb.description}</span>
+            <button
+              onClick={() => setCapturing(capturing === kb.id ? null : kb.id)}
+              className={`text-2xs font-mono px-2 py-0.5 rounded cursor-pointer ${capturing === kb.id ? 'bg-accent text-void-base' : 'text-void-text-ghost bg-void-surface'}`}
+              style={{ border: capturing === kb.id ? 'none' : '0.5px solid #2A2A30' }}
+            >
+              {capturing === kb.id ? 'Press keys...' : formatKeys(kb.keys)}
+            </button>
           </div>
         ))}
+        <div className="flex items-center justify-between py-2 border-b border-void-border/20">
+          <span className="text-sm text-void-text-muted">Switch tab (1-9)</span>
+          <kbd className="text-2xs text-void-text-ghost bg-void-surface px-2 py-0.5 rounded font-mono">⌘1-9</kbd>
+        </div>
+        <div className="flex items-center justify-between py-2 border-b border-void-border/20">
+          <span className="text-sm text-void-text-muted">Close overlay</span>
+          <kbd className="text-2xs text-void-text-ghost bg-void-surface px-2 py-0.5 rounded font-mono">ESC</kbd>
+        </div>
       </div>
     </div>
   );
@@ -535,9 +658,7 @@ function LicenseSettings() {
           {[
             'SSH Tunnel Manager', 'Broadcast Mode', 'Workspaces', 'Scheduled Tasks',
             'SFTP Sidebar', 'Watch & Alert', 'Env Inspector', 'Port Forwarding',
-            'Audit Log', 'Pinned Notes', 'AI Memory System', 'AI Error Explainer',
-            'AI Danger Detection', 'AI Autocomplete', 'NLP Commands',
-            'AI Security Scanner', 'AI Anomaly Detection',
+            'Audit Log', 'Pinned Notes', 'NLP Commands', 'AI Chat',
           ].map((f) => (
             <div key={f} className="flex items-center gap-2">
               <span className={`text-[10px] ${isPro ? 'text-status-online' : 'text-void-text-ghost'}`}>
@@ -547,6 +668,21 @@ function LicenseSettings() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Referral section */}
+      <div className="border-t border-void-border pt-4">
+        <h4 className="text-xs text-void-text-dim uppercase tracking-wider mb-2">Refer a Friend</h4>
+        <p className="text-2xs text-void-text-ghost mb-3">Invite a friend — both of you get 1 month free Pro.</p>
+        <div className="flex items-center gap-2 p-3 bg-void-input rounded-void-lg border-[0.5px] border-void-border">
+          <code className="text-sm text-accent font-mono flex-1">voidterminal.dev/ref/YOUR_CODE</code>
+          <button onClick={() => {
+            navigator.clipboard.writeText('https://voidterminal.dev/ref/REFERRAL');
+          }} className="text-2xs text-void-text-ghost hover:text-accent px-2 py-1 rounded cursor-pointer" style={{ border: '0.5px solid var(--border, #2A2A30)' }}>
+            Copy link
+          </button>
+        </div>
+        <div className="text-2xs text-void-text-ghost mt-2">Share this link. When your friend signs up and activates Pro, both accounts get extended by 30 days.</div>
       </div>
     </div>
   );

@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('void', {
     resize: (sessionId: string, cols: number, rows: number) =>
       ipcRenderer.send('ssh:resize', sessionId, cols, rows),
     disconnect: (sessionId: string) => ipcRenderer.invoke('ssh:disconnect', sessionId),
+    exec: (sessionId: string, command: string) => ipcRenderer.invoke('ssh:exec', sessionId, command),
+    parseConfig: () => ipcRenderer.invoke('ssh:parseConfig'),
     getBuffer: (sessionId: string) => ipcRenderer.invoke('ssh:getBuffer', sessionId),
     onData: (sessionId: string, cb: (data: string) => void) => {
       const handler = (_event: unknown, data: string) => cb(data);
@@ -27,14 +29,6 @@ contextBridge.exposeInMainWorld('void', {
       ipcRenderer.on(`ssh:error:${sessionId}`, handler);
       return () => {
         ipcRenderer.removeListener(`ssh:error:${sessionId}`, handler);
-      };
-    },
-    getLatency: (sessionId: string) => ipcRenderer.invoke('ssh:getLatency', sessionId),
-    onLatency: (sessionId: string, cb: (ms: number) => void) => {
-      const handler = (_event: unknown, ms: number) => cb(ms);
-      ipcRenderer.on(`ssh:latency:${sessionId}`, handler);
-      return () => {
-        ipcRenderer.removeListener(`ssh:latency:${sessionId}`, handler);
       };
     },
   },
@@ -84,6 +78,11 @@ contextBridge.exposeInMainWorld('void', {
     save: (conn: unknown) => ipcRenderer.invoke('connections:save', conn),
     update: (id: string, data: unknown) => ipcRenderer.invoke('connections:update', id, data),
     delete: (id: string) => ipcRenderer.invoke('connections:delete', id),
+    backup: (passphrase: string) => ipcRenderer.invoke('connections:backup', passphrase),
+    restore: (passphrase: string) => ipcRenderer.invoke('connections:restore', passphrase),
+    hasBackup: () => ipcRenderer.invoke('connections:hasBackup'),
+    exportEncrypted: (ids: string[], passphrase: string) => ipcRenderer.invoke('connections:exportEncrypted', ids, passphrase),
+    importEncrypted: (json: string, passphrase: string) => ipcRenderer.invoke('connections:importEncrypted', json, passphrase),
   },
 
   memory: {
@@ -108,6 +107,38 @@ contextBridge.exposeInMainWorld('void', {
     incrementRunCount: (id: string) => ipcRenderer.invoke('snippets:incrementRunCount', id),
   },
 
+  fs: {
+    readdir: (path: string) => ipcRenderer.invoke('fs:readdir', path),
+    homedir: () => ipcRenderer.invoke('fs:homedir'),
+  },
+
+  tunnel: {
+    create: (sessionId: string, type: string, localPort: number, remoteHost: string, remotePort: number) =>
+      ipcRenderer.invoke('tunnel:create', sessionId, type, localPort, remoteHost, remotePort),
+    list: () => ipcRenderer.invoke('tunnel:list'),
+    close: (id: string) => ipcRenderer.invoke('tunnel:close', id),
+  },
+
+  health: {
+    log: (connectionId: string, host: string, event: string) => ipcRenderer.invoke('health:log', connectionId, host, event),
+    events: (connectionId?: string) => ipcRenderer.invoke('health:events', connectionId),
+    summary: () => ipcRenderer.invoke('health:summary'),
+  },
+
+  recordings: {
+    list: () => ipcRenderer.invoke('recordings:list'),
+    save: (recording: unknown) => ipcRenderer.invoke('recordings:save', recording),
+    get: (id: string) => ipcRenderer.invoke('recordings:get', id),
+    delete: (id: string) => ipcRenderer.invoke('recordings:delete', id),
+  },
+
+  bookmarks: {
+    list: (server?: string) => ipcRenderer.invoke('bookmarks:list', server),
+    save: (bookmark: unknown) => ipcRenderer.invoke('bookmarks:save', bookmark),
+    delete: (id: string) => ipcRenderer.invoke('bookmarks:delete', id),
+    incrementUsage: (id: string) => ipcRenderer.invoke('bookmarks:incrementUsage', id),
+  },
+
   ai: {
     explain: (error: string, context: string) =>
       ipcRenderer.invoke('ai:explain', error, context),
@@ -121,21 +152,6 @@ contextBridge.exposeInMainWorld('void', {
       ipcRenderer.invoke('ai:chat', message, history),
     getConfig: () => ipcRenderer.invoke('ai:getConfig'),
     setConfig: (config: unknown) => ipcRenderer.invoke('ai:setConfig', config),
-    onErrorExplanation: (cb: (data: any) => void) => {
-      const handler = (_e: unknown, data: any) => cb(data);
-      ipcRenderer.on('ai:error-explanation', handler);
-      return () => ipcRenderer.removeListener('ai:error-explanation', handler);
-    },
-    onWatcherEvent: (cb: (event: any) => void) => {
-      const handler = (_e: unknown, event: any) => cb(event);
-      ipcRenderer.on('ai:watcher-event', handler);
-      return () => ipcRenderer.removeListener('ai:watcher-event', handler);
-    },
-    onAutoNote: (cb: (note: any) => void) => {
-      const handler = (_e: unknown, note: any) => cb(note);
-      ipcRenderer.on('ai:auto-note', handler);
-      return () => ipcRenderer.removeListener('ai:auto-note', handler);
-    },
   },
 
   license: {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAppStore } from '../stores/app-store';
+import { parseSSHString } from '../utils/ssh-parser';
 import type { CommandAction } from '../types';
 
 const PRO_ACTIONS = new Set([
@@ -10,11 +11,23 @@ const PRO_ACTIONS = new Set([
 export function CommandPalette() {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [bookmarks, setBookmarks] = useState<{ id: string; command: string; server: string }[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const toggleCommandPalette = useAppStore((s) => s.toggleCommandPalette);
   const isPro = useAppStore((s) => s.isPro);
 
   const store = useAppStore.getState();
+
+  // Load bookmarks for current server
+  useEffect(() => {
+    const activeTab = store.tabs.find(t => t.id === store.activeTabId);
+    const server = activeTab?.connectionConfig?.host;
+    if (server) {
+      (window as any).void.bookmarks.list(server).then((b: any[]) => setBookmarks(b || []));
+    } else {
+      (window as any).void.bookmarks.list().then((b: any[]) => setBookmarks(b || []));
+    }
+  }, [store]);
 
   const actions: CommandAction[] = useMemo(() => {
     const items: CommandAction[] = [
@@ -138,6 +151,30 @@ export function CommandPalette() {
         category: 'Pro',
         action: () => store.setActiveModal('scheduled-tasks'),
       },
+      {
+        id: 'server-dashboard',
+        label: 'Server dashboard (CPU/RAM/Disk)',
+        category: 'Pro',
+        action: () => store.setActiveModal('server-dashboard'),
+      },
+      {
+        id: 'cron-viewer',
+        label: 'Cron job viewer',
+        category: 'Pro',
+        action: () => store.setActiveModal('cron-viewer'),
+      },
+      {
+        id: 'command-runner',
+        label: 'Multi-server command runner',
+        category: 'Pro',
+        action: () => store.setActiveModal('command-runner'),
+      },
+      {
+        id: 'health-dashboard',
+        label: 'Connection health dashboard',
+        category: 'Pro',
+        action: () => store.setActiveModal('health-dashboard'),
+      },
     ];
 
     // Add saved connections as quick-connect actions
@@ -173,6 +210,26 @@ export function CommandPalette() {
       });
     });
 
+    // Add bookmarks
+    bookmarks.forEach((bm) => {
+      items.push({
+        id: `bookmark-${bm.id}`,
+        label: `⭐ ${bm.command}`,
+        category: 'Bookmark',
+        action: () => {
+          const activeTab = store.tabs.find(t => t.id === store.activeTabId);
+          if (activeTab?.sessionId) {
+            if (activeTab.type === 'ssh') {
+              window.void.ssh.write(activeTab.sessionId, bm.command + '\r');
+            } else {
+              window.void.pty.write(activeTab.sessionId, bm.command + '\r');
+            }
+            (window as any).void.bookmarks.incrementUsage(bm.id);
+          }
+        },
+      });
+    });
+
     // Add open tabs for switching
     store.tabs.forEach((tab) => {
       items.push({
@@ -184,15 +241,54 @@ export function CommandPalette() {
     });
 
     return items;
-  }, [store]);
+  }, [store, bookmarks]);
 
   const filtered = useMemo(() => {
-    if (!query) return actions;
+    const results: CommandAction[] = [];
+
+    // Quick connect: detect user@host pattern
+    if (query.includes('@')) {
+      const parsed = parseSSHString(query);
+      if (parsed?.host) {
+        const label = `Connect: ${parsed.username || 'root'}@${parsed.host}${parsed.port ? ':' + parsed.port : ''}`;
+        results.push({
+          id: 'quick-connect',
+          label,
+          category: 'Quick Connect',
+          action: () => {
+            const tabId = store.addTab('ssh');
+            const config = {
+              host: parsed.host,
+              port: parsed.port || 22,
+              username: parsed.username || 'root',
+              authMethod: 'key' as const,
+              privateKeyPath: '~/.ssh/id_ed25519',
+              keepAlive: true,
+              keepAliveInterval: 30,
+              autoReconnect: true,
+            };
+            window.void.ssh.connect(config).then((r) => {
+              if (r.success && r.sessionId) {
+                useAppStore.getState().updateTab(tabId, {
+                  sessionId: r.sessionId,
+                  connected: true,
+                  title: `${config.username}@${config.host}`,
+                  lastActivity: Date.now(),
+                });
+              }
+            });
+          },
+        });
+      }
+    }
+
+    if (!query) return [...results, ...actions];
     const q = query.toLowerCase();
-    return actions.filter(
+    const matched = actions.filter(
       (a) => a.label.toLowerCase().includes(q) || a.category.toLowerCase().includes(q),
     );
-  }, [query, actions]);
+    return [...results, ...matched];
+  }, [query, actions, store]);
 
   useEffect(() => {
     inputRef.current?.focus();

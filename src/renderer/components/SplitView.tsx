@@ -4,6 +4,7 @@ import { TerminalPane } from './TerminalPane';
 import { ConnectionPanel } from './ConnectionPanel';
 import { ConnectionProgress } from './ConnectionProgress';
 import { BrowserPane } from './BrowserPane';
+import { SettingsPanel } from './SettingsPanel';
 import { SPLIT_MIN_WIDTH, SPLIT_MIN_HEIGHT } from '../utils/constants';
 
 function PaneContent({ tabId, paneIndex }: { tabId: string | null; paneIndex: number }) {
@@ -22,6 +23,9 @@ function PaneContent({ tabId, paneIndex }: { tabId: string | null; paneIndex: nu
   if (!hasTerminals) {
     if (activeTab?.type === 'new-connection') {
       return <ConnectionPanel tabId={activeTab.id} />;
+    }
+    if (activeTab?.type === 'settings') {
+      return <SettingsPanel />;
     }
     if (activeTab?.type === 'browser') {
       return <BrowserPane tab={activeTab} />;
@@ -56,6 +60,12 @@ function PaneContent({ tabId, paneIndex }: { tabId: string | null; paneIndex: nu
       {activeTab?.type === 'new-connection' && (
         <div className="absolute inset-0 z-10 flex flex-col">
           <ConnectionPanel tabId={activeTab.id} />
+        </div>
+      )}
+
+      {activeTab?.type === 'settings' && (
+        <div className="absolute inset-0 z-10 flex flex-col">
+          <SettingsPanel />
         </div>
       )}
 

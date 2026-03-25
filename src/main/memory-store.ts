@@ -76,6 +76,36 @@ export class MemoryStore {
         created_at INTEGER NOT NULL
       );
 
+      CREATE TABLE IF NOT EXISTS recordings (
+        id TEXT PRIMARY KEY,
+        session_id TEXT,
+        server TEXT,
+        title TEXT NOT NULL,
+        data TEXT NOT NULL,
+        duration_ms INTEGER,
+        created_at INTEGER NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS bookmarks (
+        id TEXT PRIMARY KEY,
+        server TEXT,
+        command TEXT NOT NULL,
+        description TEXT,
+        used_count INTEGER DEFAULT 0,
+        created_at INTEGER NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS connection_health (
+        id TEXT PRIMARY KEY,
+        connection_id TEXT NOT NULL,
+        host TEXT NOT NULL,
+        event TEXT NOT NULL,
+        timestamp INTEGER NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_health_connection ON connection_health(connection_id);
+      CREATE INDEX IF NOT EXISTS idx_health_timestamp ON connection_health(timestamp DESC);
+      CREATE INDEX IF NOT EXISTS idx_bookmarks_server ON bookmarks(server);
       CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp DESC);
       CREATE INDEX IF NOT EXISTS idx_events_type ON events(type);
       CREATE INDEX IF NOT EXISTS idx_events_server ON events(server);
@@ -264,6 +294,78 @@ export class MemoryStore {
 
   incrementSnippetRunCount(id: string): void {
     this.db.prepare('UPDATE snippets SET run_count = run_count + 1 WHERE id = ?').run(id);
+  }
+
+  // --- Connection Health ---
+
+  logHealthEvent(connectionId: string, host: string, event: string): void {
+    const id = require('uuid').v4();
+    this.db.prepare('INSERT INTO connection_health (id, connection_id, host, event, timestamp) VALUES (?, ?, ?, ?, ?)')
+      .run(id, connectionId, host, event, Date.now());
+  }
+
+  getHealthEvents(connectionId?: string, limit = 100): unknown[] {
+    if (connectionId) {
+      return this.db.prepare('SELECT * FROM connection_health WHERE connection_id = ? ORDER BY timestamp DESC LIMIT ?').all(connectionId, limit);
+    }
+    return this.db.prepare('SELECT * FROM connection_health ORDER BY timestamp DESC LIMIT ?').all(limit);
+  }
+
+  getHealthSummary(): unknown[] {
+    return this.db.prepare(`
+      SELECT host, connection_id,
+        COUNT(CASE WHEN event = 'connected' THEN 1 END) as connect_count,
+        COUNT(CASE WHEN event = 'disconnected' THEN 1 END) as disconnect_count,
+        COUNT(CASE WHEN event = 'error' THEN 1 END) as error_count,
+        MAX(CASE WHEN event = 'connected' THEN timestamp END) as last_connected,
+        MIN(timestamp) as first_seen
+      FROM connection_health GROUP BY host, connection_id ORDER BY last_connected DESC
+    `).all();
+  }
+
+  // --- Recordings ---
+
+  listRecordings(): unknown[] {
+    return this.db.prepare('SELECT id, session_id, server, title, duration_ms, created_at FROM recordings ORDER BY created_at DESC').all();
+  }
+
+  saveRecording(recording: { sessionId?: string; server?: string; title: string; data: string; durationMs?: number }): string {
+    const id = require('uuid').v4();
+    this.db.prepare('INSERT INTO recordings (id, session_id, server, title, data, duration_ms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(id, recording.sessionId || null, recording.server || null, recording.title, recording.data, recording.durationMs || 0, Date.now());
+    return id;
+  }
+
+  getRecording(id: string): unknown {
+    return this.db.prepare('SELECT * FROM recordings WHERE id = ?').get(id);
+  }
+
+  deleteRecording(id: string): void {
+    this.db.prepare('DELETE FROM recordings WHERE id = ?').run(id);
+  }
+
+  // --- Bookmarks ---
+
+  listBookmarks(server?: string): unknown[] {
+    if (server) {
+      return this.db.prepare('SELECT * FROM bookmarks WHERE server = ? ORDER BY used_count DESC, created_at DESC').all(server);
+    }
+    return this.db.prepare('SELECT * FROM bookmarks ORDER BY used_count DESC, created_at DESC').all();
+  }
+
+  saveBookmark(bookmark: { server?: string; command: string; description?: string }): string {
+    const id = require('uuid').v4();
+    this.db.prepare('INSERT INTO bookmarks (id, server, command, description, used_count, created_at) VALUES (?, ?, ?, ?, 0, ?)')
+      .run(id, bookmark.server || null, bookmark.command, bookmark.description || null, Date.now());
+    return id;
+  }
+
+  deleteBookmark(id: string): void {
+    this.db.prepare('DELETE FROM bookmarks WHERE id = ?').run(id);
+  }
+
+  incrementBookmarkUsage(id: string): void {
+    this.db.prepare('UPDATE bookmarks SET used_count = used_count + 1 WHERE id = ?').run(id);
   }
 
   close(): void {

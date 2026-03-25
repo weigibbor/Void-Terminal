@@ -32,7 +32,7 @@ function TabItem({ tab, isActive, onContextMenu, onReorder }: { tab: Tab; isActi
             ? 'bg-void-surface border-[0.5px] border-void-border border-b-transparent'
             : 'hover:bg-void-surface/30'
       }`}
-      style={{ whiteSpace: 'nowrap', transition: 'background-color 150ms ease, border-color 150ms ease', borderLeft: dragOver ? '2px solid #F97316' : undefined }}
+      style={{ whiteSpace: 'nowrap', transition: 'background-color 150ms ease, border-color 150ms ease', borderLeft: dragOver ? '2px solid #F97316' : tab.color ? `3px solid ${tab.color}` : undefined }}
       draggable
       onDragStart={(e) => {
         e.dataTransfer.setData('text/tab-id', tab.id);

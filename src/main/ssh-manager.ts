@@ -15,6 +15,15 @@ interface SSHConfig {
   keepAlive: boolean;
   keepAliveInterval: number;
   autoReconnect: boolean;
+  agentForward?: boolean;
+  jumpHost?: {
+    host: string;
+    port: number;
+    username: string;
+    authMethod: 'key' | 'password';
+    password?: string;
+    privateKeyPath?: string;
+  };
 }
 
 interface SSHSession {
@@ -25,12 +34,12 @@ interface SSHSession {
   connected: boolean;
   reconnectAttempts: number;
   reconnectTimer?: ReturnType<typeof setTimeout>;
-  latencyTimer?: ReturnType<typeof setInterval>;
-  latency: number | null;
-  dataBuffer: string[];
+  bastionClient?: Client;
+  dataBuffer: string;
 }
 
 const MAX_RECONNECT_ATTEMPTS = 10;
+const MAX_BUFFER_SIZE = 500_000; // ~500KB rolling buffer
 
 function expandTilde(filePath: string): string {
   if (filePath.startsWith('~/') || filePath === '~') {
@@ -43,8 +52,6 @@ export class SSHManager {
   private sessions = new Map<string, SSHSession>();
   private window: BrowserWindow;
   private allWindows?: Set<BrowserWindow>;
-  private outputCallback?: (sessionId: string, data: string, server: string) => void;
-
   constructor(window: BrowserWindow) {
     this.window = window;
   }
@@ -53,8 +60,30 @@ export class SSHManager {
     this.allWindows = windows;
   }
 
-  onOutput(cb: (sessionId: string, data: string, server: string) => void): void {
-    this.outputCallback = cb;
+  private buildConnectConfig(config: SSHConfig): ConnectConfig | null {
+    const cc: ConnectConfig = {
+      host: config.host,
+      port: config.port || 22,
+      username: config.username,
+      keepaliveInterval: config.keepAlive ? (config.keepAliveInterval || 30) * 1000 : 0,
+      keepaliveCountMax: 5,
+      readyTimeout: 10000,
+    };
+    if (config.authMethod === 'password' && config.password) {
+      cc.password = config.password;
+    } else if (config.authMethod === 'key' && config.privateKeyPath) {
+      const keyPath = expandTilde(config.privateKeyPath);
+      try {
+        cc.privateKey = fs.readFileSync(keyPath);
+      } catch {
+        return null;
+      }
+    }
+    if (config.agentForward && process.env.SSH_AUTH_SOCK) {
+      cc.agent = process.env.SSH_AUTH_SOCK;
+      cc.agentForward = true;
+    }
+    return cc;
   }
 
   private send(channel: string, ...args: unknown[]): void {
@@ -84,8 +113,7 @@ export class SSHManager {
         config,
         connected: false,
         reconnectAttempts: 0,
-        latency: null,
-        dataBuffer: [],
+        dataBuffer: '',
       };
 
       client.on('ready', () => {
@@ -103,29 +131,28 @@ export class SSHManager {
 
           stream.on('data', (data: Buffer) => {
             const str = data.toString();
-            session.dataBuffer.push(str);
-            if (session.dataBuffer.length > 5000) session.dataBuffer = session.dataBuffer.slice(-2500);
+            session.dataBuffer += str;
+            if (session.dataBuffer.length > MAX_BUFFER_SIZE) {
+              session.dataBuffer = session.dataBuffer.slice(-MAX_BUFFER_SIZE / 2);
+            }
             this.send(`ssh:data:${sessionId}`, str);
-            this.outputCallback?.(sessionId, str, config.host);
           });
 
           stream.stderr.on('data', (data: Buffer) => {
             const str = data.toString();
-            session.dataBuffer.push(str);
+            session.dataBuffer += str;
             this.send(`ssh:data:${sessionId}`, str);
           });
 
           stream.on('close', () => {
             console.log(`[SSH] Stream closed for ${config.host}`);
             session.connected = false;
-            this.stopLatencyProbe(session);
             this.send(`ssh:close:${sessionId}`);
             if (config.autoReconnect) {
               this.scheduleReconnect(session);
             }
           });
 
-          this.startLatencyProbe(session);
           console.log(`[SSH] Connected to ${config.username}@${config.host}:${config.port}`);
           resolve({ success: true, sessionId });
         });
@@ -148,37 +175,57 @@ export class SSHManager {
         console.log(`[SSH] Client closed for ${config.host}`);
       });
 
-      const connectConfig: ConnectConfig = {
-        host: config.host,
-        port: config.port || 22,
-        username: config.username,
-        keepaliveInterval: config.keepAlive ? (config.keepAliveInterval || 30) * 1000 : 0,
-        keepaliveCountMax: 5,
-        readyTimeout: 10000,
-      };
-
-      if (config.authMethod === 'password' && config.password) {
-        connectConfig.password = config.password;
-      } else if (config.authMethod === 'key' && config.privateKeyPath) {
-        const keyPath = expandTilde(config.privateKeyPath);
-        try {
-          connectConfig.privateKey = fs.readFileSync(keyPath);
-          console.log(`[SSH] Loaded key from ${keyPath}`);
-        } catch (e) {
-          console.error(`[SSH] Cannot read key file: ${keyPath}`, (e as Error).message);
-          resolve({ success: false, error: `Cannot read key file: ${keyPath}` });
-          return;
-        }
+      const connectConfig = this.buildConnectConfig(config);
+      if (!connectConfig) {
+        resolve({ success: false, error: `Cannot read key file: ${config.privateKeyPath}` });
+        return;
       }
 
-      try {
-        console.log(
-          `[SSH] Connecting to ${config.username}@${config.host}:${config.port || 22} (auth: ${config.authMethod})`,
-        );
-        client.connect(connectConfig);
-      } catch (e) {
-        console.error(`[SSH] connect() threw:`, (e as Error).message);
-        resolve({ success: false, error: (e as Error).message });
+      // Jump host / bastion support
+      if (config.jumpHost) {
+        const bastionConfig = this.buildConnectConfig({
+          ...config.jumpHost,
+          keepAlive: true,
+          keepAliveInterval: 30,
+          autoReconnect: false,
+        } as SSHConfig);
+        if (!bastionConfig) {
+          resolve({ success: false, error: `Cannot read bastion key file` });
+          return;
+        }
+        const bastion = new Client();
+        bastion.on('ready', () => {
+          console.log(`[SSH] Bastion connected: ${config.jumpHost!.username}@${config.jumpHost!.host}`);
+          session.bastionClient = bastion;
+          bastion.forwardOut('127.0.0.1', 0, config.host, config.port || 22, (err, stream) => {
+            if (err) {
+              resolve({ success: false, error: `Bastion forward failed: ${err.message}` });
+              bastion.end();
+              return;
+            }
+            connectConfig.sock = stream;
+            console.log(`[SSH] Connecting to ${config.username}@${config.host} via bastion`);
+            client.connect(connectConfig);
+          });
+        });
+        bastion.on('error', (err) => {
+          resolve({ success: false, error: `Bastion error: ${err.message}` });
+        });
+        try {
+          bastion.connect(bastionConfig);
+        } catch (e) {
+          resolve({ success: false, error: `Bastion connect failed: ${(e as Error).message}` });
+        }
+      } else {
+        try {
+          console.log(
+            `[SSH] Connecting to ${config.username}@${config.host}:${config.port || 22} (auth: ${config.authMethod})`,
+          );
+          client.connect(connectConfig);
+        } catch (e) {
+          console.error(`[SSH] connect() threw:`, (e as Error).message);
+          resolve({ success: false, error: (e as Error).message });
+        }
       }
     });
   }
@@ -222,11 +269,18 @@ export class SSHManager {
         session.reconnectAttempts = 0;
 
         stream.on('data', (data: Buffer) => {
-          this.send(`ssh:data:${session.id}`, data.toString());
+          const str = data.toString();
+          session.dataBuffer += str;
+          if (session.dataBuffer.length > MAX_BUFFER_SIZE) {
+            session.dataBuffer = session.dataBuffer.slice(-MAX_BUFFER_SIZE / 2);
+          }
+          this.send(`ssh:data:${session.id}`, str);
         });
 
         stream.stderr.on('data', (data: Buffer) => {
-          this.send(`ssh:data:${session.id}`, data.toString());
+          const str = data.toString();
+          session.dataBuffer += str;
+          this.send(`ssh:data:${session.id}`, str);
         });
 
         stream.on('close', () => {
@@ -237,7 +291,6 @@ export class SSHManager {
           }
         });
 
-        this.startLatencyProbe(session);
         this.send(
           `ssh:data:${session.id}`,
           '\r\n\x1b[32m[Void] Reconnected.\x1b[0m\r\n',
@@ -249,27 +302,10 @@ export class SSHManager {
       this.scheduleReconnect(session);
     });
 
-    const connectConfig: ConnectConfig = {
-      host: session.config.host,
-      port: session.config.port || 22,
-      username: session.config.username,
-      keepaliveInterval: session.config.keepAlive
-        ? (session.config.keepAliveInterval || 30) * 1000
-        : 0,
-      keepaliveCountMax: 5,
-      readyTimeout: 10000,
-    };
-
-    if (session.config.authMethod === 'password' && session.config.password) {
-      connectConfig.password = session.config.password;
-    } else if (session.config.authMethod === 'key' && session.config.privateKeyPath) {
-      const keyPath = expandTilde(session.config.privateKeyPath);
-      try {
-        connectConfig.privateKey = fs.readFileSync(keyPath);
-      } catch {
-        this.scheduleReconnect(session);
-        return;
-      }
+    const connectConfig = this.buildConnectConfig(session.config);
+    if (!connectConfig) {
+      this.scheduleReconnect(session);
+      return;
     }
 
     try {
@@ -279,43 +315,37 @@ export class SSHManager {
     }
   }
 
-  private startLatencyProbe(session: SSHSession): void {
-    if (session.latencyTimer) clearInterval(session.latencyTimer);
-    const probe = () => {
-      if (!session.connected) return;
-      const start = Date.now();
-      session.client.exec('echo', (err) => {
-        if (!err) {
-          session.latency = Date.now() - start;
-          this.send(`ssh:latency:${session.id}`, session.latency);
-        }
-      });
-    };
-    // Initial probe after 3s, then every 60s (saves energy vs 15s)
-    setTimeout(probe, 3000);
-    session.latencyTimer = setInterval(probe, 60000);
-  }
-
-  private stopLatencyProbe(session: SSHSession): void {
-    if (session.latencyTimer) {
-      clearInterval(session.latencyTimer);
-      session.latencyTimer = undefined;
-    }
-  }
-
-  getLatency(sessionId: string): number | null {
-    return this.sessions.get(sessionId)?.latency ?? null;
-  }
 
   getClient(sessionId: string): any {
     return this.sessions.get(sessionId)?.client || null;
   }
 
+  async exec(sessionId: string, command: string): Promise<{ stdout: string; stderr: string; code: number }> {
+    const session = this.sessions.get(sessionId);
+    if (!session?.connected) return { stdout: '', stderr: '', code: -1 };
+
+    return new Promise((resolve) => {
+      session.client.exec(command, (err, stream) => {
+        if (err) {
+          resolve({ stdout: '', stderr: err.message, code: -1 });
+          return;
+        }
+        let stdout = '';
+        let stderr = '';
+        stream.on('data', (data: Buffer) => { stdout += data.toString(); });
+        stream.stderr.on('data', (data: Buffer) => { stderr += data.toString(); });
+        stream.on('close', (code: number) => {
+          resolve({ stdout, stderr, code: code || 0 });
+        });
+      });
+    });
+  }
+
   getBuffer(sessionId: string): string {
     const session = this.sessions.get(sessionId);
     if (!session) return '';
-    const buffered = session.dataBuffer.join('');
-    session.dataBuffer = [];
+    const buffered = session.dataBuffer;
+    session.dataBuffer = '';
     return buffered;
   }
 
@@ -337,8 +367,8 @@ export class SSHManager {
     const session = this.sessions.get(sessionId);
     if (session) {
       if (session.reconnectTimer) clearTimeout(session.reconnectTimer);
-      this.stopLatencyProbe(session);
       session.client.end();
+      session.bastionClient?.end();
       this.sessions.delete(sessionId);
       return { success: true };
     }
@@ -348,8 +378,8 @@ export class SSHManager {
   destroyAll(): void {
     for (const session of this.sessions.values()) {
       if (session.reconnectTimer) clearTimeout(session.reconnectTimer);
-      this.stopLatencyProbe(session);
       session.client.destroy();
+      session.bastionClient?.destroy();
     }
     this.sessions.clear();
   }
