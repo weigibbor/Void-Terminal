@@ -311,10 +311,14 @@ export function ConnectionPanel({ tabId }: { tabId: string }) {
                       </div>
                     </div>
                   )}
-                  <button onClick={() => setShowShare(true)}
+                  <button onClick={() => {
+                    const isTeams = useAppStore.getState().isTeams;
+                    if (isTeams) { setShowShare(true); }
+                    else { alert('Team sharing requires a Teams plan ($8/user/mo). Upgrade at voidterminal.dev/pricing'); }
+                  }}
                     className="w-full mt-2 flex items-center justify-center gap-2 py-[8px] rounded-[8px] cursor-pointer text-[10px] text-void-text-ghost hover:text-void-text-dim font-sans"
                     style={{ border: '0.5px dashed #2A2A30' }}>
-                    Share connections with team
+                    Share connections with team {!useAppStore.getState().isTeams && <span className="text-[8px] text-void-text-ghost ml-1">Teams</span>}
                   </button>
                 </>
               ) : (

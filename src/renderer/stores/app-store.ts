@@ -61,6 +61,7 @@ interface AppState {
   savedConnections: SavedConnection[];
   sessionStartTime: number;
   isPro: boolean;
+  isTeams: boolean;
   licenseInfo: { plan: string; email?: string; activatedAt?: number } | null;
   settingsSection: string;
   terminalFontSize: number;
@@ -131,6 +132,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   savedConnections: [],
   sessionStartTime: Date.now(),
   isPro: false,
+  isTeams: false,
   licenseInfo: null,
   settingsSection: 'general',
   terminalFontSize: parseInt(localStorage.getItem('void-terminal-font-size') || '13'),
@@ -506,7 +508,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   loadLicense: async () => {
     const pro = await window.void.license.isPro();
     const info = await window.void.license.getInfo();
-    set({ isPro: pro, licenseInfo: info });
+    set({ isPro: pro, isTeams: info?.plan === 'teams', licenseInfo: info });
   },
 
   openSettings: (section) => {
