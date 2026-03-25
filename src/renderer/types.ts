@@ -109,6 +109,7 @@ export interface AIConfig {
     dangerDetection: boolean;
     autocomplete: boolean;
     naturalLanguage: boolean;
+    chat: boolean;
     securityScanner: boolean;
     anomalyDetection: boolean;
   };

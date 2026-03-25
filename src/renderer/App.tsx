@@ -99,7 +99,7 @@ export function App() {
 
   // Receive detached tab from another window
   useEffect(() => {
-    return window.void.app.onReceiveTab((tabData: any) => {
+    return (window.void.app as any).onReceiveTab?.((tabData: any) => {
       if (!tabData?.id) return;
       const store = useAppStore.getState();
       store.receiveDetachedTab(tabData);

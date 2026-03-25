@@ -508,7 +508,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   loadLicense: async () => {
     const pro = await window.void.license.isPro();
     const info = await window.void.license.getInfo();
-    set({ isPro: pro, isTeams: info?.plan === 'teams', licenseInfo: info });
+    set({ isPro: pro, isTeams: (info as any)?.plan === 'teams', licenseInfo: info });
   },
 
   openSettings: (section) => {

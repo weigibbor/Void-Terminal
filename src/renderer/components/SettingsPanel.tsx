@@ -231,7 +231,7 @@ function AISettings() {
     window.void.ai.setConfig(updated);
   };
 
-  const FEATURES: { key: keyof AIConfig['features']; label: string; desc: string; color: string }[] = [
+  const FEATURES: { key: string; label: string; desc: string; color: string }[] = [
     { key: 'naturalLanguage', label: 'NLP commands', desc: 'Type ? prefix to convert natural language into terminal commands.', color: '#C586C0' },
     { key: 'chat', label: 'AI Chat', desc: 'Ask Void AI about your server, commands, errors — from the sidebar.', color: '#F97316' },
   ];
@@ -370,12 +370,12 @@ function AISettings() {
             </div>
             <button
               onClick={() => {
-                saveConfig({ ...config, features: { ...config.features, [f.key]: !config.features[f.key] } });
+                saveConfig({ ...config, features: { ...config.features, [f.key]: !(config.features as any)[f.key] } });
               }}
-              className={`relative w-8 h-[18px] rounded-[9px] shrink-0 ${config.features[f.key] ? 'bg-accent' : 'bg-void-border'}`}
+              className={`relative w-8 h-[18px] rounded-[9px] shrink-0 ${(config.features as any)[f.key] ? 'bg-accent' : 'bg-void-border'}`}
               style={{ transition: 'background-color 200ms ease' }}
             >
-              <span className={`absolute top-[2px] w-[14px] h-[14px] bg-white rounded-full ${config.features[f.key] ? 'right-[2px]' : 'left-[2px]'}`}
+              <span className={`absolute top-[2px] w-[14px] h-[14px] bg-white rounded-full ${(config.features as any)[f.key] ? 'right-[2px]' : 'left-[2px]'}`}
                 style={{ transition: 'all 200ms cubic-bezier(0.34, 1.56, 0.64, 1)' }} />
             </button>
           </div>

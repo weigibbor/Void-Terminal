@@ -9,7 +9,7 @@ export function LogViewer({ onClose }: { onClose: () => void }) {
   const [search, setSearch] = useState('');
   const [levels, setLevels] = useState({ error: true, warn: true, info: true, debug: true });
   const scrollRef = useRef<HTMLPreElement>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval>>();
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const activeTab = useAppStore((s) => s.tabs.find(t => t.id === s.activeTabId));
   const sessionId = activeTab?.sessionId;

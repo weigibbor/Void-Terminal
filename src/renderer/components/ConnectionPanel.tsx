@@ -386,7 +386,7 @@ function SSHForm({ connType, setConnType, host, setHost, port, setPort, username
             <input type="text" value={connGroup} onChange={e => setConnGroup(e.target.value)} placeholder="e.g. Production, Staging, Client-A"
               list="conn-groups" className={inputClass} style={{ border: '0.5px solid var(--border)' }} />
             <datalist id="conn-groups">
-              {[...new Set((savedConnections || []).map((c: any) => c.group).filter(Boolean))].map((g: string) => (
+              {[...new Set((savedConnections || []).map((c: any) => c.group).filter(Boolean))].map((g: any) => (
                 <option key={g} value={g} />
               ))}
             </datalist>
