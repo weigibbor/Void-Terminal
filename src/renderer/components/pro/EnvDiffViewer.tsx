@@ -46,13 +46,13 @@ export function EnvDiffViewer({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
-      <div className="w-full flex flex-col" style={{ maxWidth: '700px', maxHeight: '80vh', background: 'var(--base)', border: '0.5px solid #2A2A30', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
+      <div className="w-full flex flex-col" style={{ maxWidth: '700px', maxHeight: '80vh', background: 'var(--base)', border: '0.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
         onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-3 shrink-0" style={{ borderBottom: '0.5px solid #2A2A30' }}>
+        <div className="flex items-center justify-between px-5 py-3 shrink-0" style={{ borderBottom: '0.5px solid var(--border)' }}>
           <div className="text-[13px] text-void-text font-semibold font-sans">Environment Diff</div>
           <button onClick={onClose} className="text-[18px] text-void-text-ghost hover:text-void-text bg-transparent border-none cursor-pointer leading-none">×</button>
         </div>
-        <div className="px-5 py-3 shrink-0 flex gap-2 items-end" style={{ borderBottom: '0.5px solid #2A2A30' }}>
+        <div className="px-5 py-3 shrink-0 flex gap-2 items-end" style={{ borderBottom: '0.5px solid var(--border)' }}>
           <div className="flex-1">
             <label className="block text-[9px] text-void-text-dim uppercase tracking-[0.5px] mb-1">Server A</label>
             <select value={serverA} onChange={e => setServerA(e.target.value)} className="w-full bg-void-input border border-void-border rounded-[4px] text-[10px] text-void-text-muted px-2 py-1 font-mono">

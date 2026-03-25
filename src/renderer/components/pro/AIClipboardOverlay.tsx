@@ -71,14 +71,14 @@ export function AIClipboardOverlay({ visible, onClose, onPaste }: AIClipboardOve
             className="w-full max-w-md"
             style={{
               background: 'rgba(16,16,20,0.98)',
-              border: '0.5px solid #2A2A30',
+              border: '0.5px solid var(--border)',
               borderRadius: '10px',
               boxShadow: '0 16px 48px rgba(0,0,0,0.6)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: '0.5px solid #2A2A30' }}>
+            <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: '0.5px solid var(--border)' }}>
               <div className="w-5 h-5 rounded-[5px] flex items-center justify-center" style={{ background: 'rgba(249,115,22,0.1)' }}>
                 <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
                   <rect x="3" y="2" width="10" height="12" rx="1.5" stroke="#F97316" strokeWidth="1.3" />
@@ -117,10 +117,10 @@ export function AIClipboardOverlay({ visible, onClose, onPaste }: AIClipboardOve
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-end gap-2 px-4 py-3" style={{ borderTop: '0.5px solid #2A2A30' }}>
+            <div className="flex items-center justify-end gap-2 px-4 py-3" style={{ borderTop: '0.5px solid var(--border)' }}>
               <button onClick={onClose}
                 className="px-3 py-[5px] text-[10px] text-void-text-dim font-sans rounded-[5px]"
-                style={{ border: '0.5px solid #2A2A30' }}>
+                style={{ border: '0.5px solid var(--border)' }}>
                 Cancel
               </button>
               <button

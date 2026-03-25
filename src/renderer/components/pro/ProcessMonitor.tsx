@@ -56,9 +56,9 @@ export function ProcessMonitor({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={onClose}>
-      <div className="w-full flex flex-col" style={{ maxWidth: '900px', height: '85vh', background: 'var(--base)', border: '0.5px solid #2A2A30', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
+      <div className="w-full flex flex-col" style={{ maxWidth: '900px', height: '85vh', background: 'var(--base)', border: '0.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
         onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-3 shrink-0" style={{ borderBottom: '0.5px solid #2A2A30' }}>
+        <div className="flex items-center justify-between px-5 py-3 shrink-0" style={{ borderBottom: '0.5px solid var(--border)' }}>
           <div className="flex items-center gap-3">
             <span className="text-[14px] text-void-text font-semibold font-sans">Process Monitor</span>
             <span className="text-[10px] text-void-text-dim font-mono">{activeTab?.title}</span>
@@ -69,7 +69,7 @@ export function ProcessMonitor({ onClose }: { onClose: () => void }) {
           </div>
         </div>
         {/* System bars */}
-        <div className="flex gap-4 px-5 py-3 shrink-0" style={{ borderBottom: '0.5px solid #2A2A30' }}>
+        <div className="flex gap-4 px-5 py-3 shrink-0" style={{ borderBottom: '0.5px solid var(--border)' }}>
           <div className="flex-1">
             <div className="flex justify-between text-[9px] font-mono mb-1"><span className="text-void-text-dim">CPU</span><span style={{ color: barColor(cpuUsage) }}>{cpuUsage.toFixed(1)}%</span></div>
             <div className="h-[6px] rounded-full bg-void-elevated overflow-hidden"><div style={{ width: `${cpuUsage}%`, height: '100%', background: barColor(cpuUsage), borderRadius: '3px', transition: 'width 0.5s' }} /></div>
@@ -80,7 +80,7 @@ export function ProcessMonitor({ onClose }: { onClose: () => void }) {
           </div>
         </div>
         {/* Process table */}
-        <div className="flex px-5 py-2 text-[9px] text-void-text-ghost uppercase tracking-[0.5px] font-mono shrink-0" style={{ borderBottom: '0.5px solid #2A2A30' }}>
+        <div className="flex px-5 py-2 text-[9px] text-void-text-ghost uppercase tracking-[0.5px] font-mono shrink-0" style={{ borderBottom: '0.5px solid var(--border)' }}>
           <span className="w-16 cursor-pointer hover:text-void-text" onClick={() => setSortBy('pid')}>PID</span>
           <span className="w-20">User</span>
           <span className="w-16 cursor-pointer hover:text-void-text" onClick={() => setSortBy('cpu')}>CPU%{sortBy === 'cpu' ? ' ↓' : ''}</span>
@@ -101,7 +101,7 @@ export function ProcessMonitor({ onClose }: { onClose: () => void }) {
             </div>
           ))}
         </div>
-        <div className="px-5 py-2 text-[9px] text-void-text-ghost font-mono shrink-0" style={{ borderTop: '0.5px solid #2A2A30' }}>
+        <div className="px-5 py-2 text-[9px] text-void-text-ghost font-mono shrink-0" style={{ borderTop: '0.5px solid var(--border)' }}>
           {filtered.length} processes · auto-refresh 5s
         </div>
       </div>

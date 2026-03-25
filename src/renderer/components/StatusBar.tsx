@@ -29,7 +29,7 @@ export function StatusBar() {
   return (
     <div
       className="flex items-center justify-between px-[14px] py-[6px] bg-void-input shrink-0 font-mono"
-      style={{ borderTop: '0.5px solid rgba(42,42,48,0.5)', fontSize: '10px', color: '#444' }}
+      style={{ borderTop: '0.5px solid rgba(42,42,48,0.5)', fontSize: '10px', color: 'var(--ghost)' }}
     >
       <div className="flex items-center gap-[14px]">
         {/* Connected count */}

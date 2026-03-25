@@ -161,10 +161,10 @@ export function SFTPSidebar({ width = 240 }: { width?: number }) {
   if (sftpCollapsed) {
     return (
       <motion.div initial={{ width: 240 }} animate={{ width: 44 }} transition={{ duration: duration.normal, ease: easing.standard }}
-        className="bg-void-input flex flex-col items-center py-2 gap-2 shrink-0" style={{ borderRight: '0.5px solid #2A2A30' }}>
+        className="bg-void-input flex flex-col items-center py-2 gap-2 shrink-0" style={{ borderRight: '0.5px solid var(--border)' }}>
         <span className="text-[8px] text-status-info font-mono font-semibold tracking-[1px]" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>SFTP</span>
         <div className="w-[1px] h-3 bg-void-border" />
-        <button onClick={collapseSFTP} className="w-[30px] h-[30px] rounded-[6px] bg-void-elevated flex items-center justify-center hover:bg-void-surface transition-colors" style={{ border: '0.5px solid #2A2A30' }}>
+        <button onClick={collapseSFTP} className="w-[30px] h-[30px] rounded-[6px] bg-void-elevated flex items-center justify-center hover:bg-void-surface transition-colors" style={{ border: '0.5px solid var(--border)' }}>
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4h5l2 2h5v7H2V4z" stroke="#5B9BD5" strokeWidth="1.2"/></svg>
         </button>
       </motion.div>
@@ -175,13 +175,27 @@ export function SFTPSidebar({ width = 240 }: { width?: number }) {
   return (
     <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
       transition={{ duration: duration.smooth, ease: easing.enter }}
-      className="bg-void-input flex flex-col shrink-0 overflow-hidden" style={{ borderRight: '0.5px solid #2A2A30' }}
+      className="bg-void-input flex flex-col shrink-0 overflow-hidden" style={{ borderRight: '0.5px solid var(--border)' }}
       onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
       onDragEnter={(e) => { e.preventDefault(); setDragOver(true); }}
       onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(false); }}
       onDrop={(e) => {
         e.preventDefault(); setDragOver(false);
         if (!sessionId) return;
+
+        // Handle drag from local pane → upload to remote
+        const localPath_drag = e.dataTransfer.getData('text/local-path');
+        const fileName_drag = e.dataTransfer.getData('text/file-name');
+        if (localPath_drag && fileName_drag) {
+          const remotePath = currentPath === '/' ? `/${fileName_drag}` : `${currentPath}/${fileName_drag}`;
+          setUploadProgress({ name: fileName_drag, percent: 0 });
+          (window as any).void.sftp.upload(sessionId, localPath_drag, remotePath).then(() => {
+            setUploadProgress(null);
+            loadDir(currentPath);
+          });
+          return;
+        }
+
         const files = e.dataTransfer.files;
         if (!files || files.length === 0) return;
 
@@ -311,7 +325,7 @@ export function SFTPSidebar({ width = 240 }: { width?: number }) {
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="7" rx="1.5" stroke="#FF5F57" strokeWidth="1.3"/><path d="M5 7V5a3 3 0 016 0v2" stroke="#FF5F57" strokeWidth="1.3" strokeLinecap="round"/></svg>
           </div>
           <div className="text-[12px] text-status-error font-sans">{error}</div>
-          <button onClick={() => loadDir(currentPath)} className="mt-3 text-[11px] text-void-text-dim px-3 py-[6px] rounded-[5px] hover:text-void-text-muted transition-colors" style={{ border: '0.5px solid #2A2A30' }}>Retry</button>
+          <button onClick={() => loadDir(currentPath)} className="mt-3 text-[11px] text-void-text-dim px-3 py-[6px] rounded-[5px] hover:text-void-text-muted transition-colors" style={{ border: '0.5px solid var(--border)' }}>Retry</button>
         </div>
       ) : files.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center px-4 py-8">

@@ -98,7 +98,7 @@ export function AIChatSidebar() {
                 ? 'ml-6 bg-[#1A1A22] rounded-[10px_10px_2px_10px]'
                 : 'mr-3 bg-void-elevated rounded-[2px_10px_10px_10px]'
             } p-3`}
-            style={msg.role === 'assistant' ? { border: '0.5px solid #2A2A30' } : {}}
+            style={msg.role === 'assistant' ? { border: '0.5px solid var(--border)' } : {}}
           >
             {msg.role === 'assistant' && (
               <div className="flex items-center gap-2 mb-2">
@@ -113,7 +113,7 @@ export function AIChatSidebar() {
         ))}
 
         {loading && (
-          <div className="mr-3 bg-void-elevated rounded-[2px_10px_10px_10px] p-3" style={{ border: '0.5px solid #2A2A30' }}>
+          <div className="mr-3 bg-void-elevated rounded-[2px_10px_10px_10px] p-3" style={{ border: '0.5px solid var(--border)' }}>
             <div className="flex items-center gap-2 mb-2">
               <span className="w-3.5 h-3.5 rounded-[4px] bg-accent/80 flex items-center justify-center">
                 <span className="w-1.5 h-1.5 rounded-full bg-white/80" />
@@ -133,7 +133,7 @@ export function AIChatSidebar() {
 
       {/* Input */}
       <div className="p-2" style={{ borderTop: '0.5px solid rgba(42,42,48,0.5)' }}>
-        <div className="flex items-center gap-2 bg-void-surface px-3 py-2.5 rounded-[8px]" style={{ border: '0.5px solid #2A2A30' }}>
+        <div className="flex items-center gap-2 bg-void-surface px-3 py-2.5 rounded-[8px]" style={{ border: '0.5px solid var(--border)' }}>
           <span className="w-2 h-2 rounded-full bg-accent shrink-0" />
           <input
             type="text"

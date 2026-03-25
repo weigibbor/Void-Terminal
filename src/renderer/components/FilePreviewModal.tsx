@@ -70,11 +70,11 @@ export function FilePreviewModal({ open, sessionId, filePath, fileName, onClose,
             exit={{ scale: 0.95, y: 8, opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
             className="w-full flex flex-col"
-            style={{ maxWidth: '640px', maxHeight: '80vh', background: 'var(--base)', border: '0.5px solid #2A2A30', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
+            style={{ maxWidth: '640px', maxHeight: '80vh', background: 'var(--base)', border: '0.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-3 shrink-0" style={{ borderBottom: '0.5px solid #2A2A30' }}>
+            <div className="flex items-center justify-between px-5 py-3 shrink-0" style={{ borderBottom: '0.5px solid var(--border)' }}>
               <div className="flex items-center gap-[8px]">
                 <span className="text-[13px] text-void-text font-mono font-medium truncate">{fileName}</span>
                 <span className="text-[10px] text-void-text-ghost font-mono">{filePath}</span>

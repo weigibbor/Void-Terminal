@@ -149,7 +149,7 @@ export function ConnectionPanel({ tabId }: { tabId: string }) {
   const formProps = { connType, setConnType, host, setHost, port, setPort, username, setUsername, password, setPassword, privateKeyPath, setPrivateKeyPath, authMethod, setAuthMethod, keepAlive, setKeepAlive, autoReconnect, setAutoReconnect, agentForward, setAgentForward, useJumpHost, setUseJumpHost, jumpHost, setJumpHost, jumpPort, setJumpPort, jumpUser, setJumpUser, jumpAuth, setJumpAuth, jumpKeyPath, setJumpKeyPath, alias, setAlias, connGroup, setConnGroup, tabColor, setTabColor, browserUrl, setBrowserUrl, error, connecting, handleConnect, inputClass, labelClass, savedConnections };
 
   return (
-    <div className="flex-1 h-full overflow-y-auto bg-void-elevated" style={{ borderTop: '0.5px solid #2A2A30' }}>
+    <div className="flex-1 h-full overflow-y-auto bg-void-elevated" style={{ borderTop: '0.5px solid var(--border)' }}>
       <div className="w-full px-5 py-5" style={{ maxWidth: '100%' }}>
         <AnimatePresence mode="wait" custom={direction}>
           {view === 'hub' ? (
@@ -161,12 +161,12 @@ export function ConnectionPanel({ tabId }: { tabId: string }) {
                 </div>
                 <div><div className="text-[15px] text-void-text font-semibold font-sans">Connect</div><div className="text-[10px] text-void-text-dim">Choose a saved connection or create a new one</div></div>
               </div>
-              <div className="flex items-center gap-2 px-[14px] py-[10px] bg-void-input rounded-[8px] mb-[18px]" style={{ border: '0.5px solid #2A2A30' }}>
+              <div className="flex items-center gap-2 px-[14px] py-[10px] bg-void-input rounded-[8px] mb-[18px]" style={{ border: '0.5px solid var(--border)' }}>
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="#555" strokeWidth="1.2"/><line x1="11" y1="11" x2="14" y2="14" stroke="#555" strokeWidth="1.2" strokeLinecap="round"/></svg>
                 <input type="text" value={quickConnect} onChange={e => setQuickConnect(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && quickConnect) handleQuickConnectInput(quickConnect); }}
                   placeholder="Quick connect — paste user@host:port" className="flex-1 min-w-0 bg-transparent text-[11px] text-void-text outline-none placeholder:text-void-text-ghost truncate" />
-                <span className="text-[8px] text-void-text-faint px-[6px] py-[2px] rounded-[3px]" style={{ border: '0.5px solid #2A2A30' }}>Enter</span>
+                <span className="text-[8px] text-void-text-faint px-[6px] py-[2px] rounded-[3px]" style={{ border: '0.5px solid var(--border)' }}>Enter</span>
               </div>
               {hasSaved ? (
                 <>
@@ -207,7 +207,7 @@ export function ConnectionPanel({ tabId }: { tabId: string }) {
                             </div>
                             <div className="flex gap-1 shrink-0">
                               <button onClick={e => { e.stopPropagation(); setHost(conn.host); setPort(String(conn.port)); setUsername(conn.username); setAuthMethod(conn.authMethod); setAlias(conn.alias); goToForm(); }}
-                                className="w-6 h-6 rounded-[6px] flex items-center justify-center" style={{ border: '0.5px solid #2A2A30' }}>
+                                className="w-6 h-6 rounded-[6px] flex items-center justify-center" style={{ border: '0.5px solid var(--border)' }}>
                                 <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M11 2l3 3-8 8H3v-3l8-8z" stroke="#444" strokeWidth="1.2"/></svg>
                               </button>
                             </div>
@@ -260,7 +260,7 @@ export function ConnectionPanel({ tabId }: { tabId: string }) {
                     </div>
                   </div>
                   {showImport && importEntries.length > 0 && (
-                    <div className="mt-3 p-3 rounded-[8px] bg-void-input" style={{ border: '0.5px solid #2A2A30' }}>
+                    <div className="mt-3 p-3 rounded-[8px] bg-void-input" style={{ border: '0.5px solid var(--border)' }}>
                       <div className="text-[10px] text-void-text-muted uppercase tracking-[0.5px] mb-2">Found in ~/.ssh/config</div>
                       <div className="flex flex-col gap-[4px] max-h-[160px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#2A2A30 transparent' }}>
                         {importEntries.map((entry: any, i: number) => (
@@ -274,7 +274,7 @@ export function ConnectionPanel({ tabId }: { tabId: string }) {
                         ))}
                       </div>
                       <div className="flex justify-end gap-2 mt-2">
-                        <button onClick={() => setShowImport(false)} className="px-3 py-[5px] rounded-[4px] text-[10px] text-void-text-dim" style={{ border: '0.5px solid #2A2A30' }}>Cancel</button>
+                        <button onClick={() => setShowImport(false)} className="px-3 py-[5px] rounded-[4px] text-[10px] text-void-text-dim" style={{ border: '0.5px solid var(--border)' }}>Cancel</button>
                         <button onClick={async () => {
                           for (const i of importSelected) {
                             const e = importEntries[i];
@@ -353,17 +353,17 @@ function SSHForm({ connType, setConnType, host, setHost, port, setPort, username
       {connType === 'ssh' && (
         <div className="flex flex-col gap-[10px]">
           <div className="grid gap-[10px]" style={{ gridTemplateColumns: '1fr 80px' }}>
-            <div><label className={labelClass}>Host / IP</label><input type="text" value={host} onChange={e => setHost(e.target.value)} placeholder="e.g. 192.168.1.50" className={inputClass} style={{ border: '0.5px solid #2A2A30' }} /></div>
-            <div><label className={labelClass}>Port</label><input type="text" value={port} onChange={e => setPort(e.target.value)} className={inputClass} style={{ border: '0.5px solid #2A2A30' }} /></div>
+            <div><label className={labelClass}>Host / IP</label><input type="text" value={host} onChange={e => setHost(e.target.value)} placeholder="e.g. 192.168.1.50" className={inputClass} style={{ border: '0.5px solid var(--border)' }} /></div>
+            <div><label className={labelClass}>Port</label><input type="text" value={port} onChange={e => setPort(e.target.value)} className={inputClass} style={{ border: '0.5px solid var(--border)' }} /></div>
           </div>
           <div className="grid grid-cols-2 gap-[10px]">
-            <div><label className={labelClass}>Username</label><input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="e.g. root" className={inputClass} style={{ border: '0.5px solid #2A2A30' }} /></div>
-            <div><label className={labelClass}>Alias (optional)</label><input type="text" value={alias} onChange={e => setAlias(e.target.value)} placeholder="e.g. prod-api" className={inputClass} style={{ border: '0.5px solid #2A2A30' }} /></div>
+            <div><label className={labelClass}>Username</label><input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="e.g. root" className={inputClass} style={{ border: '0.5px solid var(--border)' }} /></div>
+            <div><label className={labelClass}>Alias (optional)</label><input type="text" value={alias} onChange={e => setAlias(e.target.value)} placeholder="e.g. prod-api" className={inputClass} style={{ border: '0.5px solid var(--border)' }} /></div>
           </div>
           <div>
             <label className={labelClass}>Group (optional)</label>
             <input type="text" value={connGroup} onChange={e => setConnGroup(e.target.value)} placeholder="e.g. Production, Staging, Client-A"
-              list="conn-groups" className={inputClass} style={{ border: '0.5px solid #2A2A30' }} />
+              list="conn-groups" className={inputClass} style={{ border: '0.5px solid var(--border)' }} />
             <datalist id="conn-groups">
               {[...new Set((savedConnections || []).map((c: any) => c.group).filter(Boolean))].map((g: string) => (
                 <option key={g} value={g} />
@@ -381,7 +381,7 @@ function SSHForm({ connType, setConnType, host, setHost, port, setPort, username
             <label className={labelClass}>{authMethod === 'key' ? 'Key file' : 'Password'}</label>
             <input type={authMethod === 'password' ? 'password' : 'text'} value={authMethod === 'password' ? password : privateKeyPath}
               onChange={e => authMethod === 'password' ? setPassword(e.target.value) : setPrivateKeyPath(e.target.value)}
-              placeholder={authMethod === 'key' ? '~/.ssh/id_ed25519' : ''} className={inputClass} style={{ border: '0.5px solid #2A2A30' }} />
+              placeholder={authMethod === 'key' ? '~/.ssh/id_ed25519' : ''} className={inputClass} style={{ border: '0.5px solid var(--border)' }} />
           </div>
           <Toggle label="Keep-alive" desc="Prevents timeout disconnections" checked={keepAlive} onChange={setKeepAlive} />
           <Toggle label="Auto-reconnect" desc="Reconnect on unexpected drop" checked={autoReconnect} onChange={setAutoReconnect} />
@@ -392,11 +392,11 @@ function SSHForm({ connType, setConnType, host, setHost, port, setPort, username
           {useJumpHost && (
             <div className="ml-3 pl-3 flex flex-col gap-[8px]" style={{ borderLeft: '2px solid rgba(249,115,22,0.15)' }}>
               <div className="grid gap-[8px]" style={{ gridTemplateColumns: '1fr 70px' }}>
-                <div><label className={labelClass}>Bastion host</label><input type="text" value={jumpHost} onChange={e => setJumpHost(e.target.value)} placeholder="bastion.example.com" className={inputClass} style={{ border: '0.5px solid #2A2A30' }} /></div>
-                <div><label className={labelClass}>Port</label><input type="text" value={jumpPort} onChange={e => setJumpPort(e.target.value)} className={inputClass} style={{ border: '0.5px solid #2A2A30' }} /></div>
+                <div><label className={labelClass}>Bastion host</label><input type="text" value={jumpHost} onChange={e => setJumpHost(e.target.value)} placeholder="bastion.example.com" className={inputClass} style={{ border: '0.5px solid var(--border)' }} /></div>
+                <div><label className={labelClass}>Port</label><input type="text" value={jumpPort} onChange={e => setJumpPort(e.target.value)} className={inputClass} style={{ border: '0.5px solid var(--border)' }} /></div>
               </div>
-              <div><label className={labelClass}>Bastion user</label><input type="text" value={jumpUser} onChange={e => setJumpUser(e.target.value)} placeholder="root" className={inputClass} style={{ border: '0.5px solid #2A2A30' }} /></div>
-              <div><label className={labelClass}>Bastion key</label><input type="text" value={jumpKeyPath} onChange={e => setJumpKeyPath(e.target.value)} placeholder="~/.ssh/id_ed25519" className={inputClass} style={{ border: '0.5px solid #2A2A30' }} /></div>
+              <div><label className={labelClass}>Bastion user</label><input type="text" value={jumpUser} onChange={e => setJumpUser(e.target.value)} placeholder="root" className={inputClass} style={{ border: '0.5px solid var(--border)' }} /></div>
+              <div><label className={labelClass}>Bastion key</label><input type="text" value={jumpKeyPath} onChange={e => setJumpKeyPath(e.target.value)} placeholder="~/.ssh/id_ed25519" className={inputClass} style={{ border: '0.5px solid var(--border)' }} /></div>
             </div>
           )}
           <div>
@@ -413,14 +413,14 @@ function SSHForm({ connType, setConnType, host, setHost, port, setPort, username
           <div>
             <label className={labelClass}>Startup command (optional)</label>
             <input type="text" value={(formProps as any).startupCmd || ''} onChange={e => (formProps as any).setStartupCmd?.(e.target.value)}
-              placeholder="e.g. cd /app && source .env" className={inputClass} style={{ border: '0.5px solid #2A2A30' }} />
+              placeholder="e.g. cd /app && source .env" className={inputClass} style={{ border: '0.5px solid var(--border)' }} />
           </div>
         </div>
       )}
       {connType === 'browser' && (
         <div className="flex flex-col gap-[10px]">
-          <div><label className={labelClass}>URL</label><input type="text" value={browserUrl} onChange={e => setBrowserUrl(e.target.value)} placeholder="https://example.com" className={inputClass} style={{ border: '0.5px solid #2A2A30' }} /></div>
-          <div><label className={labelClass}>Alias (optional)</label><input type="text" value={alias} onChange={e => setAlias(e.target.value)} placeholder="e.g. Admin Panel" className={inputClass} style={{ border: '0.5px solid #2A2A30' }} /></div>
+          <div><label className={labelClass}>URL</label><input type="text" value={browserUrl} onChange={e => setBrowserUrl(e.target.value)} placeholder="https://example.com" className={inputClass} style={{ border: '0.5px solid var(--border)' }} /></div>
+          <div><label className={labelClass}>Alias (optional)</label><input type="text" value={alias} onChange={e => setAlias(e.target.value)} placeholder="e.g. Admin Panel" className={inputClass} style={{ border: '0.5px solid var(--border)' }} /></div>
         </div>
       )}
       {error && <div className="mt-3 text-[10px] text-status-error bg-status-error/5 border-[0.5px] border-status-error/15 rounded-[6px] px-3 py-2">{error}</div>}
@@ -431,7 +431,7 @@ function SSHForm({ connType, setConnType, host, setHost, port, setPort, username
           {connType === 'ssh' ? (connecting ? 'Connecting...' : 'Connect') : connType === 'browser' ? 'Open' : 'Open shell'}
         </button>
         {connType === 'ssh' && !connecting && (
-          <button className="px-[18px] py-[10px] rounded-[7px] text-[12px] text-void-text-dim" style={{ border: '0.5px solid #2A2A30' }}>Save only</button>
+          <button className="px-[18px] py-[10px] rounded-[7px] text-[12px] text-void-text-dim" style={{ border: '0.5px solid var(--border)' }}>Save only</button>
         )}
       </div>
     </div>

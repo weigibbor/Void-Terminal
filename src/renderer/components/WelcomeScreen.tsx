@@ -4,7 +4,7 @@ export function WelcomeScreen() {
   const addTab = useAppStore((s) => s.addTab);
 
   return (
-    <div className="flex-1 flex items-center justify-center bg-void-elevated" style={{ borderTop: '0.5px solid #2A2A30' }}>
+    <div className="flex-1 flex items-center justify-center bg-void-elevated" style={{ borderTop: '0.5px solid var(--border)' }}>
       <div className="text-center">
         {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-[6px]">

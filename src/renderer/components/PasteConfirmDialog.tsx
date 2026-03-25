@@ -34,7 +34,7 @@ export function PasteConfirmDialog({ open, text, onPasteAll, onPasteLineByLine, 
             exit={{ scale: 0.95, y: 6, opacity: 0 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
             className="w-full"
-            style={{ maxWidth: '400px', background: 'var(--base)', border: '0.5px solid #2A2A30', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
+            style={{ maxWidth: '400px', background: 'var(--base)', border: '0.5px solid var(--border)', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -49,12 +49,12 @@ export function PasteConfirmDialog({ open, text, onPasteAll, onPasteLineByLine, 
             <div className="px-4 py-2">
               <pre
                 className="text-[10px] font-mono text-void-text-muted p-2 rounded-[6px] overflow-auto whitespace-pre"
-                style={{ background: 'var(--elevated)', border: '0.5px solid #2A2A30', maxHeight: '120px', scrollbarWidth: 'thin', scrollbarColor: '#2A2A30 transparent' }}
+                style={{ background: 'var(--elevated)', border: '0.5px solid var(--border)', maxHeight: '120px', scrollbarWidth: 'thin', scrollbarColor: '#2A2A30 transparent' }}
               >{preview}</pre>
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-between px-4 py-3" style={{ borderTop: '0.5px solid #2A2A30' }}>
+            <div className="flex items-center justify-between px-4 py-3" style={{ borderTop: '0.5px solid var(--border)' }}>
               <label className="flex items-center gap-[5px] cursor-pointer">
                 <input type="checkbox" onChange={(e) => {
                   if (e.target.checked) localStorage.setItem('void-paste-dont-ask', 'all');
@@ -65,10 +65,10 @@ export function PasteConfirmDialog({ open, text, onPasteAll, onPasteLineByLine, 
               <div className="flex gap-[6px]">
                 <button onClick={onCancel}
                   className="px-[12px] py-[5px] rounded-[5px] text-[10px] text-void-text-dim cursor-pointer font-sans"
-                  style={{ background: 'transparent', border: '0.5px solid #2A2A30' }}>Cancel</button>
+                  style={{ background: 'transparent', border: '0.5px solid var(--border)' }}>Cancel</button>
                 <button onClick={onPasteLineByLine}
                   className="px-[12px] py-[5px] rounded-[5px] text-[10px] text-void-text-muted cursor-pointer font-sans"
-                  style={{ background: 'var(--elevated)', border: '0.5px solid #2A2A30' }}>Line by line</button>
+                  style={{ background: 'var(--elevated)', border: '0.5px solid var(--border)' }}>Line by line</button>
                 <button onClick={onPasteAll}
                   className="px-[12px] py-[5px] rounded-[5px] text-[10px] font-semibold cursor-pointer font-sans border-none"
                   style={{ background: '#F97316', color: 'var(--base)' }}>Paste all</button>

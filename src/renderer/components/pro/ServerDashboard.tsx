@@ -93,10 +93,10 @@ export function ServerDashboard({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
-      <div className="w-full" style={{ maxWidth: '420px', background: 'var(--base)', border: '0.5px solid #2A2A30', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
+      <div className="w-full" style={{ maxWidth: '420px', background: 'var(--base)', border: '0.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
         onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '0.5px solid #2A2A30' }}>
+        <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '0.5px solid var(--border)' }}>
           <div>
             <div className="text-[13px] text-void-text font-semibold font-sans">{stats?.hostname || activeTab?.title || 'Server'}</div>
             {stats && <div className="text-[10px] text-void-text-dim font-mono">up {stats.uptime}</div>}
@@ -123,7 +123,7 @@ export function ServerDashboard({ onClose }: { onClose: () => void }) {
 
             {/* Details */}
             {stats.loadAvg && (
-              <div className="flex items-center justify-between py-2 px-3 bg-void-surface rounded-[6px]" style={{ border: '0.5px solid #2A2A30' }}>
+              <div className="flex items-center justify-between py-2 px-3 bg-void-surface rounded-[6px]" style={{ border: '0.5px solid var(--border)' }}>
                 <span className="text-[10px] text-void-text-dim font-mono">Load average</span>
                 <span className="text-[11px] text-void-text-muted font-mono">{stats.loadAvg}</span>
               </div>
@@ -132,7 +132,7 @@ export function ServerDashboard({ onClose }: { onClose: () => void }) {
         ) : null}
 
         {/* Footer */}
-        <div className="px-5 py-2 text-[9px] text-void-text-ghost font-mono text-center" style={{ borderTop: '0.5px solid #2A2A30' }}>
+        <div className="px-5 py-2 text-[9px] text-void-text-ghost font-mono text-center" style={{ borderTop: '0.5px solid var(--border)' }}>
           Auto-refreshes every 30s
         </div>
       </div>

@@ -294,7 +294,7 @@ function AISettings() {
           ))}
         </div>
       ) : (
-        <div className="flex items-center gap-[10px] p-3 bg-void-surface rounded-[8px]" style={{ border: '0.5px solid #2A2A30' }}>
+        <div className="flex items-center gap-[10px] p-3 bg-void-surface rounded-[8px]" style={{ border: '0.5px solid var(--border)' }}>
           <div className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0" style={{ background: 'rgba(249,115,22,0.08)' }}>
             <div className="w-3 h-3 rounded-full border-[1.5px] border-accent bg-accent" />
           </div>
@@ -333,16 +333,16 @@ function AISettings() {
                 style={{ border: 'none' }}>Save</button>
               <button onClick={() => { setEditingKey(false); setKeyInput(''); }}
                 className="px-[10px] py-2 rounded-[6px] text-[10px] text-void-text-dim"
-                style={{ border: '0.5px solid #2A2A30' }}>✕</button>
+                style={{ border: '0.5px solid var(--border)' }}>✕</button>
             </div>
           ) : (
             <div className="flex gap-2">
-              <div className="flex-1 px-3 py-2 bg-void-input rounded-[6px] text-[11px] text-void-text-dim font-mono" style={{ border: '0.5px solid #2A2A30' }}>
+              <div className="flex-1 px-3 py-2 bg-void-input rounded-[6px] text-[11px] text-void-text-dim font-mono" style={{ border: '0.5px solid var(--border)' }}>
                 {config.apiKey ? `${config.apiKey.substring(0, 8)}${'•'.repeat(16)}${config.apiKey.slice(-4)}` : 'No API key set'}
               </div>
               <button onClick={() => { setEditingKey(true); setKeyInput(config.apiKey || ''); }}
                 className="px-[14px] py-2 rounded-[6px] text-[10px] text-void-text-muted hover:text-void-text transition-colors cursor-pointer"
-                style={{ border: '0.5px solid #2A2A30' }}>Edit</button>
+                style={{ border: '0.5px solid var(--border)' }}>Edit</button>
             </div>
           )}
         </div>
@@ -737,7 +737,7 @@ function AboutSection() {
   return (
     <div className="max-w-lg space-y-5">
       {/* Logo + version */}
-      <div className="flex items-center gap-4 pb-5" style={{ borderBottom: '0.5px solid #2A2A30' }}>
+      <div className="flex items-center gap-4 pb-5" style={{ borderBottom: '0.5px solid var(--border)' }}>
         <div className="w-12 h-12 rounded-[12px] flex items-center justify-center shrink-0" style={{ border: '2.5px solid #F97316' }}>
           <div className="w-5 h-5 rounded-[5px] bg-accent" />
         </div>
@@ -814,7 +814,7 @@ function AboutSection() {
           ) : (
             <button onClick={checkForUpdates} disabled={checking}
               className="px-[18px] py-[8px] rounded-[6px] text-[11px] font-semibold cursor-pointer font-sans flex items-center gap-[6px]"
-              style={{ background: 'var(--elevated)', color: checking ? 'var(--ghost)' : 'var(--muted)', border: '0.5px solid #2A2A30', opacity: checking ? 0.6 : 1 }}>
+              style={{ background: 'var(--elevated)', color: checking ? 'var(--ghost)' : 'var(--muted)', border: '0.5px solid var(--border)', opacity: checking ? 0.6 : 1 }}>
               {checking ? 'Checking...' : updateStatus === 'failed' ? 'Retry' : 'Check for updates'}
             </button>
           )}
@@ -960,7 +960,7 @@ function WatchAlertSettings() {
       <div className="flex gap-2">
         <input value={newPattern} onChange={e => setNewPattern(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') addRule(); }}
-          placeholder="Enter pattern (regex supported)" className="flex-1 px-3 py-[8px] bg-void-input rounded-[6px] text-[11px] text-void-text font-mono outline-none" style={{ border: '0.5px solid #2A2A30' }} />
+          placeholder="Enter pattern (regex supported)" className="flex-1 px-3 py-[8px] bg-void-input rounded-[6px] text-[11px] text-void-text font-mono outline-none" style={{ border: '0.5px solid var(--border)' }} />
         <button onClick={addRule} className="px-4 py-[8px] rounded-[6px] text-[11px] text-accent font-semibold font-sans cursor-pointer" style={{ background: 'rgba(249,115,22,0.08)', border: '0.5px solid rgba(249,115,22,0.15)' }}>+ Add</button>
       </div>
       <div className="text-[10px] text-void-text-ghost leading-relaxed">Rules are matched against terminal output in real-time. Notifications appear as macOS alerts.</div>
@@ -1028,23 +1028,23 @@ function ScheduledTasksSettings() {
 
       {adding ? (
         <div className="p-4 bg-void-surface rounded-[8px] space-y-3" style={{ border: '0.5px solid rgba(249,115,22,0.15)' }}>
-          <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Task name (e.g. DB Backup)" className="w-full px-3 py-[8px] bg-void-input rounded-[6px] text-[11px] text-void-text font-sans outline-none" style={{ border: '0.5px solid #2A2A30' }} />
-          <input value={newCommand} onChange={e => setNewCommand(e.target.value)} placeholder="Command (e.g. pg_dump -U postgres mydb > backup.sql)" className="w-full px-3 py-[8px] bg-void-input rounded-[6px] text-[11px] text-void-text font-mono outline-none" style={{ border: '0.5px solid #2A2A30' }} />
+          <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Task name (e.g. DB Backup)" className="w-full px-3 py-[8px] bg-void-input rounded-[6px] text-[11px] text-void-text font-sans outline-none" style={{ border: '0.5px solid var(--border)' }} />
+          <input value={newCommand} onChange={e => setNewCommand(e.target.value)} placeholder="Command (e.g. pg_dump -U postgres mydb > backup.sql)" className="w-full px-3 py-[8px] bg-void-input rounded-[6px] text-[11px] text-void-text font-mono outline-none" style={{ border: '0.5px solid var(--border)' }} />
           <div className="flex gap-2">
-            <select value={newSchedule} onChange={e => setNewSchedule(e.target.value)} className="flex-1 px-3 py-[8px] bg-void-input rounded-[6px] text-[11px] text-void-text font-mono outline-none appearance-none" style={{ border: '0.5px solid #2A2A30' }}>
+            <select value={newSchedule} onChange={e => setNewSchedule(e.target.value)} className="flex-1 px-3 py-[8px] bg-void-input rounded-[6px] text-[11px] text-void-text font-mono outline-none appearance-none" style={{ border: '0.5px solid var(--border)' }}>
               <option value="*/5 * * * *">Every 5 minutes</option>
               <option value="0 * * * *">Every hour</option>
               <option value="0 */6 * * *">Every 6 hours</option>
               <option value="0 0 * * *">Daily at midnight</option>
               <option value="0 0 * * 0">Weekly (Sunday)</option>
             </select>
-            <select value={newServer} onChange={e => setNewServer(e.target.value)} className="flex-1 px-3 py-[8px] bg-void-input rounded-[6px] text-[11px] text-void-text font-sans outline-none appearance-none" style={{ border: '0.5px solid #2A2A30' }}>
+            <select value={newServer} onChange={e => setNewServer(e.target.value)} className="flex-1 px-3 py-[8px] bg-void-input rounded-[6px] text-[11px] text-void-text font-sans outline-none appearance-none" style={{ border: '0.5px solid var(--border)' }}>
               <option>All servers</option>
               <option>Active server only</option>
             </select>
           </div>
           <div className="flex gap-2 justify-end">
-            <button onClick={() => setAdding(false)} className="px-4 py-[6px] rounded-[6px] text-[11px] text-void-text-dim font-sans cursor-pointer" style={{ border: '0.5px solid #2A2A30', background: 'transparent' }}>Cancel</button>
+            <button onClick={() => setAdding(false)} className="px-4 py-[6px] rounded-[6px] text-[11px] text-void-text-dim font-sans cursor-pointer" style={{ border: '0.5px solid var(--border)', background: 'transparent' }}>Cancel</button>
             <button onClick={addTask} className="px-4 py-[6px] rounded-[6px] text-[11px] text-void-base font-semibold font-sans cursor-pointer border-none" style={{ background: '#F97316' }}>Add task</button>
           </div>
         </div>

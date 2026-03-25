@@ -52,21 +52,21 @@ export function LogViewer({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={onClose}>
-      <div className="w-full flex flex-col" style={{ maxWidth: '800px', height: '80vh', background: 'var(--base)', border: '0.5px solid #2A2A30', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
+      <div className="w-full flex flex-col" style={{ maxWidth: '800px', height: '80vh', background: 'var(--base)', border: '0.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
         onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-3 shrink-0" style={{ borderBottom: '0.5px solid #2A2A30' }}>
+        <div className="flex items-center justify-between px-5 py-3 shrink-0" style={{ borderBottom: '0.5px solid var(--border)' }}>
           <div className="text-[13px] text-void-text font-semibold font-sans">Log Viewer</div>
           <button onClick={onClose} className="text-[18px] text-void-text-ghost hover:text-void-text bg-transparent border-none cursor-pointer leading-none">×</button>
         </div>
-        <div className="flex items-center gap-2 px-5 py-2 shrink-0" style={{ borderBottom: '0.5px solid #2A2A30' }}>
+        <div className="flex items-center gap-2 px-5 py-2 shrink-0" style={{ borderBottom: '0.5px solid var(--border)' }}>
           <input type="text" value={logPath} onChange={e => setLogPath(e.target.value)}
             className="flex-1 px-2 py-1 bg-void-elevated border border-void-border rounded-[4px] text-[10px] text-void-text font-mono outline-none" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..."
             className="px-2 py-1 bg-void-elevated border border-void-border rounded-[4px] text-[10px] text-void-text font-mono outline-none w-32" />
           <button onClick={() => setPaused(!paused)} className={`px-2 py-1 rounded-[4px] text-[9px] font-mono cursor-pointer ${paused ? 'text-accent' : 'text-void-text-ghost'}`}
-            style={{ border: '0.5px solid #2A2A30' }}>{paused ? '▶ Resume' : '⏸ Pause'}</button>
+            style={{ border: '0.5px solid var(--border)' }}>{paused ? '▶ Resume' : '⏸ Pause'}</button>
         </div>
-        <div className="flex gap-2 px-5 py-[6px] shrink-0" style={{ borderBottom: '0.5px solid #2A2A30' }}>
+        <div className="flex gap-2 px-5 py-[6px] shrink-0" style={{ borderBottom: '0.5px solid var(--border)' }}>
           {(['error', 'warn', 'info', 'debug'] as const).map(l => (
             <button key={l} onClick={() => toggleLevel(l)}
               className={`px-2 py-[2px] rounded-[3px] text-[9px] font-mono cursor-pointer ${levels[l] ? '' : 'opacity-30'}`}

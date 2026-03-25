@@ -26,7 +26,7 @@ export function AINotConfiguredPrompt() {
           Open Settings
         </button>
         <button className="px-3 py-[5px] rounded-[4px] text-[9px] text-void-text-dim font-sans"
-          style={{ border: '0.5px solid #2A2A30' }}>
+          style={{ border: '0.5px solid var(--border)' }}>
           Learn more
         </button>
       </div>

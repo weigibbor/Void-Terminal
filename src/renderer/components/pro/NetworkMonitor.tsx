@@ -53,9 +53,9 @@ export function NetworkMonitor({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={onClose}>
-      <div className="w-full flex flex-col" style={{ maxWidth: '800px', height: '75vh', background: 'var(--base)', border: '0.5px solid #2A2A30', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
+      <div className="w-full flex flex-col" style={{ maxWidth: '800px', height: '75vh', background: 'var(--base)', border: '0.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
         onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-3 shrink-0" style={{ borderBottom: '0.5px solid #2A2A30' }}>
+        <div className="flex items-center justify-between px-5 py-3 shrink-0" style={{ borderBottom: '0.5px solid var(--border)' }}>
           <div className="flex items-center gap-3">
             <span className="text-[13px] text-void-text font-semibold font-sans">Network Monitor</span>
             <span className="text-[10px] text-void-text-dim font-mono">{established} established · {listening} listening</span>
@@ -67,7 +67,7 @@ export function NetworkMonitor({ onClose }: { onClose: () => void }) {
             <button onClick={onClose} className="text-[18px] text-void-text-ghost hover:text-void-text bg-transparent border-none cursor-pointer leading-none">×</button>
           </div>
         </div>
-        <div className="flex px-5 py-2 text-[9px] text-void-text-ghost uppercase tracking-[0.5px] font-mono shrink-0" style={{ borderBottom: '0.5px solid #2A2A30' }}>
+        <div className="flex px-5 py-2 text-[9px] text-void-text-ghost uppercase tracking-[0.5px] font-mono shrink-0" style={{ borderBottom: '0.5px solid var(--border)' }}>
           <span className="w-12">Proto</span>
           <span className="w-48">Local Address</span>
           <span className="w-48">Remote Address</span>
@@ -87,7 +87,7 @@ export function NetworkMonitor({ onClose }: { onClose: () => void }) {
             </div>
           ))}
         </div>
-        <div className="px-5 py-2 text-[9px] text-void-text-ghost font-mono shrink-0" style={{ borderTop: '0.5px solid #2A2A30' }}>
+        <div className="px-5 py-2 text-[9px] text-void-text-ghost font-mono shrink-0" style={{ borderTop: '0.5px solid var(--border)' }}>
           {filtered.length} connections · auto-refresh 10s
         </div>
       </div>

@@ -169,7 +169,7 @@ export function UploadModal({ open, files: initialFiles, sessionId, serverName, 
             exit={{ scale: 0.95, y: 8, opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
             className="w-full"
-            style={{ maxWidth: '480px', background: 'var(--base)', border: '0.5px solid #2A2A30', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
+            style={{ maxWidth: '480px', background: 'var(--base)', border: '0.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -251,7 +251,7 @@ export function UploadModal({ open, files: initialFiles, sessionId, serverName, 
                   {/* Directory listing */}
                   <div
                     className="rounded-[6px] overflow-y-auto"
-                    style={{ maxHeight: '180px', background: 'var(--elevated)', border: '0.5px solid #2A2A30', scrollbarWidth: 'thin', scrollbarColor: '#2A2A30 transparent' }}
+                    style={{ maxHeight: '180px', background: 'var(--elevated)', border: '0.5px solid var(--border)', scrollbarWidth: 'thin', scrollbarColor: '#2A2A30 transparent' }}
                   >
                     {loading ? (
                       <div className="px-3 py-4 text-center text-[11px] text-void-text-ghost font-mono">Loading...</div>
@@ -296,7 +296,7 @@ export function UploadModal({ open, files: initialFiles, sessionId, serverName, 
                         onKeyDown={(e) => { if (e.key === 'Enter') createFolder(); if (e.key === 'Escape') setShowNewFolder(false); }}
                         placeholder="Folder name"
                         className="flex-1 px-2 py-[4px] rounded-[4px] text-[11px] font-mono bg-void-elevated text-void-text outline-none"
-                        style={{ border: '0.5px solid #2A2A30' }}
+                        style={{ border: '0.5px solid var(--border)' }}
                       />
                       <button onClick={createFolder} className="text-[10px] text-accent bg-transparent border-none cursor-pointer font-mono">Create</button>
                       <button onClick={() => setShowNewFolder(false)} className="text-[10px] text-void-text-ghost bg-transparent border-none cursor-pointer font-mono">Cancel</button>
@@ -315,13 +315,13 @@ export function UploadModal({ open, files: initialFiles, sessionId, serverName, 
 
             {/* Footer */}
             {!uploadDone && (
-              <div className="flex items-center justify-between px-5 py-3" style={{ borderTop: '0.5px solid #2A2A30' }}>
+              <div className="flex items-center justify-between px-5 py-3" style={{ borderTop: '0.5px solid var(--border)' }}>
                 <span className="text-[10px] text-void-text-ghost font-mono">
                   {uploading ? 'Uploading...' : `${files.length} file${files.length !== 1 ? 's' : ''} · ${formatSize(totalSize)}`}
                 </span>
                 {!uploading && (
                   <div className="flex gap-2">
-                    <button onClick={onClose} className="px-[16px] py-[6px] rounded-[6px] text-[11px] font-semibold cursor-pointer font-sans" style={{ background: 'transparent', color: 'var(--dim)', border: '0.5px solid #2A2A30' }}>Cancel</button>
+                    <button onClick={onClose} className="px-[16px] py-[6px] rounded-[6px] text-[11px] font-semibold cursor-pointer font-sans" style={{ background: 'transparent', color: 'var(--dim)', border: '0.5px solid var(--border)' }}>Cancel</button>
                     <button
                       onClick={startUpload}
                       disabled={files.length === 0}

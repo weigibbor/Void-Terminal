@@ -188,7 +188,7 @@ export function NotesSidebar() {
           <button
             onClick={() => setComposing(true)}
             className="w-full text-left text-[12px] text-void-text-ghost bg-void-surface rounded-[6px] px-3 py-2.5 hover:text-void-text-muted transition-colors font-sans cursor-pointer"
-            style={{ border: '0.5px solid #2A2A30' }}
+            style={{ border: '0.5px solid var(--border)' }}
           >
             Type a note...
           </button>

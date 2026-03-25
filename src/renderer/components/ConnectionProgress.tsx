@@ -104,7 +104,7 @@ export function ConnectionProgress({
             <button onClick={onCancel} className="px-5 py-2 bg-accent rounded-[6px] text-[11px] text-void-base font-semibold hover:bg-accent-hover transition-colors">
               Retry
             </button>
-            <button onClick={onCancel} className="px-4 py-2 rounded-[6px] text-[11px] text-void-text-dim" style={{ border: '0.5px solid #2A2A30' }}>
+            <button onClick={onCancel} className="px-4 py-2 rounded-[6px] text-[11px] text-void-text-dim" style={{ border: '0.5px solid var(--border)' }}>
               Edit connection
             </button>
           </div>

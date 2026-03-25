@@ -1,0 +1,11 @@
+{
+  "name": "void-terminal-cli",
+  "version": "0.1.0",
+  "description": "CLI for Void Terminal — connect to saved servers from your terminal",
+  "main": "index.js",
+  "bin": {
+    "void": "./index.js"
+  },
+  "author": "GE Labs <dev@gelabs.dev>",
+  "license": "MIT"
+}

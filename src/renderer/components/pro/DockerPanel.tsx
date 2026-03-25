@@ -80,7 +80,7 @@ export function DockerPanel({ onClose }: { onClose: () => void }) {
   return (
     <div className="flex flex-col h-full bg-void-surface">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: '0.5px solid #2A2A30' }}>
+      <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: '0.5px solid var(--border)' }}>
         <div className="flex items-center gap-2">
           <span className="text-[13px] text-void-text font-semibold font-sans">Docker</span>
           <span className="text-[10px] text-void-text-dim font-mono">{running} running, {stopped} stopped</span>
@@ -117,14 +117,14 @@ export function DockerPanel({ onClose }: { onClose: () => void }) {
               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 {c.state !== 'running' && (
                   <button onClick={(e) => { e.stopPropagation(); containerAction(c.id, 'start'); }}
-                    className="w-[22px] h-[22px] rounded-[4px] flex items-center justify-center text-[10px] text-void-text-dim hover:text-status-online cursor-pointer" style={{ border: '0.5px solid #2A2A30' }}>▶</button>
+                    className="w-[22px] h-[22px] rounded-[4px] flex items-center justify-center text-[10px] text-void-text-dim hover:text-status-online cursor-pointer" style={{ border: '0.5px solid var(--border)' }}>▶</button>
                 )}
                 {c.state === 'running' && (
                   <button onClick={(e) => { e.stopPropagation(); containerAction(c.id, 'stop'); }}
-                    className="w-[22px] h-[22px] rounded-[4px] flex items-center justify-center text-[10px] text-void-text-dim hover:text-status-error cursor-pointer" style={{ border: '0.5px solid #2A2A30' }}>■</button>
+                    className="w-[22px] h-[22px] rounded-[4px] flex items-center justify-center text-[10px] text-void-text-dim hover:text-status-error cursor-pointer" style={{ border: '0.5px solid var(--border)' }}>■</button>
                 )}
                 <button onClick={(e) => { e.stopPropagation(); containerAction(c.id, 'restart'); }}
-                  className="w-[22px] h-[22px] rounded-[4px] flex items-center justify-center text-[10px] text-void-text-dim hover:text-accent cursor-pointer" style={{ border: '0.5px solid #2A2A30' }}>↻</button>
+                  className="w-[22px] h-[22px] rounded-[4px] flex items-center justify-center text-[10px] text-void-text-dim hover:text-accent cursor-pointer" style={{ border: '0.5px solid var(--border)' }}>↻</button>
               </div>
             </div>
           ))
@@ -133,8 +133,8 @@ export function DockerPanel({ onClose }: { onClose: () => void }) {
 
       {/* Logs panel */}
       {selectedId && (
-        <div className="shrink-0" style={{ height: '240px', borderTop: '0.5px solid #2A2A30' }}>
-          <div className="flex items-center gap-2 px-4 py-[6px]" style={{ borderBottom: '0.5px solid #2A2A30', background: 'var(--input, #0E0E12)' }}>
+        <div className="shrink-0" style={{ height: '240px', borderTop: '0.5px solid var(--border)' }}>
+          <div className="flex items-center gap-2 px-4 py-[6px]" style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--input, #0E0E12)' }}>
             <span className="text-[10px] text-accent font-mono font-semibold">LOGS</span>
             <span className="text-[10px] text-void-text-dim font-mono">{containers.find(c => c.id === selectedId)?.name}</span>
             <span className="flex-1" />

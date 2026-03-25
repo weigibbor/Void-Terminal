@@ -41,9 +41,9 @@ export function AlertWebhooks({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
-      <div className="w-full" style={{ maxWidth: '500px', background: 'var(--base)', border: '0.5px solid #2A2A30', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
+      <div className="w-full" style={{ maxWidth: '500px', background: 'var(--base)', border: '0.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
         onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '0.5px solid #2A2A30' }}>
+        <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '0.5px solid var(--border)' }}>
           <div className="text-[13px] text-void-text font-semibold font-sans">Alert Webhooks</div>
           <div className="flex gap-2">
             <button onClick={() => setAdding(!adding)} className="text-[10px] text-accent bg-transparent border-none cursor-pointer font-mono">+ Add</button>
@@ -52,8 +52,8 @@ export function AlertWebhooks({ onClose }: { onClose: () => void }) {
         </div>
         <div className="px-5 py-4 max-h-[400px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
           {adding && (
-            <div className="p-3 mb-3 rounded-[8px] bg-void-surface space-y-2" style={{ border: '0.5px solid #2A2A30' }}>
-              <input type="text" value={newUrl} onChange={e => setNewUrl(e.target.value)} placeholder="https://hooks.slack.com/..." className="w-full px-3 py-2 bg-void-input rounded-[6px] text-[11px] text-void-text font-mono outline-none" style={{ border: '0.5px solid #2A2A30' }} />
+            <div className="p-3 mb-3 rounded-[8px] bg-void-surface space-y-2" style={{ border: '0.5px solid var(--border)' }}>
+              <input type="text" value={newUrl} onChange={e => setNewUrl(e.target.value)} placeholder="https://hooks.slack.com/..." className="w-full px-3 py-2 bg-void-input rounded-[6px] text-[11px] text-void-text font-mono outline-none" style={{ border: '0.5px solid var(--border)' }} />
               <div className="flex flex-wrap gap-1">
                 {EVENT_TYPES.map(ev => (
                   <button key={ev} onClick={() => { const n = new Set(newEvents); n.has(ev) ? n.delete(ev) : n.add(ev); setNewEvents(n); }}
@@ -65,7 +65,7 @@ export function AlertWebhooks({ onClose }: { onClose: () => void }) {
             </div>
           )}
           {webhooks.map(wh => (
-            <div key={wh.id} className="group flex items-center gap-2 p-3 mb-2 rounded-[8px] bg-void-surface" style={{ border: '0.5px solid #2A2A30', opacity: wh.enabled ? 1 : 0.4 }}>
+            <div key={wh.id} className="group flex items-center gap-2 p-3 mb-2 rounded-[8px] bg-void-surface" style={{ border: '0.5px solid var(--border)', opacity: wh.enabled ? 1 : 0.4 }}>
               <span className={`w-[6px] h-[6px] rounded-full ${wh.enabled ? 'bg-status-online' : 'bg-void-text-ghost'}`} />
               <div className="flex-1 min-w-0">
                 <div className="text-[10px] text-void-text font-mono truncate">{wh.url}</div>

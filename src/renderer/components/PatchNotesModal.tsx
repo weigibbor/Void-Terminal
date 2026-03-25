@@ -52,7 +52,7 @@ export function PatchNotesModal() {
             exit={{ scale: 0.95, y: 8, opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
             className="w-full"
-            style={{ maxWidth: '480px', background: 'var(--base)', border: '0.5px solid #2A2A30', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
+            style={{ maxWidth: '480px', background: 'var(--base)', border: '0.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -94,11 +94,11 @@ export function PatchNotesModal() {
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between px-6 py-3" style={{ borderTop: '0.5px solid #2A2A30' }}>
+            <div className="flex items-center justify-between px-6 py-3" style={{ borderTop: '0.5px solid var(--border)' }}>
               <span className="text-[10px] text-void-text-ghost font-mono">Full changelog at voidterminal.dev/changelog</span>
               {mode === 'preview' ? (
                 <div className="flex gap-2">
-                  <button onClick={close} className="px-[20px] py-[8px] rounded-[6px] text-[12px] font-semibold cursor-pointer font-sans" style={{ background: 'transparent', color: 'var(--dim)', border: '0.5px solid #2A2A30' }}>Not now</button>
+                  <button onClick={close} className="px-[20px] py-[8px] rounded-[6px] text-[12px] font-semibold cursor-pointer font-sans" style={{ background: 'transparent', color: 'var(--dim)', border: '0.5px solid var(--border)' }}>Not now</button>
                   <button onClick={startDownload} className="px-[20px] py-[8px] rounded-[6px] text-[12px] font-semibold cursor-pointer font-sans border-none" style={{ background: '#F97316', color: 'var(--base)' }}>Download & install</button>
                 </div>
               ) : (

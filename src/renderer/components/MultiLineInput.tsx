@@ -45,9 +45,9 @@ export function MultiLineInput({ visible, onSubmit, onClose, prompt }: MultiLine
           exit={{ maxHeight: 0, opacity: 0 }}
           transition={{ duration: duration.normal, ease: easing.enter }}
           className="shrink-0 overflow-hidden"
-          style={{ borderTop: '0.5px solid #2A2A30' }}
+          style={{ borderTop: '0.5px solid var(--border)' }}
         >
-          <div className="bg-void-input rounded-[8px] m-2 overflow-hidden" style={{ border: '0.5px solid #2A2A30' }}>
+          <div className="bg-void-input rounded-[8px] m-2 overflow-hidden" style={{ border: '0.5px solid var(--border)' }}>
             {/* Header */}
             <div className="flex items-center justify-between px-[10px] py-[6px]" style={{ borderBottom: '0.5px solid #1A1A1E' }}>
               <div className="flex items-center gap-[6px]">
@@ -55,7 +55,7 @@ export function MultiLineInput({ visible, onSubmit, onClose, prompt }: MultiLine
                 <span className="text-[9px] text-void-text-ghost">Multi-line input</span>
               </div>
               <div className="flex gap-2">
-                <span className="text-[8px] text-void-text-ghost px-[6px] py-[2px] rounded-[3px]" style={{ border: '0.5px solid #2A2A30' }}>
+                <span className="text-[8px] text-void-text-ghost px-[6px] py-[2px] rounded-[3px]" style={{ border: '0.5px solid var(--border)' }}>
                   Shift+↵ new line
                 </span>
                 <span className="text-[8px] text-accent px-[6px] py-[2px] rounded-[3px]" style={{ border: '0.5px solid rgba(249,115,22,0.25)' }}>

@@ -50,9 +50,9 @@ export function ServiceViewer({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
-      <div className="w-full flex flex-col" style={{ maxWidth: '600px', maxHeight: '80vh', background: 'var(--base)', border: '0.5px solid #2A2A30', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
+      <div className="w-full flex flex-col" style={{ maxWidth: '600px', maxHeight: '80vh', background: 'var(--base)', border: '0.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
         onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-3 shrink-0" style={{ borderBottom: '0.5px solid #2A2A30' }}>
+        <div className="flex items-center justify-between px-5 py-3 shrink-0" style={{ borderBottom: '0.5px solid var(--border)' }}>
           <div className="text-[13px] text-void-text font-semibold font-sans">Services — {activeTab?.title}</div>
           <button onClick={onClose} className="text-[18px] text-void-text-ghost hover:text-void-text bg-transparent border-none cursor-pointer leading-none">×</button>
         </div>
@@ -64,7 +64,7 @@ export function ServiceViewer({ onClose }: { onClose: () => void }) {
           ) : (
             <div className="flex flex-col gap-[4px]">
               {services.map(s => (
-                <div key={s.name} className="group flex items-center gap-2 p-[10px] rounded-[6px] bg-void-surface" style={{ border: '0.5px solid #2A2A30' }}>
+                <div key={s.name} className="group flex items-center gap-2 p-[10px] rounded-[6px] bg-void-surface" style={{ border: '0.5px solid var(--border)' }}>
                   <span className="w-[6px] h-[6px] rounded-full shrink-0" style={{ background: statusColor(s.status) }} />
                   <span className="text-[11px] text-void-text font-mono font-medium flex-1 truncate">{s.name}</span>
                   <span className="text-[9px] font-mono" style={{ color: statusColor(s.status) }}>{s.status}</span>
@@ -78,7 +78,7 @@ export function ServiceViewer({ onClose }: { onClose: () => void }) {
           )}
         </div>
         {logs && (
-          <div className="shrink-0" style={{ maxHeight: '200px', borderTop: '0.5px solid #2A2A30' }}>
+          <div className="shrink-0" style={{ maxHeight: '200px', borderTop: '0.5px solid var(--border)' }}>
             <div className="flex items-center justify-between px-4 py-[6px]" style={{ background: 'var(--input, #0E0E12)' }}>
               <span className="text-[10px] text-accent font-mono font-semibold">LOGS — {selectedService}</span>
               <button onClick={() => setLogs('')} className="text-[12px] text-void-text-ghost bg-transparent border-none cursor-pointer">×</button>

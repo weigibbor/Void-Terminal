@@ -179,7 +179,7 @@ export function UpdateBar() {
           <span className="text-[10px] text-void-text-dim">{error || 'Network error. Check your connection.'}</span>
         </div>
         <div className="flex items-center gap-[6px]">
-          <button onClick={retry} className="px-[14px] py-[4px] rounded-[5px] text-[10px] font-semibold cursor-pointer font-sans" style={{ background: 'var(--elevated)', color: 'var(--muted)', border: '0.5px solid #2A2A30' }}>Retry</button>
+          <button onClick={retry} className="px-[14px] py-[4px] rounded-[5px] text-[10px] font-semibold cursor-pointer font-sans" style={{ background: 'var(--elevated)', color: 'var(--muted)', border: '0.5px solid var(--border)' }}>Retry</button>
           <button onClick={dismiss} className="text-[14px] text-void-text-ghost hover:text-void-text-muted bg-transparent border-none cursor-pointer leading-none px-1">×</button>
         </div>
       </div>

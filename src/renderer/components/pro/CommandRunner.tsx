@@ -63,10 +63,10 @@ export function CommandRunner({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
-      <div className="w-full flex flex-col" style={{ maxWidth: '600px', maxHeight: '80vh', background: 'var(--base)', border: '0.5px solid #2A2A30', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
+      <div className="w-full flex flex-col" style={{ maxWidth: '600px', maxHeight: '80vh', background: 'var(--base)', border: '0.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
         onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 shrink-0" style={{ borderBottom: '0.5px solid #2A2A30' }}>
+        <div className="flex items-center justify-between px-5 py-3 shrink-0" style={{ borderBottom: '0.5px solid var(--border)' }}>
           <div className="text-[13px] text-void-text font-semibold font-sans">Multi-Server Command Runner</div>
           <button onClick={onClose} className="text-[18px] text-void-text-ghost hover:text-void-text bg-transparent border-none cursor-pointer leading-none">×</button>
         </div>
@@ -78,7 +78,7 @@ export function CommandRunner({ onClose }: { onClose: () => void }) {
               onKeyDown={e => { if (e.key === 'Enter') runCommand(); }}
               placeholder="Enter command (e.g., uptime, df -h, whoami)"
               className="flex-1 px-3 py-2 bg-void-input rounded-[6px] text-[12px] text-void-text font-mono outline-none"
-              style={{ border: '0.5px solid #2A2A30' }} autoFocus />
+              style={{ border: '0.5px solid var(--border)' }} autoFocus />
             <button onClick={runCommand} disabled={running || !command.trim() || selectedTabs.size === 0}
               className="px-4 py-2 rounded-[6px] text-[11px] font-semibold cursor-pointer font-sans border-none"
               style={{ background: running ? '#333' : '#F97316', color: 'var(--base)' }}>
@@ -129,7 +129,7 @@ export function CommandRunner({ onClose }: { onClose: () => void }) {
               </button>
               {expandedResults.has(r.tabId) && (
                 <pre className="px-3 py-2 text-[10px] font-mono text-void-text-muted whitespace-pre-wrap break-words max-h-[200px] overflow-y-auto"
-                  style={{ scrollbarWidth: 'thin', scrollbarColor: '#2A2A30 transparent', borderTop: '0.5px solid #2A2A30' }}>
+                  style={{ scrollbarWidth: 'thin', scrollbarColor: '#2A2A30 transparent', borderTop: '0.5px solid var(--border)' }}>
                   {r.stdout || '(no output)'}
                   {r.stderr && <span className="text-status-error">{'\n' + r.stderr}</span>}
                 </pre>
@@ -140,7 +140,7 @@ export function CommandRunner({ onClose }: { onClose: () => void }) {
 
         {/* Footer */}
         {results.length > 0 && (
-          <div className="flex items-center justify-between px-5 py-2 shrink-0" style={{ borderTop: '0.5px solid #2A2A30' }}>
+          <div className="flex items-center justify-between px-5 py-2 shrink-0" style={{ borderTop: '0.5px solid var(--border)' }}>
             <span className="text-[9px] text-void-text-ghost font-mono">
               {results.filter(r => r.code === 0).length}/{results.length} succeeded
             </span>

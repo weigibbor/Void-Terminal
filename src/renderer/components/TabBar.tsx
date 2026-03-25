@@ -21,6 +21,7 @@ function TabItem({ tab, isActive, onContextMenu, onReorder }: { tab: Tab; isActi
     tab.type === 'ssh' ? 'SSH'
     : tab.type === 'local' ? 'PTY'
     : tab.type === 'browser' ? 'WEB'
+    : tab.type === 'settings' ? '⚙'
     : '';
 
   return (

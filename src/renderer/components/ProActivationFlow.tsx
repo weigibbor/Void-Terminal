@@ -1,5 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppStore } from '../stores/app-store';
+
+function ReferralSection() {
+  const [code, setCode] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    // Generate stable referral code from machine info
+    const raw = `void-${navigator.userAgent}-${navigator.language}-${screen.width}`;
+    let hash = 0;
+    for (let i = 0; i < raw.length; i++) { hash = ((hash << 5) - hash) + raw.charCodeAt(i); hash |= 0; }
+    const c = Math.abs(hash).toString(36).toUpperCase().substring(0, 8);
+    setCode(c || 'VOID0001');
+  }, []);
+
+  const link = `https://voidterminal.dev/ref/${code}`;
+
+  return (
+    <div className="mt-4 pt-4" style={{ borderTop: '0.5px solid var(--border)' }}>
+      <div className="text-[11px] text-void-text font-medium font-sans mb-1">Refer a Friend</div>
+      <div className="text-[9px] text-void-text-ghost mb-2">Invite a friend — both of you get 1 month free Pro.</div>
+      <div className="flex items-center gap-2 p-[10px] rounded-[6px]" style={{ background: 'var(--elevated)', border: '0.5px solid var(--border)' }}>
+        <code className="text-[10px] text-accent font-mono flex-1 truncate">{link}</code>
+        <button onClick={() => { navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+          className="text-[9px] text-void-text-ghost hover:text-accent bg-transparent border-none cursor-pointer font-mono">
+          {copied ? 'Copied!' : 'Copy'}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 type Screen = 'license' | 'activating' | 'error' | 'success' | 'welcome' | 'provider' | 'apikey' | 'features' | 'celebration';
 type Provider = 'anthropic' | 'openai' | 'gemini' | 'ollama';
@@ -109,8 +139,8 @@ export function ProActivationFlow({ initialScreen = 'license', onComplete }: { i
 
         {/* Manage buttons */}
         <div className="flex gap-2 mb-[18px]">
-          <button className="px-4 py-2 rounded-[6px] text-[10px] text-void-text-muted" style={{ border: '0.5px solid #2A2A30' }}>Manage subscription</button>
-          <button className="px-4 py-2 rounded-[6px] text-[10px] text-void-text-dim" style={{ border: '0.5px solid #2A2A30' }}>Switch to annual ($120/yr)</button>
+          <button className="px-4 py-2 rounded-[6px] text-[10px] text-void-text-muted" style={{ border: '0.5px solid var(--border)' }}>Manage subscription</button>
+          <button className="px-4 py-2 rounded-[6px] text-[10px] text-void-text-dim" style={{ border: '0.5px solid var(--border)' }}>Switch to annual ($120/yr)</button>
         </div>
 
         {/* Deactivate */}
@@ -143,7 +173,7 @@ export function ProActivationFlow({ initialScreen = 'license', onComplete }: { i
         {/* Current plan card */}
         <div className="p-[14px] bg-void-surface rounded-[8px] mb-[18px]" style={{ border: '0.5px solid #1A1A1E' }}>
           <div className="flex items-center gap-2 mb-[10px]">
-            <div className="w-6 h-6 rounded-[6px] flex items-center justify-center" style={{ background: 'rgba(85,85,85,0.1)', border: '0.5px solid #2A2A30' }}>
+            <div className="w-6 h-6 rounded-[6px] flex items-center justify-center" style={{ background: 'rgba(85,85,85,0.1)', border: '0.5px solid var(--border)' }}>
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2" y="7" width="12" height="8" rx="1.5" stroke="#555" strokeWidth="1.5"/><path d="M5 7V5a3 3 0 016 0v2" stroke="#555" strokeWidth="1.5" strokeLinecap="round"/></svg>
             </div>
             <div>
@@ -167,7 +197,7 @@ export function ProActivationFlow({ initialScreen = 'license', onComplete }: { i
             onChange={(e) => setKey(e.target.value.toUpperCase())}
             placeholder="VOID-XXXX-XXXX-XXXX-XXXX"
             className="flex-1 px-[14px] py-[10px] bg-void-input rounded-[6px] text-[12px] text-void-text-muted font-mono outline-none"
-            style={{ border: '0.5px solid #2A2A30' }}
+            style={{ border: '0.5px solid var(--border)' }}
           />
           <button onClick={handleActivate} className="px-5 py-[10px] bg-accent rounded-[6px] text-[11px] text-void-base font-semibold hover:bg-accent-hover transition-colors">
             Activate
@@ -189,15 +219,7 @@ export function ProActivationFlow({ initialScreen = 'license', onComplete }: { i
         </div>
 
         {/* Referral */}
-        <div className="mt-4 pt-4" style={{ borderTop: '0.5px solid #2A2A30' }}>
-          <div className="text-[11px] text-void-text font-medium font-sans mb-1">Refer a Friend</div>
-          <div className="text-[9px] text-void-text-ghost mb-2">Invite a friend — both of you get 1 month free Pro.</div>
-          <div className="flex items-center gap-2 p-[10px] rounded-[6px]" style={{ background: 'var(--elevated, #141418)', border: '0.5px solid #2A2A30' }}>
-            <code className="text-[10px] text-accent font-mono flex-1 truncate">voidterminal.dev/ref/YOUR_CODE</code>
-            <button onClick={() => navigator.clipboard.writeText('https://voidterminal.dev/ref/REFERRAL')}
-              className="text-[9px] text-void-text-ghost hover:text-accent bg-transparent border-none cursor-pointer font-mono">Copy</button>
-          </div>
-        </div>
+        <ReferralSection />
       </div>
     );
   }
@@ -349,7 +371,7 @@ export function ProActivationFlow({ initialScreen = 'license', onComplete }: { i
             onChange={(e) => setApiKey(e.target.value)}
             placeholder={provider === 'anthropic' ? 'sk-ant-api03-...' : provider === 'openai' ? 'sk-...' : 'API key'}
             className="w-full px-[14px] py-[10px] bg-void-input rounded-[6px] text-[12px] text-void-text-muted font-mono outline-none"
-            style={{ border: '0.5px solid #2A2A30' }}
+            style={{ border: '0.5px solid var(--border)' }}
           />
           <div className="text-[9px] text-void-text-ghost mt-[5px]">
             Get your key at <span className="text-accent">{provider === 'anthropic' ? 'console.anthropic.com' : provider === 'openai' ? 'platform.openai.com' : 'your provider'}</span>
@@ -501,7 +523,7 @@ export function ProActivationFlow({ initialScreen = 'license', onComplete }: { i
 
         <div className="flex gap-2 justify-center">
           <button onClick={() => setScreen('provider')} className="px-7 py-3 bg-accent rounded-[8px] text-[13px] text-void-base font-semibold font-sans hover:bg-accent-hover transition-colors">Set up AI now</button>
-          <button onClick={() => onComplete ? onComplete() : useAppStore.getState().toggleSettings()} className="px-5 py-3 rounded-[8px] text-[13px] text-void-text-dim font-sans" style={{ border: '0.5px solid #2A2A30' }}>Skip for now</button>
+          <button onClick={() => onComplete ? onComplete() : useAppStore.getState().toggleSettings()} className="px-5 py-3 rounded-[8px] text-[13px] text-void-text-dim font-sans" style={{ border: '0.5px solid var(--border)' }}>Skip for now</button>
         </div>
         <div className="text-[9px] text-void-text-ghost mt-[10px]">You can always set up AI later in Settings {'>'} AI</div>
       </div>

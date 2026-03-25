@@ -59,7 +59,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
         top: y,
         minWidth: '160px',
         background: 'rgba(22,22,26,0.98)',
-        border: '0.5px solid #2A2A30',
+        border: '0.5px solid var(--border)',
         borderRadius: '6px',
         padding: '4px 0',
         boxShadow: '0 8px 24px rgba(0,0,0,0.5)',

@@ -53,11 +53,11 @@ export function ShareConnectionsModal({ open, onClose }: { open: boolean; onClos
           className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
           <motion.div initial={{ scale: 0.95, y: 8, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.95, y: 8, opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }} className="w-full"
-            style={{ maxWidth: '460px', background: 'var(--base)', border: '0.5px solid #2A2A30', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
+            style={{ maxWidth: '460px', background: 'var(--base)', border: '0.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
             onClick={e => e.stopPropagation()}>
 
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '0.5px solid #2A2A30' }}>
+            <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '0.5px solid var(--border)' }}>
               <div className="text-[13px] text-void-text font-semibold font-sans">
                 {mode === 'choose' ? 'Share Connections' : mode === 'export' ? 'Export Connections' : 'Import Connections'}
               </div>
@@ -70,7 +70,7 @@ export function ShareConnectionsModal({ open, onClose }: { open: boolean; onClos
                   <div className="text-[11px] text-void-text-dim">Share connections with your team using encrypted export/import.</div>
                   <button onClick={() => setMode('export')}
                     className="flex items-center gap-3 p-3 bg-void-surface rounded-[8px] text-left cursor-pointer hover:bg-void-elevated transition-colors"
-                    style={{ border: '0.5px solid #2A2A30' }}>
+                    style={{ border: '0.5px solid var(--border)' }}>
                     <span className="text-[20px]">↑</span>
                     <div>
                       <div className="text-[12px] text-void-text font-medium">Export</div>
@@ -79,7 +79,7 @@ export function ShareConnectionsModal({ open, onClose }: { open: boolean; onClos
                   </button>
                   <button onClick={() => setMode('import')}
                     className="flex items-center gap-3 p-3 bg-void-surface rounded-[8px] text-left cursor-pointer hover:bg-void-elevated transition-colors"
-                    style={{ border: '0.5px solid #2A2A30' }}>
+                    style={{ border: '0.5px solid var(--border)' }}>
                     <span className="text-[20px]">↓</span>
                     <div>
                       <div className="text-[12px] text-void-text font-medium">Import</div>

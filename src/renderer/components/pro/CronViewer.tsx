@@ -73,10 +73,10 @@ export function CronViewer({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
-      <div className="w-full" style={{ maxWidth: '580px', background: 'var(--base)', border: '0.5px solid #2A2A30', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
+      <div className="w-full" style={{ maxWidth: '580px', background: 'var(--base)', border: '0.5px solid var(--border)', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
         onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '0.5px solid #2A2A30' }}>
+        <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '0.5px solid var(--border)' }}>
           <div className="text-[13px] text-void-text font-semibold font-sans">Cron Jobs — {activeTab?.title || 'server'}</div>
           <button onClick={onClose} className="text-[18px] text-void-text-ghost hover:text-void-text bg-transparent border-none cursor-pointer leading-none">×</button>
         </div>
@@ -92,7 +92,7 @@ export function CronViewer({ onClose }: { onClose: () => void }) {
           ) : (
             <div className="flex flex-col gap-[6px]">
               {entries.map((entry, i) => (
-                <div key={i} className="group p-3 rounded-[8px] bg-void-surface" style={{ border: '0.5px solid #2A2A30' }}>
+                <div key={i} className="group p-3 rounded-[8px] bg-void-surface" style={{ border: '0.5px solid var(--border)' }}>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-[11px] text-accent font-mono font-medium">{entry.description}</span>
                     <button onClick={() => deleteEntry(i)}
@@ -107,7 +107,7 @@ export function CronViewer({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-2 text-[9px] text-void-text-ghost font-mono text-center" style={{ borderTop: '0.5px solid #2A2A30' }}>
+        <div className="px-5 py-2 text-[9px] text-void-text-ghost font-mono text-center" style={{ borderTop: '0.5px solid var(--border)' }}>
           {entries.length} cron job{entries.length !== 1 ? 's' : ''} configured
         </div>
       </div>

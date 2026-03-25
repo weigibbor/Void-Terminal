@@ -92,13 +92,13 @@ export function DeployCopilot({ onRunCommand }: DeployCopilotProps) {
       style={{
         width: '220px',
         background: 'rgba(16,16,20,0.98)',
-        border: '0.5px solid #2A2A30',
+        border: '0.5px solid var(--border)',
         borderRadius: '8px',
         boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
       }}
     >
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2" style={{ borderBottom: '0.5px solid #2A2A30' }}>
+      <div className="flex items-center gap-2 px-3 py-2" style={{ borderBottom: '0.5px solid var(--border)' }}>
         <span className="w-[5px] h-[5px] rounded-full bg-accent void-pulse-slow" />
         <span className="text-[9px] text-accent font-medium font-sans flex-1">Deploy Copilot</span>
         <span className="text-[7px] text-void-text-ghost font-mono">{completedCount}/{steps.length}</span>

@@ -435,7 +435,7 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
             className="pointer-events-auto text-center"
             style={{
               background: 'rgba(10,10,13,0.9)',
-              border: '0.5px solid #2A2A30',
+              border: '0.5px solid var(--border)',
               borderRadius: '8px',
               padding: '16px 24px',
               maxWidth: '280px',
