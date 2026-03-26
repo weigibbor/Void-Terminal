@@ -94,25 +94,8 @@ export function AIChatSidebar() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  // Cache terminal context periodically (every 5s when chat is open)
-  useEffect(() => {
-    const updateContext = async () => {
-      const store = useAppStore.getState();
-      const tab = store.tabs.find(t => t.id === store.activeTabId);
-      if (tab?.sessionId) {
-        try {
-          const buf = await window.void.ssh.getBuffer(tab.sessionId);
-          if (buf) {
-            const existing = (window as any).__voidTerminalContext || '';
-            (window as any).__voidTerminalContext = (existing + buf).split('\n').slice(-50).join('\n');
-          }
-        } catch { /* ignore */ }
-      }
-    };
-    updateContext();
-    const interval = setInterval(updateContext, 5000);
-    return () => clearInterval(interval);
-  }, []);
+  // Terminal context is captured by useTerminal.ts directly on window.__voidTerminalContext
+  // No polling needed — data flows in real-time from the terminal data handler
 
   const insertCommand = (cmd: string) => {
     const store = useAppStore.getState();

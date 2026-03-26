@@ -293,11 +293,19 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter, onMu
       }
     };
 
+    // Store terminal output for AI Chat context (last 50 lines, no API call)
+    const captureForAI = (data: string) => {
+      const w = window as any;
+      const existing = w.__voidTerminalContext || '';
+      w.__voidTerminalContext = (existing + data).split('\n').slice(-50).join('\n');
+    };
+
     if (sessionType === 'ssh') {
       unsub = window.void.ssh.onData(sessionId, (data) => {
         batchWrite(data);
         checkWatchRules(data);
         checkCommandDone(data);
+        captureForAI(data);
       });
       // Replay buffered data — watch rules suppressed during replay
       window.void.ssh.getBuffer(sessionId).then((buffered) => {
@@ -310,6 +318,7 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter, onMu
         batchWrite(data);
         checkWatchRules(data);
         checkCommandDone(data);
+        captureForAI(data);
       });
     }
 
