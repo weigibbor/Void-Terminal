@@ -14,3 +14,10 @@ node_modules/@void/
 void-docs/
 CLAUDE-CODE-PROMPT.md
 Void-Terminal-Complete-Docs.zip
+
+# Web app & API — private (not open source)
+void-web/
+void-api/
+
+# Dev notes & designer files — private
+dev-notes/
