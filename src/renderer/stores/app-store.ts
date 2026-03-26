@@ -283,15 +283,31 @@ export const useAppStore = create<AppState>((set, get) => ({
   reconnectTab: async (id) => {
     const tab = get().tabs.find((t) => t.id === id);
     if (!tab?.connectionConfig) return;
+
+    // If already connected (auto-reconnected), just update UI
+    if (tab.connected) {
+      set((state) => ({
+        tabs: state.tabs.map((t) => (t.id === id ? { ...t, disconnectedAt: undefined } : t)),
+      }));
+      return;
+    }
+
     set((state) => ({
-      tabs: state.tabs.map((t) => (t.id === id ? { ...t, disconnectedAt: undefined, scrollbackPreserved: false } : t)),
+      tabs: state.tabs.map((t) => (t.id === id ? { ...t, disconnectedAt: undefined, scrollbackPreserved: false, connecting: true } : t)),
     }));
+
     // Re-connect using saved config
     const result = await window.void.ssh.connect(tab.connectionConfig);
     if (result.success && result.sessionId) {
       set((state) => ({
         tabs: state.tabs.map((t) =>
-          t.id === id ? { ...t, sessionId: result.sessionId, connected: true } : t,
+          t.id === id ? { ...t, sessionId: result.sessionId, connected: true, connecting: false } : t,
+        ),
+      }));
+    } else {
+      set((state) => ({
+        tabs: state.tabs.map((t) =>
+          t.id === id ? { ...t, connecting: false, connectionError: result.error || 'Reconnect failed' } : t,
         ),
       }));
     }

@@ -69,6 +69,30 @@ export function App() {
   const [showProWelcome, setShowProWelcome] = useState(false);
   const [sftpWidth, setSftpWidth] = useState(() => parseInt(localStorage.getItem('void-sftp-width') || '240'));
   const sftpDragRef = useRef(false);
+  const [chatWidth, setChatWidth] = useState(() => parseInt(localStorage.getItem('void-chat-width') || '320'));
+  const [chatDragging, setChatDragging] = useState(false);
+
+  const handleChatDrag = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setChatDragging(true);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    const onMove = (ev: MouseEvent) => {
+      const newWidth = Math.max(220, Math.min(600, window.innerWidth - ev.clientX));
+      setChatWidth(newWidth);
+      localStorage.setItem('void-chat-width', String(newWidth));
+      window.dispatchEvent(new Event('resize'));
+    };
+    const onUp = () => {
+      setChatDragging(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, []);
 
   const handleSftpDrag = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -137,7 +161,7 @@ export function App() {
   useEffect(() => {
     const checkUpdate = async () => {
       try {
-        const currentVersion = '1.1.1';
+        const currentVersion = '1.2.0';
         const data = await window.void.app.checkForUpdates(currentVersion);
         if (data.update) {
           const lastSeen = localStorage.getItem('last-seen-changelog');
@@ -305,16 +329,22 @@ export function App() {
             <motion.div
               key="right-sidebar"
               initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 260, opacity: 1 }}
+              animate={{ width: chatWidth, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
               onAnimationComplete={() => {
-                // Only fit terminal AFTER animation completes — prevents flicker
                 window.dispatchEvent(new Event('resize'));
               }}
-              className="shrink-0 flex flex-col overflow-hidden"
-              style={{ height: '100%', maxHeight: '100%', borderLeft: '0.5px solid #2A2A30', background: 'var(--input)' }}
+              className="shrink-0 flex overflow-hidden relative"
+              style={{ height: '100%', maxHeight: '100%', background: 'var(--input)' }}
             >
+              {/* Drag divider — resize sidebar */}
+              <div
+                onMouseDown={handleChatDrag}
+                className="w-[4px] shrink-0 cursor-col-resize hover:bg-accent/20 active:bg-accent/40 transition-colors"
+                style={{ background: chatDragging ? '#F97316' : 'var(--border)' }}
+              />
+              <div className="flex-1 flex flex-col overflow-hidden">
               {/* Tab switcher */}
               <div className="flex shrink-0" style={{ borderBottom: '0.5px solid rgba(42,42,48,0.5)' }}>
                 <button
@@ -337,6 +367,7 @@ export function App() {
               <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
                 {notesSidebarOpen && <NotesSidebar />}
                 {aiChatSidebarOpen && <AIChatSidebar />}
+              </div>
               </div>
             </motion.div>
           )}

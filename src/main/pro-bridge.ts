@@ -185,11 +185,12 @@ export async function aiChat(
   history: { role: string; content: string }[],
   terminalContext?: string,
   serverInfo?: string,
+  modelOverride?: string,
 ): Promise<string> {
   if (!licenseActive || !aiEngine) {
     return 'AI Chat is a Pro feature. Go to Settings > License to activate.';
   }
-  return aiEngine.chat(message, history, terminalContext, serverInfo);
+  return aiEngine.chat(message, history, terminalContext, serverInfo, modelOverride);
 }
 
 export function getAIConfig(): any {
@@ -213,6 +214,43 @@ export function getAIConfig(): any {
 export function setAIConfig(config: any): void {
   if (!aiEngine) return;
   aiEngine.setConfig(config);
+}
+
+export async function aiAgentStep(
+  messages: any[],
+  terminalContext?: string,
+  serverInfo?: string,
+  memories?: string,
+  modelOverride?: string,
+): Promise<{ thought: string; action?: any; done?: boolean }> {
+  if (!licenseActive || !aiEngine) {
+    return { thought: 'AI Agent is a Pro feature.', done: true };
+  }
+  return aiEngine.agentStep(messages, terminalContext, serverInfo, memories, modelOverride);
+}
+
+export async function aiExtractMemories(conversation: string, server: string) {
+  if (!aiEngine) return [];
+  return aiEngine.extractMemories(conversation, server);
+}
+
+export function getAvailableModels() {
+  if (!aiEngine) return [];
+  return aiEngine.getAvailableModels();
+}
+
+export function setAIModel(model: string) {
+  if (aiEngine) aiEngine.setModel(model);
+}
+
+export function getCurrentModel(): string {
+  if (!aiEngine) return '';
+  return aiEngine.getCurrentModel();
+}
+
+export function getSmartModel(tier: 'light' | 'medium' | 'heavy', availableProviders?: string[]): string {
+  if (!aiEngine) return '';
+  return aiEngine.getSmartModel(tier, availableProviders);
 }
 
 export function getAIWatcher(): any {

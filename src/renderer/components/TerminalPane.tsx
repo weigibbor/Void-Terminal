@@ -237,6 +237,7 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
       className={`relative flex flex-col h-full w-full bg-void-elevated ${
         dragOver ? 'ring-1 ring-accent/40 ring-inset' : ''
       }`}
+      style={{ opacity: !isFocused && showHeader ? 0.6 : 1, transition: 'opacity 200ms ease' }}
       onClick={handleClick}
       onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
       onDragLeave={() => setDragOver(false)}
@@ -267,7 +268,7 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
       {showHeader && (
         <div
           className="flex items-center gap-[8px] px-3 shrink-0 cursor-grab active:cursor-grabbing"
-          style={{ height: '32px', fontSize: '11px', borderBottom: '0.5px solid rgba(42,42,48,0.5)', background: 'rgba(17,17,21,0.5)' }}
+          style={{ height: '32px', fontSize: '11px', borderBottom: '0.5px solid rgba(42,42,48,0.5)', borderLeft: isFocused ? '2px solid #F97316' : '2px solid transparent', background: isFocused ? 'rgba(17,17,21,0.7)' : 'rgba(17,17,21,0.3)' }}
           draggable
           onDragStart={(e) => {
             e.dataTransfer.setData('text/pane-index', String(paneIndex));

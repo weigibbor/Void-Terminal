@@ -41,8 +41,15 @@ export function useSSH() {
         }
 
         const connectTime = Date.now();
+
+        // Listen for auto-reconnect success — update tab state back to connected
+        (window.void.ssh as any).onReconnected?.(result.sessionId, () => {
+          updateTab(tabId, { connected: true, disconnectedAt: undefined, connectionError: undefined });
+          (window as any).void.health?.log(tabId, config.host, 'reconnected');
+        });
+
         window.void.ssh.onClose(result.sessionId, () => {
-          updateTab(tabId, { connected: false });
+          updateTab(tabId, { connected: false, disconnectedAt: Date.now() });
           (window as any).void.health?.log(tabId, config.host, 'disconnected');
           fireWebhook('disconnect', { host: config.host, duration: Date.now() - connectTime });
           logTeamActivity('disconnected', config.host);
@@ -50,7 +57,7 @@ export function useSSH() {
         });
 
         window.void.ssh.onError(result.sessionId, (err: string) => {
-          updateTab(tabId, { connected: false });
+          updateTab(tabId, { connected: false, disconnectedAt: Date.now() });
           (window as any).void.health?.log(tabId, config.host, 'error');
           fireWebhook('error', { host: config.host, error: err });
           logTeamActivity('error', config.host, err);

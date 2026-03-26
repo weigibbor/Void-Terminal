@@ -14,16 +14,20 @@ export function PatchNotesModal() {
     }
   };
 
-  const startDownload = () => {
+  const startDownload = async () => {
     close();
-    useAppStore.setState({ updateStatus: 'downloading', downloadProgress: 0 });
-    // Trigger download (same as UpdateBar)
-    let p = 0;
-    const interval = setInterval(() => {
-      p += Math.random() * 15;
-      if (p >= 100) { p = 100; clearInterval(interval); useAppStore.setState({ updateStatus: 'ready', downloadProgress: 100 }); }
-      useAppStore.setState({ downloadProgress: Math.min(100, Math.round(p)) });
-    }, 500);
+    const platform = await window.void.app.getPlatform();
+    if (platform === 'darwin') {
+      // macOS: open GitHub Releases for manual DMG download
+      window.open(`https://github.com/weigibbor/Void-Terminal/releases/tag/v${version}`, '_blank');
+    } else {
+      // Windows: auto-download
+      useAppStore.setState({ updateStatus: 'downloading', downloadProgress: 0 });
+      const result = await (window.void.app as any).updaterDownload?.();
+      if (result && !result.success) {
+        useAppStore.setState({ updateStatus: 'failed', updateError: result.error || 'Download failed' });
+      }
+    }
   };
 
   const features = changelog.filter(c => c.type === 'feature');
@@ -99,7 +103,7 @@ export function PatchNotesModal() {
               {mode === 'preview' ? (
                 <div className="flex gap-2">
                   <button onClick={close} className="px-[20px] py-[8px] rounded-[6px] text-[12px] font-semibold cursor-pointer font-sans" style={{ background: 'transparent', color: 'var(--dim)', border: '0.5px solid var(--border)' }}>Not now</button>
-                  <button onClick={startDownload} className="px-[20px] py-[8px] rounded-[6px] text-[12px] font-semibold cursor-pointer font-sans border-none" style={{ background: '#F97316', color: 'var(--base)' }}>Download & install</button>
+                  <button onClick={startDownload} className="px-[20px] py-[8px] rounded-[6px] text-[12px] font-semibold cursor-pointer font-sans border-none" style={{ background: '#F97316', color: 'var(--base)' }}>Download update</button>
                 </div>
               ) : (
                 <button onClick={close} className="px-[20px] py-[8px] rounded-[6px] text-[12px] font-semibold cursor-pointer font-sans border-none" style={{ background: '#F97316', color: 'var(--base)' }}>Got it</button>

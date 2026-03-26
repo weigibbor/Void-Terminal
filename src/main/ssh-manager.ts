@@ -230,26 +230,41 @@ export class SSHManager {
     });
   }
 
-  private scheduleReconnect(session: SSHSession): void {
+  private async scheduleReconnect(session: SSHSession): Promise<void> {
     if (session.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-      this.send(
-        `ssh:data:${session.id}`,
-        '\r\n\x1b[33m[Void] Reconnect failed after maximum attempts. Press Enter to retry.\x1b[0m\r\n',
-      );
+      this.send(`ssh:data:${session.id}`, '\r\n\x1b[33m[Void] Reconnect failed after maximum attempts. Press Enter to retry.\x1b[0m\r\n');
+      this.send(`ssh:reconnect-failed:${session.id}`);
       return;
     }
 
     session.reconnectAttempts++;
     const delay = Math.min(Math.pow(2, session.reconnectAttempts - 1) * 1000, 30000);
 
-    this.send(
-      `ssh:data:${session.id}`,
-      `\r\n\x1b[33m[Void] Reconnecting... (attempt ${session.reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})\x1b[0m\r\n`,
-    );
+    // Check internet first
+    this.send(`ssh:data:${session.id}`, `\r\n\x1b[33m[Void] Checking connection...\x1b[0m\r\n`);
+    this.send(`ssh:status:${session.id}`, 'checking');
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const net = require('net');
+        const socket = net.createConnection({ host: session.config.host, port: session.config.port || 22, timeout: 5000 });
+        socket.on('connect', () => { socket.destroy(); resolve(); });
+        socket.on('error', () => { socket.destroy(); reject(); });
+        socket.on('timeout', () => { socket.destroy(); reject(); });
+      });
+    } catch {
+      this.send(`ssh:data:${session.id}`, `\x1b[31m[Void] No internet or server unreachable. Retrying in ${Math.round(delay / 1000)}s...\x1b[0m\r\n`);
+      this.send(`ssh:status:${session.id}`, 'no-internet');
+      session.reconnectTimer = setTimeout(() => { this.scheduleReconnect(session); }, delay);
+      return;
+    }
+
+    this.send(`ssh:data:${session.id}`, `\x1b[33m[Void] Reconnecting... (attempt ${session.reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})\x1b[0m\r\n`);
+    this.send(`ssh:status:${session.id}`, 'reconnecting');
 
     session.reconnectTimer = setTimeout(() => {
       this.attemptReconnect(session);
-    }, delay);
+    }, 1000); // Short delay since we already verified connectivity
   }
 
   private attemptReconnect(session: SSHSession): void {
@@ -291,10 +306,10 @@ export class SSHManager {
           }
         });
 
-        this.send(
-          `ssh:data:${session.id}`,
-          '\r\n\x1b[32m[Void] Reconnected.\x1b[0m\r\n',
-        );
+        this.send(`ssh:data:${session.id}`, '\r\n\x1b[32m[Void] Reconnected successfully.\x1b[0m\r\n');
+        // Notify renderer — this is critical so the tab state updates
+        this.send(`ssh:reconnected:${session.id}`);
+        this.send(`ssh:status:${session.id}`, 'connected');
       });
     });
 

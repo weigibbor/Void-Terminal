@@ -31,6 +31,16 @@ contextBridge.exposeInMainWorld('void', {
         ipcRenderer.removeListener(`ssh:error:${sessionId}`, handler);
       };
     },
+    onReconnected: (sessionId: string, cb: () => void) => {
+      const handler = () => cb();
+      ipcRenderer.on(`ssh:reconnected:${sessionId}`, handler);
+      return () => { ipcRenderer.removeListener(`ssh:reconnected:${sessionId}`, handler); };
+    },
+    onStatus: (sessionId: string, cb: (status: string) => void) => {
+      const handler = (_event: unknown, status: string) => cb(status);
+      ipcRenderer.on(`ssh:status:${sessionId}`, handler);
+      return () => { ipcRenderer.removeListener(`ssh:status:${sessionId}`, handler); };
+    },
   },
 
   pty: {
@@ -148,10 +158,17 @@ contextBridge.exposeInMainWorld('void', {
       ipcRenderer.invoke('ai:autocomplete', context, history),
     naturalLanguage: (query: string, server: string) =>
       ipcRenderer.invoke('ai:naturalLanguage', query, server),
-    chat: (message: string, history: { role: string; content: string }[], terminalContext?: string, serverInfo?: string) =>
-      ipcRenderer.invoke('ai:chat', message, history, terminalContext, serverInfo),
+    chat: (message: string, history: { role: string; content: string }[], terminalContext?: string, serverInfo?: string, modelOverride?: string) =>
+      ipcRenderer.invoke('ai:chat', message, history, terminalContext, serverInfo, modelOverride),
+    agentStep: (messages: any[], terminalContext?: string, serverInfo?: string, memories?: string, modelOverride?: string) =>
+      ipcRenderer.invoke('ai:agentStep', messages, terminalContext, serverInfo, memories, modelOverride),
     getConfig: () => ipcRenderer.invoke('ai:getConfig'),
     setConfig: (config: unknown) => ipcRenderer.invoke('ai:setConfig', config),
+    getModels: () => ipcRenderer.invoke('ai:getModels'),
+    setModel: (model: string) => ipcRenderer.invoke('ai:setModel', model),
+    getCurrentModel: () => ipcRenderer.invoke('ai:getCurrentModel'),
+    getSmartModel: (tier: string, availableProviders?: string[]) => ipcRenderer.invoke('ai:getSmartModel', tier, availableProviders),
+    extractMemories: (conversation: string, server: string) => ipcRenderer.invoke('ai:extractMemories', conversation, server),
   },
 
   license: {

@@ -572,9 +572,19 @@ function registerIPCHandlers(): void {
     return pro.aiNaturalLanguage(query, server);
   });
 
-  ipcMain.handle('ai:chat', async (_event, message: string, history, terminalContext?: string, serverInfo?: string) => {
-    return pro.aiChat(message, history, terminalContext, serverInfo);
+  ipcMain.handle('ai:chat', async (_event, message: string, history, terminalContext?: string, serverInfo?: string, modelOverride?: string) => {
+    return pro.aiChat(message, history, terminalContext, serverInfo, modelOverride);
   });
+
+  ipcMain.handle('ai:agentStep', async (_event, messages: any[], terminalContext?: string, serverInfo?: string, memories?: string, modelOverride?: string) => {
+    return pro.aiAgentStep(messages, terminalContext, serverInfo, memories, modelOverride);
+  });
+
+  ipcMain.handle('ai:getModels', async () => { return pro.getAvailableModels(); });
+  ipcMain.handle('ai:setModel', async (_event, model: string) => { pro.setAIModel(model); });
+  ipcMain.handle('ai:getCurrentModel', async () => { return pro.getCurrentModel(); });
+  ipcMain.handle('ai:getSmartModel', async (_event, tier: string, availableProviders?: string[]) => { return pro.getSmartModel(tier as any, availableProviders); });
+  ipcMain.handle('ai:extractMemories', async (_event, conversation: string, server: string) => { return pro.aiExtractMemories(conversation, server); });
 
   ipcMain.handle('ai:getConfig', async () => {
     return pro.getAIConfig();

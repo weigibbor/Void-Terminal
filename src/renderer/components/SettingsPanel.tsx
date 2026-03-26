@@ -212,6 +212,9 @@ function AISettings() {
   const [editingKey, setEditingKey] = useState(false);
   const [keyInput, setKeyInput] = useState('');
   const [choosingProvider, setChoosingProvider] = useState(false);
+  const [keyStatuses, setKeyStatuses] = useState<Record<string, 'idle' | 'saving' | 'success' | 'error'>>({});
+  const [keyErrors, setKeyErrors] = useState<Record<string, string>>({});
+  const [keyInputs, setKeyInputs] = useState<Record<string, string>>({});
 
   useEffect(() => {
     window.void.ai.getConfig().then((c: any) => {
@@ -246,107 +249,137 @@ function AISettings() {
   const hasApiKey = !!config.apiKey || config.provider === 'ollama';
   const hasProvider = !!config.provider;
 
+  const validateAndSaveKey = async (provider: string, key: string) => {
+    if (!key.trim()) return;
+    setKeyStatuses(s => ({ ...s, [provider]: 'saving' }));
+
+    // Quick validation by format
+    const isValid = provider === 'anthropic' ? key.startsWith('sk-ant-') :
+      provider === 'openai' ? key.startsWith('sk-') :
+      provider === 'gemini' ? key.startsWith('AIza') || key.length > 20 : true;
+
+    if (!isValid) {
+      setKeyStatuses(s => ({ ...s, [provider]: 'error' }));
+      setKeyErrors(e => ({ ...e, [provider]: `Invalid format. ${provider === 'anthropic' ? 'Should start with sk-ant-' : provider === 'openai' ? 'Should start with sk-' : 'Should start with AIza'}` }));
+      return;
+    }
+
+    const isActive = config.provider === provider;
+    if (isActive) {
+      saveConfig({ ...config, apiKey: key.trim() });
+    } else {
+      saveConfig({ ...config, [`${provider}Key`]: key.trim() } as any);
+    }
+    // Auto-set as active provider if it's the first key
+    if (!config.apiKey && !isActive) {
+      saveConfig({ ...config, provider: provider as any, apiKey: key.trim() });
+    }
+    setKeyStatuses(s => ({ ...s, [provider]: 'success' }));
+    setKeyErrors(e => ({ ...e, [provider]: '' }));
+  };
+
   return (
-    <div className="max-w-md space-y-4">
+    <div className="max-w-md space-y-5">
       <div>
-        <div className="text-[16px] text-void-text font-semibold font-sans mb-[3px]">AI configuration</div>
-        <div className="text-[10px] text-void-text-dim mb-5">Manage your AI provider and toggle individual features.</div>
+        <div className="text-[18px] text-void-text font-semibold font-sans mb-[4px]">AI Configuration</div>
+        <div className="text-[12px] text-void-text-dim mb-2">Add your API keys below. Smart routing picks the best model per task. BYOK — your data stays local.</div>
       </div>
 
-      {/* Not configured warning */}
-      {!hasApiKey && (
-        <div className="p-4 rounded-[10px] text-center mb-2" style={{ background: 'rgba(254,188,46,0.04)', border: '0.5px solid rgba(254,188,46,0.12)' }}>
-          <div className="w-11 h-11 rounded-[11px] mx-auto mb-3 flex items-center justify-center" style={{ background: 'rgba(254,188,46,0.06)', border: '0.5px solid rgba(254,188,46,0.1)' }}>
-            <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#FEBC2E" strokeWidth="1.3"/><line x1="8" y1="5" x2="8" y2="8.5" stroke="#FEBC2E" strokeWidth="1.5" strokeLinecap="round"/><circle cx="8" cy="11" r="0.7" fill="#FEBC2E"/></svg>
-          </div>
-          <div className="text-[14px] text-void-text font-semibold mb-1">AI is not configured</div>
-          <div className="text-[10px] text-void-text-muted leading-relaxed mb-1">You have Pro, but AI features need an API key to work.</div>
-          <div className="text-[10px] text-void-text-dim">BYOK — bring your own key. Your data never leaves your machine.</div>
-        </div>
-      )}
-
-      {/* Verified banner */}
-      {hasApiKey && (
-        <div className="flex items-center gap-2 p-[10px] rounded-[8px] mb-2" style={{ background: 'rgba(40,200,64,0.04)', border: '0.5px solid rgba(40,200,64,0.12)' }}>
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#28C840" strokeWidth="1.3"/><path d="M5.5 8l2 2 3.5-4" stroke="#28C840" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          <span className="text-[10px] text-status-online font-medium">API key verified</span>
-          <span className="text-[10px] text-void-text-muted">— {providerNames[config.provider] || 'Provider'} connected</span>
-        </div>
-      )}
-
-      {/* Provider selector */}
-      {choosingProvider ? (
-        <div className="space-y-2">
-          <div className="text-[10px] text-void-text-muted uppercase tracking-wider mb-[6px]">Choose AI provider</div>
-          {(['anthropic', 'openai', 'gemini', 'ollama'] as const).map((p) => (
-            <button key={p} onClick={() => { saveConfig({ ...config, provider: p }); setChoosingProvider(false); if (p !== 'ollama') { setEditingKey(true); setKeyInput(''); } }}
-              className="w-full flex items-center gap-3 p-3 bg-void-surface rounded-[8px] text-left transition-all hover:bg-void-elevated"
-              style={{ border: `0.5px solid ${config.provider === p ? 'var(--accent-border)' : '#2A2A30'}` }}>
-              <div className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0"
-                style={{ background: config.provider === p ? 'rgba(249,115,22,0.12)' : 'rgba(255,255,255,0.03)' }}>
-                <div className={`w-3 h-3 rounded-full border-[1.5px] ${config.provider === p ? 'border-accent bg-accent' : 'border-void-border'}`} />
+      {/* API Keys — multiple providers with save + validation */}
+      <div>
+        <div className="text-[11px] text-void-text-muted uppercase tracking-wider mb-[8px] font-semibold">API Keys</div>
+        {(['anthropic', 'openai', 'gemini'] as const).map(p => {
+          const isActive = config.provider === p;
+          const storedKey = isActive ? config.apiKey : (config as any)[`${p}Key`];
+          const status = keyStatuses[p] || (storedKey ? 'success' : 'idle');
+          const error = keyErrors[p];
+          const placeholders: Record<string, string> = { anthropic: 'sk-ant-api03-...', openai: 'sk-proj-...', gemini: 'AIzaSy...' };
+          const names: Record<string, string> = { anthropic: 'Anthropic', openai: 'OpenAI', gemini: 'Gemini' };
+          return (
+            <div key={p} className="mb-3">
+              <div className="flex items-center gap-[8px] mb-[4px]">
+                <span className={`w-[7px] h-[7px] rounded-full shrink-0 ${status === 'success' ? 'bg-status-online' : status === 'error' ? 'bg-status-error' : 'bg-void-text-ghost'}`} />
+                <span className="text-[13px] text-void-text font-sans font-medium">{names[p]}</span>
+                {isActive && <span className="text-[9px] text-accent font-mono px-[6px] py-[1px] rounded-[3px]" style={{ background: 'rgba(249,115,22,0.08)' }}>ACTIVE</span>}
+                {status === 'success' && storedKey && <span className="text-[9px] text-status-online font-mono">Connected</span>}
               </div>
-              <div>
-                <div className="text-[12px] text-void-text font-medium">{providerNames[p]}</div>
-                <div className="text-[9px] text-void-text-dim mt-[1px]">{p === 'ollama' ? 'Free · Fully offline' : 'BYOK · Pay your provider'}</div>
+              <div className="flex gap-[6px]">
+                <input
+                  type="password"
+                  value={keyInputs[p] ?? storedKey ?? ''}
+                  onChange={(e) => setKeyInputs(s => ({ ...s, [p]: e.target.value }))}
+                  placeholder={placeholders[p]}
+                  className="flex-1 px-3 py-[8px] bg-void-input rounded-[6px] text-[12px] text-void-text font-mono outline-none"
+                  style={{ border: `0.5px solid ${status === 'error' ? 'rgba(255,95,87,0.3)' : status === 'success' && storedKey ? 'rgba(40,200,64,0.2)' : 'var(--border)'}` }}
+                />
+                <button
+                  onClick={() => validateAndSaveKey(p, keyInputs[p] ?? storedKey ?? '')}
+                  className="px-[14px] py-[8px] rounded-[6px] text-[11px] font-semibold cursor-pointer font-sans border-none shrink-0"
+                  style={{ background: '#F97316', color: 'var(--base)' }}>
+                  Save
+                </button>
               </div>
-            </button>
-          ))}
-        </div>
-      ) : (
-        <div className="flex items-center gap-[10px] p-3 bg-void-surface rounded-[8px]" style={{ border: '0.5px solid var(--border)' }}>
-          <div className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0" style={{ background: 'rgba(249,115,22,0.08)' }}>
-            <div className="w-3 h-3 rounded-full border-[1.5px] border-accent bg-accent" />
-          </div>
-          <div className="flex-1">
-            <div className="text-[12px] text-void-text font-medium">{providerNames[config.provider] || 'Select a provider'}</div>
-            <div className={`text-[9px] mt-[1px] ${hasApiKey ? 'text-status-online' : 'text-void-text-dim'}`}>{hasApiKey ? 'Connected' : 'Not configured'}</div>
-          </div>
-          <span className="text-[10px] text-accent cursor-pointer" onClick={() => setChoosingProvider(true)}>Change provider</span>
-        </div>
-      )}
-
-      {/* API Key */}
-      {config.provider !== 'ollama' && (
-        <div>
-          <div className="text-[10px] text-void-text-muted uppercase tracking-wider mb-[6px]">API key</div>
-          {editingKey ? (
-            <div className="flex gap-2">
-              <input
-                type="password"
-                value={keyInput}
-                onChange={(e) => setKeyInput(e.target.value)}
-                placeholder={config.provider === 'anthropic' ? 'sk-ant-...' : config.provider === 'openai' ? 'sk-...' : 'AIza...'}
-                className="flex-1 px-3 py-2 bg-void-input rounded-[6px] text-[11px] text-void-text font-mono outline-none"
-                style={{ border: '0.5px solid var(--accent-border)' }}
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && keyInput.trim()) {
-                    saveConfig({ ...config, apiKey: keyInput.trim() });
-                    setEditingKey(false);
-                  }
-                  if (e.key === 'Escape') { setEditingKey(false); setKeyInput(''); }
-                }}
-              />
-              <button onClick={() => { if (keyInput.trim()) { saveConfig({ ...config, apiKey: keyInput.trim() }); setEditingKey(false); } }}
-                className="px-[14px] py-2 rounded-[6px] text-[10px] text-void-base font-medium bg-accent"
-                style={{ border: 'none' }}>Save</button>
-              <button onClick={() => { setEditingKey(false); setKeyInput(''); }}
-                className="px-[10px] py-2 rounded-[6px] text-[10px] text-void-text-dim"
-                style={{ border: '0.5px solid var(--border)' }}>✕</button>
+              {status === 'error' && error && (
+                <div className="text-[10px] text-status-error mt-[4px] ml-[15px]">{error}</div>
+              )}
+              {!isActive && storedKey && status === 'success' && (
+                <button onClick={() => saveConfig({ ...config, provider: p as any, apiKey: storedKey })}
+                  className="text-[10px] text-accent mt-[4px] ml-[15px] bg-transparent border-none cursor-pointer font-sans">Set as active provider</button>
+              )}
             </div>
-          ) : (
-            <div className="flex gap-2">
-              <div className="flex-1 px-3 py-2 bg-void-input rounded-[6px] text-[11px] text-void-text-dim font-mono" style={{ border: '0.5px solid var(--border)' }}>
-                {config.apiKey ? `${config.apiKey.substring(0, 8)}${'•'.repeat(16)}${config.apiKey.slice(-4)}` : 'No API key set'}
-              </div>
-              <button onClick={() => { setEditingKey(true); setKeyInput(config.apiKey || ''); }}
-                className="px-[14px] py-2 rounded-[6px] text-[10px] text-void-text-muted hover:text-void-text transition-colors cursor-pointer"
-                style={{ border: '0.5px solid var(--border)' }}>Edit</button>
-            </div>
+          );
+        })}
+        <div className="flex items-center gap-[8px] mt-2 p-[10px] rounded-[6px] bg-void-surface" style={{ border: '0.5px solid var(--border)' }}>
+          <span className={`w-[7px] h-[7px] rounded-full shrink-0 ${config.provider === 'ollama' ? 'bg-status-online' : 'bg-void-text-ghost'}`} />
+          <span className="text-[13px] text-void-text font-sans font-medium">Ollama</span>
+          <span className="text-[11px] text-void-text-ghost font-mono ml-auto">Local · No key needed</span>
+          {config.provider !== 'ollama' && (
+            <button onClick={() => saveConfig({ ...config, provider: 'ollama' })}
+              className="text-[10px] text-accent bg-transparent border-none cursor-pointer font-sans">Use</button>
           )}
+          {config.provider === 'ollama' && <span className="text-[9px] text-accent font-mono">ACTIVE</span>}
         </div>
-      )}
+      </div>
+
+      {/* Smart Routing Providers */}
+      <div>
+        <div className="text-[11px] text-void-text-muted uppercase tracking-wider mb-[6px] font-semibold">Smart Routing</div>
+        <div className="text-[11px] text-void-text-dim mb-[8px]">Choose which providers Smart mode can use. It picks the best model per task across enabled providers.</div>
+        {(['anthropic', 'openai', 'gemini', 'ollama'] as string[]).map(p => {
+          const hasKey = p === 'ollama' || (p === config.provider ? !!config.apiKey : !!(config as any)[`${p}Key`]);
+          const enabled = ((config as any).smartProviders || [config.provider]).includes(p);
+          const names: Record<string, string> = { anthropic: 'Anthropic', openai: 'OpenAI', gemini: 'Gemini', ollama: 'Ollama' };
+          const tiers: Record<string, string> = {
+            anthropic: 'Haiku → Sonnet → Opus',
+            openai: '4o-mini → 4o → 4o',
+            gemini: '2.5 Flash → 2.5 Pro → 2.5 Pro',
+            ollama: 'Llama 8B → Llama 70B → Llama 70B',
+          };
+          return (
+            <div key={p} className="flex items-center gap-[8px] py-[6px]">
+              <button
+                onClick={() => {
+                  const current: string[] = (config as any).smartProviders || [config.provider];
+                  const next = enabled ? current.filter((x: string) => x !== p) : [...current, p];
+                  if (next.length === 0) return; // must have at least 1
+                  saveConfig({ ...config, smartProviders: next } as any);
+                }}
+                disabled={!hasKey && p !== 'ollama'}
+                className={`w-[32px] h-[18px] rounded-full relative transition-colors shrink-0 ${enabled && hasKey ? 'bg-accent' : 'bg-void-border'}`}
+                style={{ opacity: hasKey ? 1 : 0.3 }}
+              >
+                <div className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition-transform ${enabled && hasKey ? 'translate-x-[16px]' : 'translate-x-[2px]'}`} />
+              </button>
+              <span className="text-[12px] text-void-text font-sans">{names[p]}</span>
+              <span className="text-[9px] text-void-text-ghost font-mono ml-auto">{tiers[p]}</span>
+              {!hasKey && p !== 'ollama' && <span className="text-[8px] text-void-text-ghost">no key</span>}
+            </div>
+          );
+        })}
+        <div className="text-[9px] text-void-text-ghost mt-[4px]">
+          When multiple enabled: light tasks use cheapest, heavy tasks use best across all enabled providers.
+        </div>
+      </div>
 
       {/* Rate limit */}
       <div className="flex items-center justify-between p-[10px] bg-void-surface rounded-[6px]">
@@ -703,7 +736,7 @@ function AboutSection() {
     setChecking(true);
     useAppStore.setState({ updateStatus: 'idle', updateError: null });
     try {
-      const data = await (window as any).void.app.checkForUpdates('1.1.1');
+      const data = await (window as any).void.app.checkForUpdates('1.2.0');
       if (data.error) throw new Error(data.error);
       setLastChecked(new Date());
       if (data.update) {
@@ -720,14 +753,19 @@ function AboutSection() {
     setChecking(false);
   };
 
-  const startDownload = () => {
-    useAppStore.setState({ updateStatus: 'downloading', downloadProgress: 0 });
-    let p = 0;
-    const interval = setInterval(() => {
-      p += Math.random() * 15;
-      if (p >= 100) { p = 100; clearInterval(interval); useAppStore.setState({ updateStatus: 'ready', downloadProgress: 100 }); }
-      useAppStore.setState({ downloadProgress: Math.min(100, Math.round(p)) });
-    }, 500);
+  const startDownload = async () => {
+    const platform = await window.void.app.getPlatform();
+    if (platform === 'darwin') {
+      // macOS: open GitHub Releases for manual DMG download
+      window.open(`https://github.com/weigibbor/Void-Terminal/releases/tag/v${updateVersion}`, '_blank');
+    } else {
+      // Windows: auto-download
+      useAppStore.setState({ updateStatus: 'downloading', downloadProgress: 0 });
+      const result = await (window.void.app as any).updaterDownload?.();
+      if (result && !result.success) {
+        useAppStore.setState({ updateStatus: 'failed', updateError: result.error || 'Download failed' });
+      }
+    }
   };
 
   const features = updateChangelog.filter(c => c.type === 'feature').length;
@@ -744,7 +782,7 @@ function AboutSection() {
         <div>
           <div className="text-[16px] text-void-text font-bold font-mono" style={{ letterSpacing: '-0.5px' }}>void terminal</div>
           <div className="flex items-center gap-2 mt-[2px] text-[12px] text-void-text-dim font-mono">
-            v1.1.1
+            v1.2.0
             {isPro && <span className="text-[8px] font-bold text-accent px-2 py-[2px] rounded-[4px]" style={{ background: 'rgba(249,115,22,0.08)', border: '0.5px solid rgba(249,115,22,0.15)' }}>PRO</span>}
             <span className="text-[8px] font-bold text-status-online px-2 py-[2px] rounded-[4px]" style={{ background: 'rgba(40,200,64,0.06)', border: '0.5px solid rgba(40,200,64,0.1)' }}>STABLE</span>
           </div>
