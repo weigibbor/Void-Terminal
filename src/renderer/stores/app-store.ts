@@ -304,6 +304,33 @@ export const useAppStore = create<AppState>((set, get) => ({
           t.id === id ? { ...t, sessionId: result.sessionId, connected: true, connecting: false } : t,
         ),
       }));
+
+      // Register event listeners for the NEW session so disconnect/reconnect works again
+      const newSessionId = result.sessionId;
+
+      (window.void.ssh as any).onReconnected?.(newSessionId, () => {
+        set((state) => ({
+          tabs: state.tabs.map((t) =>
+            t.id === id ? { ...t, connected: true, disconnectedAt: undefined, connectionError: undefined } : t,
+          ),
+        }));
+      });
+
+      window.void.ssh.onClose(newSessionId, () => {
+        set((state) => ({
+          tabs: state.tabs.map((t) =>
+            t.id === id ? { ...t, connected: false, disconnectedAt: Date.now() } : t,
+          ),
+        }));
+      });
+
+      window.void.ssh.onError(newSessionId, () => {
+        set((state) => ({
+          tabs: state.tabs.map((t) =>
+            t.id === id ? { ...t, connected: false, disconnectedAt: Date.now() } : t,
+          ),
+        }));
+      });
     } else {
       set((state) => ({
         tabs: state.tabs.map((t) =>
