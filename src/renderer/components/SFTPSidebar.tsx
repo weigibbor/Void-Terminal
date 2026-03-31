@@ -30,11 +30,15 @@ export function SFTPSidebar({ width = 240 }: { width?: number }) {
   const tabs = useAppStore((s) => s.tabs);
   const activeTabId = useAppStore((s) => s.activeTabId);
   const activeTab = tabs.find((t) => t.id === activeTabId);
-  const isSSH = activeTab?.type === 'ssh' && activeTab.connected && activeTab.sessionId;
-  const sessionId = activeTab?.sessionId;
+  // Use the active SSH tab, or if active tab is editor use its sftpSessionId, or fall back to any connected SSH tab
+  const sshTab = activeTab?.type === 'ssh' ? activeTab
+    : tabs.find((t) => t.type === 'ssh' && t.connected && t.sessionId);
+  const sessionId = (activeTab?.type === 'editor' ? activeTab.sftpSessionId : sshTab?.sessionId) || sshTab?.sessionId;
+  const isSSH = !!sessionId && tabs.some((t) => t.type === 'ssh' && t.connected && t.sessionId === sessionId);
 
   const [files, setFiles] = useState<SFTPEntry[]>([]);
-  const [currentPath, setCurrentPath] = useState('/home');
+  const currentPath = useAppStore((s) => s.sftpCurrentPath);
+  const setCurrentPath = (path: string) => useAppStore.setState({ sftpCurrentPath: path });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set());
@@ -85,16 +89,14 @@ export function SFTPSidebar({ width = 240 }: { width?: number }) {
     }
   }, [sftpMode, localPath, loadLocalDir]);
 
-  // Load home dir when SSH connects
+  // Load current dir when SSH connects (keep last path if available)
   useEffect(() => {
     if (isSSH && sessionId) {
-      // Try to detect home dir
-      loadDir('/home');
+      loadDir(currentPath);
     } else {
       setFiles([]);
-      setCurrentPath('/home');
     }
-  }, [isSSH, sessionId, loadDir]);
+  }, [isSSH, sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Listen for upload progress
   useEffect(() => {
@@ -355,10 +357,23 @@ export function SFTPSidebar({ width = 240 }: { width?: number }) {
                   setSelected(new Set([e.name]));
                 }
               }}
-              onDoubleClick={() => {
+              onDoubleClick={async () => {
                 if (e.type === 'file') {
                   const fp = currentPath === '/' ? `/${e.name}` : `${currentPath}/${e.name}`;
-                  setPreviewFile({ path: fp, name: e.name });
+                  // Open in CodeMirror editor tab
+                  if (!sessionId) return;
+                  const result = await window.void.sftp.readFile(sessionId, fp);
+                  if (result.success && result.content !== undefined) {
+                    const { addTab, setActiveTab } = useAppStore.getState();
+                    const tabId = addTab('editor', {
+                      title: e.name,
+                      filePath: fp,
+                      fileContent: result.content,
+                      sftpSessionId: sessionId,
+                      connected: true,
+                    });
+                    setActiveTab(tabId);
+                  }
                 }
               }}>
               {e.type === 'directory' ? (

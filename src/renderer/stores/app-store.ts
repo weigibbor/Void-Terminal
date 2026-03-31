@@ -55,8 +55,10 @@ interface AppState {
   aiChatSidebarOpen: boolean;
   sftpOpen: boolean;
   sftpCollapsed: boolean;
+  sftpCurrentPath: string;
   commandPaletteOpen: boolean;
   settingsOpen: boolean;
+  warpInputEnabled: boolean;
 
   savedConnections: SavedConnection[];
   sessionStartTime: number;
@@ -126,7 +128,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   aiChatSidebarOpen: false,
   sftpOpen: false,
   sftpCollapsed: false,
+  sftpCurrentPath: '/home',
   commandPaletteOpen: false,
+  warpInputEnabled: localStorage.getItem('void-warp-input') !== 'false',
   settingsOpen: false,
 
   savedConnections: [],

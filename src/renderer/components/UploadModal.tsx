@@ -41,7 +41,7 @@ function fileIcon(name: string) {
 
 export function UploadModal({ open, files: initialFiles, sessionId, serverName, onClose }: UploadModalProps) {
   const [files, setFiles] = useState<DroppedFile[]>([]);
-  const [currentPath, setCurrentPath] = useState('/home');
+  const [currentPath, setCurrentPath] = useState(() => localStorage.getItem('void-last-upload-path') || '/home');
   const [dirs, setDirs] = useState<SFTPEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -73,6 +73,7 @@ export function UploadModal({ open, files: initialFiles, sessionId, serverName, 
       if (result.success) {
         setDirs(result.entries.filter((e: SFTPEntry) => e.type === 'directory'));
         setCurrentPath(path);
+        localStorage.setItem('void-last-upload-path', path);
       } else {
         setError(result.error || 'Failed to read directory');
       }
@@ -82,9 +83,12 @@ export function UploadModal({ open, files: initialFiles, sessionId, serverName, 
     setLoading(false);
   }, [sessionId]);
 
-  // Load initial dir when modal opens
+  // Load last-used dir when modal opens (fall back to /home)
   useEffect(() => {
-    if (open && sessionId) loadDir('/home');
+    if (open && sessionId) {
+      const lastPath = localStorage.getItem('void-last-upload-path') || '/home';
+      loadDir(lastPath);
+    }
   }, [open, sessionId, loadDir]);
 
   // Listen for upload progress

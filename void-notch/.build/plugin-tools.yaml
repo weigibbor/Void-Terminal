@@ -1,0 +1,66 @@
+client:
+  name: basic
+  file-system: device-agnostic
+tools: {}
+targets:
+  "PackageStructure": ["<PackageStructure>"]
+  "VoidNotch-arm64-apple-macosx-release.exe": ["<VoidNotch-arm64-apple-macosx-release.exe>"]
+  "VoidNotch-arm64-apple-macosx-release.module": ["<VoidNotch-arm64-apple-macosx-release.module>"]
+  "main": ["<VoidNotch-arm64-apple-macosx-release.exe>","<VoidNotch-arm64-apple-macosx-release.module>"]
+  "test": ["<VoidNotch-arm64-apple-macosx-release.exe>","<VoidNotch-arm64-apple-macosx-release.module>"]
+default: "main"
+nodes:
+  "/Users/weigi/Void Terminal/void-notch/Sources/VoidNotch/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+commands:
+  "/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/weigi/Void Terminal/void-notch/Sources/VoidNotch/AppDelegate.swift","/Users/weigi/Void Terminal/void-notch/Sources/VoidNotch/GlobalHotkey.swift","/Users/weigi/Void Terminal/void-notch/Sources/VoidNotch/IPCProtocol.swift","/Users/weigi/Void Terminal/void-notch/Sources/VoidNotch/IPCServer.swift","/Users/weigi/Void Terminal/void-notch/Sources/VoidNotch/MenuBarFallback.swift","/Users/weigi/Void Terminal/void-notch/Sources/VoidNotch/NotchDetector.swift","/Users/weigi/Void Terminal/void-notch/Sources/VoidNotch/NotchOverlayWindow.swift","/Users/weigi/Void Terminal/void-notch/Sources/VoidNotch/main.swift"]
+    outputs: ["/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/sources"]
+    description: "Write auxiliary file /Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/sources"
+
+  "/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.product/Objects.LinkFileList":
+    tool: write-auxiliary-file
+    inputs: ["<link-file-list>","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/AppDelegate.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/GlobalHotkey.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/IPCProtocol.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/IPCServer.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/MenuBarFallback.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/NotchDetector.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/NotchOverlayWindow.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/main.swift.o"]
+    outputs: ["/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.product/Objects.LinkFileList"]
+    description: "Write auxiliary file /Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.product/Objects.LinkFileList"
+
+  "/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt":
+    tool: write-auxiliary-file
+    inputs: ["<swift-get-version>","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"]
+    outputs: ["/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"]
+    always-out-of-date: "true"
+    description: "Write auxiliary file /Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"
+
+  "<VoidNotch-arm64-apple-macosx-release.exe>":
+    tool: phony
+    inputs: ["/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch"]
+    outputs: ["<VoidNotch-arm64-apple-macosx-release.exe>"]
+
+  "<VoidNotch-arm64-apple-macosx-release.module>":
+    tool: phony
+    inputs: ["/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/AppDelegate.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/GlobalHotkey.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/IPCProtocol.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/IPCServer.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/MenuBarFallback.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/NotchDetector.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/NotchOverlayWindow.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/main.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/Modules/VoidNotch.swiftmodule"]
+    outputs: ["<VoidNotch-arm64-apple-macosx-release.module>"]
+
+  "C.VoidNotch-arm64-apple-macosx-release.exe":
+    tool: shell
+    inputs: ["/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/AppDelegate.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/GlobalHotkey.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/IPCProtocol.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/IPCServer.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/MenuBarFallback.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/NotchDetector.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/NotchOverlayWindow.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/main.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.product/Objects.LinkFileList"]
+    outputs: ["/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch"]
+    description: "Linking ./.build/arm64-apple-macosx/release/VoidNotch"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-L","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release","-o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch","-module-name","VoidNotch","-Xlinker","-no_warn_duplicate_libraries","-emit-executable","-Xlinker","-dead_strip","-Xlinker","-alias","-Xlinker","_VoidNotch_main","-Xlinker","_main","-Xlinker","-rpath","-Xlinker","@loader_path","@/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.product/Objects.LinkFileList","-Xlinker","-rpath","-Xlinker","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-6.2/macosx","-target","arm64-apple-macosx12.0","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g"]
+
+  "C.VoidNotch-arm64-apple-macosx-release.module":
+    tool: shell
+    inputs: ["/Users/weigi/Void Terminal/void-notch/Sources/VoidNotch/AppDelegate.swift","/Users/weigi/Void Terminal/void-notch/Sources/VoidNotch/GlobalHotkey.swift","/Users/weigi/Void Terminal/void-notch/Sources/VoidNotch/IPCProtocol.swift","/Users/weigi/Void Terminal/void-notch/Sources/VoidNotch/IPCServer.swift","/Users/weigi/Void Terminal/void-notch/Sources/VoidNotch/MenuBarFallback.swift","/Users/weigi/Void Terminal/void-notch/Sources/VoidNotch/NotchDetector.swift","/Users/weigi/Void Terminal/void-notch/Sources/VoidNotch/NotchOverlayWindow.swift","/Users/weigi/Void Terminal/void-notch/Sources/VoidNotch/main.swift","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/sources"]
+    outputs: ["/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/AppDelegate.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/GlobalHotkey.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/IPCProtocol.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/IPCServer.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/MenuBarFallback.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/NotchDetector.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/NotchOverlayWindow.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/main.swift.o","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/Modules/VoidNotch.swiftmodule"]
+    description: "Compiling Swift Module 'VoidNotch' (8 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","VoidNotch","-emit-dependencies","-emit-module","-emit-module-path","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/Modules/VoidNotch.swiftmodule","-output-file-map","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/output-file-map.json","-whole-module-optimization","-num-threads","10","-c","@/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/VoidNotch.build/sources","-I","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/Modules","-target","arm64-apple-macosx12.0","-whole-module-optimization","-num-threads","10","-serialize-diagnostics","-O","-j10","-DSWIFT_PACKAGE","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/weigi/Void Terminal/void-notch/.build/arm64-apple-macosx/release/ModuleCache","-parseable-output","-Xfrontend","-entry-point-function-name","-Xfrontend","VoidNotch_main","-swift-version","5","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","void_notch"]
+
+  "PackageStructure":
+    tool: package-structure-tool
+    inputs: ["/Users/weigi/Void Terminal/void-notch/Sources/VoidNotch/","/Users/weigi/Void Terminal/void-notch/Package.swift","/Users/weigi/Void Terminal/void-notch/Package.resolved"]
+    outputs: ["<PackageStructure>"]
+    description: "Planning build"
+    allow-missing-inputs: true
+

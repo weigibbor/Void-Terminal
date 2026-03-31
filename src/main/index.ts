@@ -12,6 +12,7 @@ import { TunnelManager } from './tunnel-manager';
 import { parseSSHConfig } from './utils/ssh-config-parser';
 import { encryptString, decryptString } from './utils/crypto';
 import { initAutoUpdater } from './auto-updater';
+import { NotchHelper } from './notch-helper';
 
 let mainWindow: BrowserWindow | null = null;
 const allWindows = new Set<BrowserWindow>();
@@ -21,6 +22,7 @@ let uploadManager: SFTPUploadManager;
 let tunnelManager: TunnelManager;
 let connectionStore: ConnectionStore;
 let memoryStore: MemoryStore;
+let notchHelper: NotchHelper | null = null;
 
 function createWindow(options?: { width?: number; height?: number; x?: number; y?: number; detachedTab?: any }): BrowserWindow {
   const win = new BrowserWindow({
@@ -573,11 +575,27 @@ function registerIPCHandlers(): void {
   });
 
   ipcMain.handle('ai:chat', async (_event, message: string, history, terminalContext?: string, serverInfo?: string, modelOverride?: string) => {
-    return pro.aiChat(message, history, terminalContext, serverInfo, modelOverride);
+    notchHelper?.sendStatus({ connection: sshManager?.getConnectionSummary() ?? 'disconnected' as any, ai: 'working' as const });
+    try {
+      const result = await pro.aiChat(message, history, terminalContext, serverInfo, modelOverride);
+      notchHelper?.sendStatus({ connection: sshManager?.getConnectionSummary() ?? 'disconnected' as any, ai: 'idle' as const });
+      return result;
+    } catch (err) {
+      notchHelper?.sendStatus({ connection: sshManager?.getConnectionSummary() ?? 'disconnected' as any, ai: 'idle' as const });
+      throw err;
+    }
   });
 
   ipcMain.handle('ai:agentStep', async (_event, messages: any[], terminalContext?: string, serverInfo?: string, memories?: string, modelOverride?: string) => {
-    return pro.aiAgentStep(messages, terminalContext, serverInfo, memories, modelOverride);
+    notchHelper?.sendStatus({ connection: sshManager?.getConnectionSummary() ?? 'disconnected' as any, ai: 'working' as const });
+    try {
+      const result = await pro.aiAgentStep(messages, terminalContext, serverInfo, memories, modelOverride);
+      notchHelper?.sendStatus({ connection: sshManager?.getConnectionSummary() ?? 'disconnected' as any, ai: 'idle' as const });
+      return result;
+    } catch (err) {
+      notchHelper?.sendStatus({ connection: sshManager?.getConnectionSummary() ?? 'disconnected' as any, ai: 'idle' as const });
+      throw err;
+    }
   });
 
   ipcMain.handle('ai:getModels', async () => { return pro.getAvailableModels(); });
@@ -721,6 +739,46 @@ app.whenReady().then(async () => {
   // Auto-updater (checks GitHub Releases for new versions)
   initAutoUpdater(mainWindow);
 
+  // macOS notch helper (status pill + global hotkey)
+  if (isMac()) {
+    notchHelper = new NotchHelper(mainWindow);
+    notchHelper.setToggleHandler(() => {
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+      if (mainWindow.isVisible() && mainWindow.isFocused()) {
+        mainWindow.hide();
+      } else {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    });
+    notchHelper.start();
+
+    // Wire SSH status changes to notch
+    sshManager.onStatusChange = (status) => {
+      notchHelper?.sendStatus({
+        connection: status.connection as 'connected' | 'disconnected' | 'reconnecting',
+        activeHost: status.activeHost,
+        sessionCount: status.sessionCount,
+      });
+    };
+
+    // Wire file edit detection (Claude Code in SSH terminal)
+    sshManager.onFileEdited = (sessionId, filePath) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('ssh:file-edited', sessionId, filePath);
+      }
+    };
+
+    // Wire AI activity detection (Claude Code in SSH terminal)
+    sshManager.onAIStatusChange = (aiStatus) => {
+      notchHelper?.sendStatus({
+        connection: sshManager.getConnectionSummary(),
+        ai: aiStatus as any,
+        activeHost: Array.from((sshManager as any).sessions?.values?.() ?? []).find((s: any) => s.connected)?.config?.host,
+      });
+    };
+  }
+
   // Periodic license enforcement (every 6 hours)
   pro.enforceLicenseExpiry(mainWindow);
   const licenseInterval = setInterval(() => {
@@ -749,6 +807,7 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
+  notchHelper?.shutdown();
   memoryStore?.close();
   app.quit();
 });

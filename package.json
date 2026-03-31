@@ -1,6 +1,6 @@
 {
   "name": "void-terminal",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "The terminal that thinks. AI-powered SSH client.",
   "author": "GE Labs <dev@gelabs.dev>",
   "license": "MIT",
@@ -11,14 +11,15 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "pack": "npm run build && electron-builder --dir",
-    "dist:mac": "npm run build && electron-builder --mac",
+    "build:notch": "cd void-notch && bash scripts/build.sh",
+    "dist:mac": "npm run build:notch && npm run build && electron-builder --mac",
     "dist:win": "npm run build && electron-builder --win",
     "dist": "npm run build && electron-builder --mac --win"
   },
   "build": {
     "appId": "dev.voidterminal.app",
     "productName": "Void Terminal",
-    "copyright": "Copyright \u00a9 2026 GE Labs",
+    "copyright": "Copyright © 2026 GE Labs",
     "directories": {
       "output": "release"
     },
@@ -45,6 +46,10 @@
       {
         "from": "build/app-update.yml",
         "to": "app-update.yml"
+      },
+      {
+        "from": "void-notch/.build/release/VoidNotch",
+        "to": "notch/VoidNotch"
       }
     ],
     "mac": {
@@ -74,16 +79,22 @@
       }
     },
     "dmg": {
-      "backgroundColor": "#0A0A0D",
+      "background": "build/dmg-bg.png",
+      "window": {
+        "width": 660,
+        "height": 440
+      },
+      "iconSize": 140,
+      "iconTextSize": 14,
       "title": "Void Terminal",
       "contents": [
         {
-          "x": 130,
-          "y": 220
+          "x": 175,
+          "y": 195
         },
         {
-          "x": 410,
-          "y": 220,
+          "x": 485,
+          "y": 195,
           "type": "link",
           "path": "/Applications"
         }
@@ -128,6 +139,19 @@
     }
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.1",
+    "@codemirror/commands": "^6.10.3",
+    "@codemirror/lang-css": "^6.3.1",
+    "@codemirror/lang-html": "^6.4.11",
+    "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/lang-json": "^6.0.2",
+    "@codemirror/lang-markdown": "^6.5.0",
+    "@codemirror/lang-python": "^6.2.1",
+    "@codemirror/language": "^6.12.3",
+    "@codemirror/search": "^6.6.0",
+    "@codemirror/state": "^6.6.0",
+    "@codemirror/theme-one-dark": "^6.1.3",
+    "@codemirror/view": "^6.40.0",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-search": "^0.15.0",
     "@xterm/addon-web-links": "^0.12.0",

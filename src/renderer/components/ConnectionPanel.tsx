@@ -42,6 +42,7 @@ export function ConnectionPanel({ tabId }: { tabId: string }) {
   const [showShare, setShowShare] = useState(false);
   const [error, setError] = useState('');
   const [connecting, setConnecting] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [quickConnect, setQuickConnect] = useState('');
 
   const tabs = useAppStore((s) => s.tabs);
@@ -151,7 +152,7 @@ export function ConnectionPanel({ tabId }: { tabId: string }) {
   };
 
   const goToForm = () => { setDirection(1); setView('form'); };
-  const goToHub = () => { setDirection(-1); setView('hub'); setError(''); };
+  const goToHub = () => { setDirection(-1); setView('hub'); setError(''); setEditingId(null); };
   const isActive = (conn: SavedConnection) => tabs.some(t => t.connected && t.connectionConfig?.host === conn.host && t.connectionConfig?.username === conn.username);
 
   const inputClass = "w-full px-3 py-[9px] bg-void-input rounded-[6px] text-[11px] text-void-text-muted font-mono outline-none";
@@ -163,7 +164,7 @@ export function ConnectionPanel({ tabId }: { tabId: string }) {
     exit: (d: number) => ({ x: d > 0 ? -20 : 20, opacity: 0 }),
   };
 
-  const formProps = { connType, setConnType, host, setHost, port, setPort, username, setUsername, password, setPassword, privateKeyPath, setPrivateKeyPath, authMethod, setAuthMethod, keepAlive, setKeepAlive, autoReconnect, setAutoReconnect, agentForward, setAgentForward, useJumpHost, setUseJumpHost, jumpHost, setJumpHost, jumpPort, setJumpPort, jumpUser, setJumpUser, jumpAuth, setJumpAuth, jumpKeyPath, setJumpKeyPath, alias, setAlias, connGroup, setConnGroup, tabColor, setTabColor, startupCmd, setStartupCmd, browserUrl, setBrowserUrl, error, connecting, handleConnect, inputClass, labelClass, savedConnections };
+  const formProps = { connType, setConnType, host, setHost, port, setPort, username, setUsername, password, setPassword, privateKeyPath, setPrivateKeyPath, authMethod, setAuthMethod, keepAlive, setKeepAlive, autoReconnect, setAutoReconnect, agentForward, setAgentForward, useJumpHost, setUseJumpHost, jumpHost, setJumpHost, jumpPort, setJumpPort, jumpUser, setJumpUser, jumpAuth, setJumpAuth, jumpKeyPath, setJumpKeyPath, alias, setAlias, connGroup, setConnGroup, tabColor, setTabColor, startupCmd, setStartupCmd, browserUrl, setBrowserUrl, error, connecting, handleConnect, inputClass, labelClass, savedConnections, editingId, setEditingId, goToHub };
 
   return (
     <div className="flex-1 h-full overflow-y-auto bg-void-elevated" style={{ borderTop: '0.5px solid var(--border)' }}>
@@ -223,7 +224,7 @@ export function ConnectionPanel({ tabId }: { tabId: string }) {
                               <div className="text-[9px] text-void-text-dim mt-[2px] truncate">{conn.username}@{conn.host}:{conn.port} · {conn.authMethod === 'key' ? 'SSH key' : 'Password'}</div>
                             </div>
                             <div className="flex gap-1 shrink-0">
-                              <button onClick={e => { e.stopPropagation(); setHost(conn.host); setPort(String(conn.port)); setUsername(conn.username); setAuthMethod(conn.authMethod); setAlias(conn.alias); goToForm(); }}
+                              <button onClick={e => { e.stopPropagation(); setEditingId(conn.id); setHost(conn.host); setPort(String(conn.port)); setUsername(conn.username); setAuthMethod(conn.authMethod); setAlias(conn.alias); setPassword(conn.password || ''); setPrivateKeyPath(conn.privateKeyPath || '~/.ssh/id_ed25519'); setKeepAlive(conn.keepAlive); setAutoReconnect(conn.autoReconnect); setConnGroup(conn.group || ''); setTabColor(conn.color || ''); setStartupCmd(conn.startupCommand || ''); goToForm(); }}
                                 className="w-6 h-6 rounded-[6px] flex items-center justify-center" style={{ border: '0.5px solid var(--border)' }}>
                                 <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M11 2l3 3-8 8H3v-3l8-8z" stroke="#444" strokeWidth="1.2"/></svg>
                               </button>
@@ -359,7 +360,7 @@ export function ConnectionPanel({ tabId }: { tabId: string }) {
 
 const TAB_COLORS = ['#FF5F57', '#F97316', '#FEBC2E', '#28C840', '#5B9BD5', '#C586C0'];
 
-function SSHForm({ connType, setConnType, host, setHost, port, setPort, username, setUsername, password, setPassword, privateKeyPath, setPrivateKeyPath, authMethod, setAuthMethod, keepAlive, setKeepAlive, autoReconnect, setAutoReconnect, agentForward, setAgentForward, useJumpHost, setUseJumpHost, jumpHost, setJumpHost, jumpPort, setJumpPort, jumpUser, setJumpUser, jumpAuth, setJumpAuth, jumpKeyPath, setJumpKeyPath, alias, setAlias, connGroup, setConnGroup, tabColor, setTabColor, startupCmd, setStartupCmd, browserUrl, setBrowserUrl, error, connecting, handleConnect, inputClass, labelClass, savedConnections }: any) {
+function SSHForm({ connType, setConnType, host, setHost, port, setPort, username, setUsername, password, setPassword, privateKeyPath, setPrivateKeyPath, authMethod, setAuthMethod, keepAlive, setKeepAlive, autoReconnect, setAutoReconnect, agentForward, setAgentForward, useJumpHost, setUseJumpHost, jumpHost, setJumpHost, jumpPort, setJumpPort, jumpUser, setJumpUser, jumpAuth, setJumpAuth, jumpKeyPath, setJumpKeyPath, alias, setAlias, connGroup, setConnGroup, tabColor, setTabColor, startupCmd, setStartupCmd, browserUrl, setBrowserUrl, error, connecting, handleConnect, inputClass, labelClass, savedConnections, editingId, setEditingId, goToHub }: any) {
   return (
     <div style={{ borderTop: '0.5px solid rgba(42,42,48,0.5)', paddingTop: '16px' }}>
       <div className="flex gap-2 mb-4">
@@ -452,7 +453,25 @@ function SSHForm({ connType, setConnType, host, setHost, port, setPort, username
           {connType === 'ssh' ? (connecting ? 'Connecting...' : 'Connect') : connType === 'browser' ? 'Open' : 'Open shell'}
         </button>
         {connType === 'ssh' && !connecting && (
-          <button className="px-[18px] py-[10px] rounded-[7px] text-[12px] text-void-text-dim" style={{ border: '0.5px solid var(--border)' }}>Save only</button>
+          <button onClick={async () => {
+            const connData = {
+              alias: alias || `${username}@${host}`,
+              host, port: parseInt(port) || 22, username, authMethod,
+              password: authMethod === 'password' ? password : undefined,
+              privateKeyPath: authMethod === 'key' ? privateKeyPath : undefined,
+              keepAlive, keepAliveInterval: 30, autoReconnect,
+              group: connGroup || undefined, color: tabColor || undefined,
+              startupCommand: startupCmd || undefined,
+            };
+            if (editingId) {
+              await window.void.connections.update(editingId, connData);
+            } else {
+              await window.void.connections.save(connData);
+            }
+            useAppStore.getState().loadSavedConnections();
+            setEditingId(null);
+            goToHub();
+          }} className="px-[18px] py-[10px] rounded-[7px] text-[12px] text-void-text-dim hover:text-void-text transition-colors" style={{ border: '0.5px solid var(--border)' }}>Save only</button>
         )}
       </div>
     </div>

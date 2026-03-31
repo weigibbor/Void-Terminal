@@ -21,6 +21,7 @@ import { WorkspaceManager } from './components/pro/WorkspaceManager';
 import { SecurityReport } from './components/pro/SecurityReport';
 import { AIClipboardOverlay } from './components/pro/AIClipboardOverlay';
 import { UpdateBar } from './components/UpdateBar';
+import { useAutoEditor } from './hooks/useAutoEditor';
 import { PatchNotesModal } from './components/PatchNotesModal';
 import { ServerDashboard } from './components/pro/ServerDashboard';
 import { CronViewer } from './components/pro/CronViewer';
@@ -51,6 +52,7 @@ import { TipOfTheDay } from './components/TipOfTheDay';
 
 export function App() {
   useKeyboard();
+  // useAutoEditor(); // TODO: re-enable once file edit detection is reliable
 
   const tabs = useAppStore((s) => s.tabs);
   const notesSidebarOpen = useAppStore((s) => s.notesSidebarOpen);
@@ -161,7 +163,7 @@ export function App() {
   useEffect(() => {
     const checkUpdate = async () => {
       try {
-        const currentVersion = '1.2.1';
+        const currentVersion = '1.3.0';
         const data = await window.void.app.checkForUpdates(currentVersion);
         if (data.update) {
           const lastSeen = localStorage.getItem('last-seen-changelog');

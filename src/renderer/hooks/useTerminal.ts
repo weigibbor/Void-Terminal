@@ -32,6 +32,7 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter, onMu
   const lastCommandRef = useRef('');
   const onShiftEnterRef = useRef(onShiftEnter);
   const onMultiLinePasteRef = useRef(onMultiLinePaste);
+  const sendDataRef = useRef<((data: string) => void) | null>(null);
   sessionIdRef.current = sessionId;
   sessionTypeRef.current = sessionType;
   onDataRef.current = onData;
@@ -83,6 +84,8 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter, onMu
         }
       }
     };
+
+    sendDataRef.current = sendData;
 
     // Handle user input — zero overhead, send immediately like native terminal
     terminal.onData((data) => {
@@ -359,5 +362,8 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter, onMu
     return history.length > 0 ? history[history.length - 1] : '';
   };
 
-  return { containerRef, terminalRef, search, searchNext, searchPrev, fit, getLastCommand };
+  const sendCommand = (cmd: string) => sendDataRef.current?.(cmd + '\r');
+  const sendRaw = (data: string) => sendDataRef.current?.(data);
+
+  return { containerRef, terminalRef, search, searchNext, searchPrev, fit, getLastCommand, sendCommand, sendRaw };
 }

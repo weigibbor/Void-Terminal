@@ -124,10 +124,12 @@ export class ConnectionStore {
   update(id: string, data: Partial<SavedConnection>): SavedConnection | null {
     const idx = this.connections.findIndex((c) => c.id === id);
     if (idx === -1) return null;
+    const rawPassword = data.password;
     if (data.password) data.password = encryptPassword(data.password);
     this.connections[idx] = { ...this.connections[idx], ...data };
     this.persist();
-    return this.connections[idx];
+    // Return with decrypted password (same as list() and save())
+    return { ...this.connections[idx], password: rawPassword || (this.connections[idx].password ? decryptPassword(this.connections[idx].password!) : undefined) };
   }
 
   delete(id: string): void {

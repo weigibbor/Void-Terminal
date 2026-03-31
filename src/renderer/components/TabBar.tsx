@@ -22,6 +22,7 @@ function TabItem({ tab, isActive, onContextMenu, onReorder }: { tab: Tab; isActi
     : tab.type === 'local' ? 'PTY'
     : tab.type === 'browser' ? 'WEB'
     : tab.type === 'settings' ? '⚙'
+    : tab.type === 'editor' ? 'FILE'
     : '';
 
   return (
@@ -105,7 +106,11 @@ function TabItem({ tab, isActive, onContextMenu, onReorder }: { tab: Tab; isActi
 
       {/* Type badge */}
       {typeBadge && (
-        <span className="text-[10px] text-void-text-ghost">{typeBadge}</span>
+        <span className={`text-[10px] ${tab.type === 'editor' ? 'text-[#5B9BD5]' : 'text-void-text-ghost'}`}>{typeBadge}</span>
+      )}
+      {/* Unsaved indicator for editor tabs */}
+      {tab.type === 'editor' && tab.unsaved && (
+        <span className="w-[5px] h-[5px] rounded-full" style={{ background: '#F97316' }} />
       )}
 
       {/* Offline badge */}

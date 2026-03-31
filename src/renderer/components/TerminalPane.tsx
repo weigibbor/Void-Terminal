@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTerminal } from '../hooks/useTerminal';
+import { useTerminalMode } from '../hooks/useTerminalMode';
 import { useAppStore, getPaneLabel } from '../stores/app-store';
 import { SearchBar } from './SearchBar';
 import { MultiLineInput } from './MultiLineInput';
+import { WarpInputBar } from './WarpInputBar';
 import { ContextMenu } from './ContextMenu';
 import type { ContextMenuItem } from './ContextMenu';
 import { UploadModal } from './UploadModal';
@@ -46,6 +48,8 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
   const [recordEvents, setRecordEvents] = useState<{ t: number; type: string; data: string }[]>([]);
   const recordStartRef = useRef(0);
   const isPro = useAppStore((s) => s.isPro);
+  const warpInputEnabled = useAppStore((s) => (s as any).warpInputEnabled ?? true);
+  const { mode: terminalMode, processData: processTerminalMode, toggleMode: toggleTerminalMode } = useTerminalMode();
 
   const updateTab = useAppStore((s) => s.updateTab);
   const isDisconnected = !tab.connected && !!tab.disconnectedAt;
@@ -56,7 +60,7 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
   const recordEventsRef = useRef(recordEvents);
   recordEventsRef.current = recordEvents;
 
-  const { containerRef, terminalRef, search, searchNext, searchPrev, fit, getLastCommand } = useTerminal({
+  const { containerRef, terminalRef, search, searchNext, searchPrev, fit, getLastCommand, sendCommand, sendRaw } = useTerminal({
     sessionId: tab.sessionId,
     sessionType: tab.type === 'ssh' ? 'ssh' : 'local',
     onShiftEnter: () => setMultiLineOpen(true),
@@ -84,6 +88,21 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
         });
     return unsub;
   }, [recording, tab.sessionId, tab.type]);
+
+  // Wire terminal mode detection to SSH/PTY data stream
+  useEffect(() => {
+    if (!tab.sessionId || !warpInputEnabled) return;
+    const unsub = tab.type === 'ssh'
+      ? window.void.ssh.onData(tab.sessionId, processTerminalMode)
+      : window.void.pty.onData(tab.sessionId, processTerminalMode);
+    return unsub;
+  }, [tab.sessionId, tab.type, warpInputEnabled, processTerminalMode]);
+
+  // In block mode, disable xterm stdin so keystrokes go to WarpInputBar
+  useEffect(() => {
+    if (!terminalRef.current || !warpInputEnabled) return;
+    terminalRef.current.options.disableStdin = terminalMode === 'block';
+  }, [terminalMode, warpInputEnabled]);
 
   useEffect(() => {
     if (activeTabId === tab.id && terminalRef.current) {
@@ -419,12 +438,44 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
 
       {/* AI error explainer removed — energy optimization */}
 
-      {/* Multi-line input (Shift+Enter) */}
-      <MultiLineInput
-        visible={multiLineOpen && !isDisconnected}
-        onSubmit={sendToSession}
-        onClose={() => { setMultiLineOpen(false); terminalRef.current?.focus(); }}
-      />
+      {/* Multi-line input (Shift+Enter) — only in raw mode */}
+      {(!warpInputEnabled || terminalMode === 'raw') && (
+        <MultiLineInput
+          visible={multiLineOpen && !isDisconnected}
+          onSubmit={sendToSession}
+          onClose={() => { setMultiLineOpen(false); terminalRef.current?.focus(); }}
+        />
+      )}
+
+      {/* Warp-style input bar — block mode only */}
+      {warpInputEnabled && tab.connected && (
+        <WarpInputBar
+          sessionId={tab.sessionId}
+          promptLabel={terminalMode === 'raw' ? undefined : '❯'}
+          visible={terminalMode === 'block' && !isDisconnected}
+          onSend={(cmd) => sendCommand(cmd)}
+          onInterrupt={() => sendRaw('\x03')}
+          onClear={() => sendRaw('\x0c')}
+        />
+      )}
+
+      {/* Mode badge — small indicator */}
+      {warpInputEnabled && tab.connected && !isDisconnected && (
+        <div
+          className="absolute bottom-1 right-2 cursor-pointer select-none"
+          style={{ zIndex: 5 }}
+          onClick={toggleTerminalMode}
+          title="Click to toggle mode (⌘⇧R)"
+        >
+          <span className="text-[7px] font-mono px-1.5 py-0.5 rounded" style={{
+            color: terminalMode === 'block' ? '#28C840' : '#F97316',
+            background: terminalMode === 'block' ? 'rgba(40,200,64,0.08)' : 'rgba(249,115,22,0.08)',
+            border: `0.5px solid ${terminalMode === 'block' ? 'rgba(40,200,64,0.15)' : 'rgba(249,115,22,0.15)'}`,
+          }}>
+            {terminalMode === 'block' ? 'BLOCK' : 'RAW'}
+          </span>
+        </div>
+      )}
 
       {/* Disconnect overlay */}
       {isDisconnected && (

@@ -117,11 +117,49 @@ export function NotesSidebar() {
         </button>
       </div>
 
+      {/* Quick add — at the top so new notes appear below */}
+      <div className="p-2 shrink-0" style={{ borderBottom: '0.5px solid rgba(42,42,48,0.5)' }}>
+        {composing ? (
+          <div className="space-y-[6px]">
+            <textarea
+              value={newNote}
+              onChange={(e) => setNewNote(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSaveNote();
+                }
+                if (e.key === 'Escape') { setComposing(false); setNewNote(''); }
+              }}
+              placeholder="Type a note..."
+              rows={3}
+              autoFocus
+              className="w-full bg-void-surface rounded-[6px] text-[12px] text-void-text-muted p-2.5 resize-none outline-none font-sans"
+              style={{ border: '0.5px solid rgba(249,115,22,0.15)' }}
+            />
+            <div className="flex items-center justify-between text-[10px] text-void-text-ghost font-sans">
+              <span>Shift+Enter new line</span>
+              <button onClick={handleSaveNote} className="text-accent hover:text-accent-hover bg-transparent border-none cursor-pointer font-sans font-semibold">
+                Save ↵
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setComposing(true)}
+            className="w-full text-left text-[12px] text-void-text-ghost bg-void-surface rounded-[6px] px-3 py-2.5 hover:text-void-text-muted transition-colors font-sans cursor-pointer"
+            style={{ border: '0.5px solid var(--border)' }}
+          >
+            Type a note...
+          </button>
+        )}
+      </div>
+
       {/* Notes list */}
       <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#2A2A30 transparent' }}>
         {notes.length === 0 && (
           <p className="text-[11px] text-void-text-ghost text-center py-6 font-sans">
-            No notes yet. Click + to start.
+            No notes yet. Type above to start.
           </p>
         )}
         {notes.map((note) => (
@@ -162,44 +200,6 @@ export function NotesSidebar() {
             )}
           </div>
         ))}
-      </div>
-
-      {/* Quick add */}
-      <div className="p-2 shrink-0" style={{ borderTop: '0.5px solid rgba(42,42,48,0.5)' }}>
-        {composing ? (
-          <div className="space-y-[6px]">
-            <textarea
-              value={newNote}
-              onChange={(e) => setNewNote(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSaveNote();
-                }
-                if (e.key === 'Escape') { setComposing(false); setNewNote(''); }
-              }}
-              placeholder="Type a note..."
-              rows={3}
-              autoFocus
-              className="w-full bg-void-surface rounded-[6px] text-[12px] text-void-text-muted p-2.5 resize-none outline-none font-sans"
-              style={{ border: '0.5px solid rgba(249,115,22,0.15)' }}
-            />
-            <div className="flex items-center justify-between text-[10px] text-void-text-ghost font-sans">
-              <span>Shift+Enter new line</span>
-              <button onClick={handleSaveNote} className="text-accent hover:text-accent-hover bg-transparent border-none cursor-pointer font-sans font-semibold">
-                Save ↵
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            onClick={() => setComposing(true)}
-            className="w-full text-left text-[12px] text-void-text-ghost bg-void-surface rounded-[6px] px-3 py-2.5 hover:text-void-text-muted transition-colors font-sans cursor-pointer"
-            style={{ border: '0.5px solid var(--border)' }}
-          >
-            Type a note...
-          </button>
-        )}
       </div>
     </div>
   );

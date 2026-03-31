@@ -41,6 +41,11 @@ contextBridge.exposeInMainWorld('void', {
       ipcRenderer.on(`ssh:status:${sessionId}`, handler);
       return () => { ipcRenderer.removeListener(`ssh:status:${sessionId}`, handler); };
     },
+    onFileEdited: (cb: (sessionId: string, filePath: string) => void) => {
+      const handler = (_event: unknown, sessionId: string, filePath: string) => cb(sessionId, filePath);
+      ipcRenderer.on('ssh:file-edited', handler);
+      return () => { ipcRenderer.removeListener('ssh:file-edited', handler); };
+    },
   },
 
   pty: {

@@ -52,12 +52,144 @@ export class SSHManager {
   private sessions = new Map<string, SSHSession>();
   private window: BrowserWindow;
   private allWindows?: Set<BrowserWindow>;
+  onStatusChange?: (status: { connection: string; activeHost?: string; sessionCount: number }) => void;
+  onAIStatusChange?: (status: 'working' | 'waiting' | 'idle') => void;
+  onFileEdited?: (sessionId: string, filePath: string) => void;
+  private aiDetectTimer?: ReturnType<typeof setTimeout>;
+  private lastAIStatus: string = 'idle';
+  private waitingStickyUntil: number = 0;
+  private fileEditDebounce = new Map<string, ReturnType<typeof setTimeout>>();
+
   constructor(window: BrowserWindow) {
     this.window = window;
   }
 
   setAllWindows(windows: Set<BrowserWindow>): void {
     this.allWindows = windows;
+  }
+
+  getConnectionSummary(): 'connected' | 'disconnected' | 'reconnecting' {
+    const sessions = Array.from(this.sessions.values());
+    const connected = sessions.some((s) => s.connected);
+    const reconnecting = sessions.some((s) => s.reconnectAttempts > 0 && !s.connected);
+    return connected ? 'connected' : reconnecting ? 'reconnecting' : 'disconnected';
+  }
+
+  /// Detect file edits from Claude Code output
+  /// Looks for patterns: "Wrote to /path", "Edited /path", "Created /path"
+  private detectFileEdit(session: SSHSession, data: string): void {
+    if (!this.onFileEdited) return;
+
+    // Strip ANSI from recent buffer — Claude Code output has color codes everywhere
+    const clean = SSHManager.stripAnsi(session.dataBuffer.slice(-3000));
+
+    // Only match Claude Code's exact confirmed output patterns
+    // These always start with ✓ or ✔ followed by the action
+    const patterns = [
+      /[✓✔]\s+Wrote to\s+([^\s\n\x1b]+)/,
+      /[✓✔]\s+Edited\s+([^\s\n\x1b]+)/,
+      /[✓✔]\s+Created\s+([^\s\n\x1b]+)/,
+    ];
+
+    for (const pattern of patterns) {
+      const match = clean.match(pattern);
+      if (match && match[1]) {
+        let filePath = match[1].trim().replace(/['"]/g, '');
+        // Must be an absolute path to avoid false positives
+        if (!filePath.startsWith('/')) continue;
+        // Must have a file extension
+        if (!filePath.includes('.')) continue;
+
+        const key = `${session.id}:${filePath}`;
+        // Debounce: don't fire for same file within 1s (Claude may output multiple times)
+        if (this.fileEditDebounce.has(key)) {
+          clearTimeout(this.fileEditDebounce.get(key)!);
+        }
+        this.fileEditDebounce.set(key, setTimeout(() => {
+          this.fileEditDebounce.delete(key);
+          console.log(`[AI FileEdit] Detected: ${filePath}`);
+          this.onFileEdited?.(session.id, filePath);
+        }, 500));
+        break;
+      }
+    }
+  }
+
+  /// Strip all ANSI/terminal escape sequences from a string
+  private static stripAnsi(str: string): string {
+    return str
+      .replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, '')  // CSI sequences
+      .replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, '')  // OSC sequences
+      .replace(/\x1b[()][A-Z0-9]/g, '')  // Character set
+      .replace(/\x1b[#=<>]/g, '')  // Other escapes
+      .replace(/[\x00-\x08\x0e-\x1f]/g, '');  // Control chars (keep \n \r \t)
+  }
+
+  /// Detect Claude Code activity in terminal output
+  private detectAIActivity(session: SSHSession): void {
+    // Only check recent buffer — old content causes false positives
+    const recentRaw = session.dataBuffer.slice(-3000);
+    const clean = SSHManager.stripAnsi(recentRaw);
+    // Very recent for spinner (last few renders)
+    const veryRecent = SSHManager.stripAnsi(session.dataBuffer.slice(-500));
+
+    // Waiting: must have Claude Code's unique prompt footer
+    // "Esc to cancel" + "Tab to amend" only appear together in Claude permission prompts
+    const hasPromptFooter = clean.includes('Esc to cancel') && clean.includes('Tab to amend');
+    const hasDoYouWant = clean.includes('Do you want to proceed');
+    const hasAllowPrompt = clean.includes('allow reading') || clean.includes('allow writing') || clean.includes('allow executing');
+    const isWaiting = hasPromptFooter || (hasDoYouWant && clean.includes('Yes'));
+
+    // Working: spinner in very recent output only
+    const spinnerChars = ['✢', '✳', '✶', '✻', '✽'];
+    const hasRecentSpinner = spinnerChars.some((c) => veryRecent.includes(c));
+    const hasEscInterrupt = veryRecent.includes('esc to interrupt');
+    const isWorking = !isWaiting && (hasEscInterrupt || hasRecentSpinner);
+
+    let status: 'working' | 'waiting' | 'idle' = 'idle';
+    if (isWaiting) {
+      status = 'waiting';
+      this.waitingStickyUntil = Date.now() + 30000;
+    } else if (Date.now() < this.waitingStickyUntil) {
+      // Sticky: keep "waiting" — only clear when sticky expires or user input triggers new working
+      // "working" from old spinner chars should NOT override waiting
+      if (isWorking && !hasEscInterrupt) {
+        // Old spinner chars in buffer — ignore, keep waiting
+        status = 'waiting';
+      } else if (hasEscInterrupt) {
+        // "esc to interrupt" = Claude actually started working again
+        status = 'working';
+        this.waitingStickyUntil = 0;
+      } else {
+        status = 'waiting';
+      }
+    } else if (isWorking) {
+      status = 'working';
+    }
+
+    // Debug: always log when we transition from working to idle (prompt moment)
+    if (this.lastAIStatus === 'working' && status === 'idle') {
+      console.log(`[AI DUMP] last 400 clean: ${JSON.stringify(clean.slice(-400))}`);
+    }
+
+    if (status !== this.lastAIStatus) {
+      console.log(`[AI Detect] ${this.lastAIStatus} -> ${status}`);
+      this.lastAIStatus = status;
+      if (this.aiDetectTimer) clearTimeout(this.aiDetectTimer);
+      this.aiDetectTimer = setTimeout(() => {
+        this.onAIStatusChange?.(status);
+      }, 150);
+    }
+  }
+
+  private emitStatusChange(): void {
+    if (!this.onStatusChange) return;
+    const sessions = Array.from(this.sessions.values());
+    const connectedSessions = sessions.filter((s) => s.connected);
+    const reconnecting = sessions.some((s) => s.reconnectAttempts > 0 && !s.connected);
+    const connection = connectedSessions.length > 0 ? 'connected' : reconnecting ? 'reconnecting' : 'disconnected';
+    const activeHost = connectedSessions[0]?.config.host;
+    this.onStatusChange({ connection, activeHost, sessionCount: connectedSessions.length });
   }
 
   private buildConnectConfig(config: SSHConfig): ConnectConfig | null {
@@ -136,6 +268,8 @@ export class SSHManager {
               session.dataBuffer = session.dataBuffer.slice(-MAX_BUFFER_SIZE / 2);
             }
             this.send(`ssh:data:${sessionId}`, str);
+            this.detectAIActivity(session);
+            this.detectFileEdit(session, str);
           });
 
           stream.stderr.on('data', (data: Buffer) => {
@@ -148,12 +282,14 @@ export class SSHManager {
             console.log(`[SSH] Stream closed for ${config.host}`);
             session.connected = false;
             this.send(`ssh:close:${sessionId}`);
+            this.emitStatusChange();
             if (config.autoReconnect) {
               this.scheduleReconnect(session);
             }
           });
 
           console.log(`[SSH] Connected to ${config.username}@${config.host}:${config.port}`);
+          this.emitStatusChange();
           resolve({ success: true, sessionId });
         });
       });
@@ -310,6 +446,7 @@ export class SSHManager {
         // Notify renderer — this is critical so the tab state updates
         this.send(`ssh:reconnected:${session.id}`);
         this.send(`ssh:status:${session.id}`, 'connected');
+        this.emitStatusChange();
       });
     });
 
@@ -382,6 +519,13 @@ export class SSHManager {
     const session = this.sessions.get(sessionId);
     if (session) {
       if (session.reconnectTimer) clearTimeout(session.reconnectTimer);
+      // Clean up file edit debounce timers for this session
+      for (const [key, timer] of this.fileEditDebounce) {
+        if (key.startsWith(sessionId + ':')) {
+          clearTimeout(timer);
+          this.fileEditDebounce.delete(key);
+        }
+      }
       session.client.end();
       session.bastionClient?.end();
       this.sessions.delete(sessionId);
@@ -391,6 +535,10 @@ export class SSHManager {
   }
 
   destroyAll(): void {
+    // Clean up all timers
+    if (this.aiDetectTimer) clearTimeout(this.aiDetectTimer);
+    for (const timer of this.fileEditDebounce.values()) clearTimeout(timer);
+    this.fileEditDebounce.clear();
     for (const session of this.sessions.values()) {
       if (session.reconnectTimer) clearTimeout(session.reconnectTimer);
       session.client.destroy();
