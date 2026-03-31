@@ -60,14 +60,10 @@ jobs:
           EOF
 
       - name: Upload to Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event.inputs.version }}
-          files: |
-            release/*.exe
-            release/latest.yml
+        run: |
+          gh release upload ${{ github.event.inputs.version }} release/*.exe release/latest.yml --clobber
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-mac-x64:
     runs-on: macos-13
@@ -97,9 +93,7 @@ jobs:
         run: npx electron-builder --mac dmg --x64 --config.mac.identity=null
 
       - name: Upload to Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event.inputs.version }}
-          files: release/*.dmg
+        run: |
+          gh release upload ${{ github.event.inputs.version }} release/*.dmg --clobber
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
