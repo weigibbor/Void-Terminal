@@ -5,6 +5,7 @@ import { useAppStore, getPaneLabel } from '../stores/app-store';
 import { SearchBar } from './SearchBar';
 import { MultiLineInput } from './MultiLineInput';
 import { WarpInputBar } from './WarpInputBar';
+import type { WarpInputBarHandle } from './WarpInputBar';
 import { ContextMenu } from './ContextMenu';
 import type { ContextMenuItem } from './ContextMenu';
 import { UploadModal } from './UploadModal';
@@ -49,6 +50,7 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
   const recordStartRef = useRef(0);
   const isPro = useAppStore((s) => s.isPro);
   const warpInputEnabled = useAppStore((s) => (s as any).warpInputEnabled ?? true);
+  const warpInputRef = useRef<WarpInputBarHandle>(null);
   const { mode: terminalMode, processData: processTerminalMode, toggleMode: toggleTerminalMode } = useTerminalMode();
 
   const updateTab = useAppStore((s) => s.updateTab);
@@ -105,10 +107,14 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
   }, [terminalMode, warpInputEnabled]);
 
   useEffect(() => {
-    if (activeTabId === tab.id && terminalRef.current) {
-      setTimeout(() => terminalRef.current?.focus(), 50);
+    if (activeTabId === tab.id) {
+      if (warpInputEnabled && terminalMode === 'block') {
+        // In block mode, don't focus xterm — WarpInputBar handles focus
+      } else if (terminalRef.current) {
+        setTimeout(() => terminalRef.current?.focus(), 50);
+      }
     }
-  }, [activeTabId, tab.id]);
+  }, [activeTabId, tab.id, terminalMode, warpInputEnabled]);
 
   useEffect(() => {
     const terminal = terminalRef.current;
@@ -257,7 +263,12 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
         dragOver ? 'ring-1 ring-accent/40 ring-inset' : ''
       }`}
       style={{ opacity: !isFocused && showHeader ? 0.6 : 1, transition: 'opacity 200ms ease' }}
-      onClick={handleClick}
+      onClick={() => {
+        handleClick();
+        if (warpInputEnabled && terminalMode === 'block') {
+          warpInputRef.current?.focus();
+        }
+      }}
       onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
       onDragLeave={() => setDragOver(false)}
       onDrop={(e) => {
@@ -450,29 +461,44 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
       {/* Warp-style input bar — block mode only */}
       {warpInputEnabled && tab.connected && (
         <WarpInputBar
+          ref={warpInputRef}
           sessionId={tab.sessionId}
           promptLabel={terminalMode === 'raw' ? undefined : '❯'}
           visible={terminalMode === 'block' && !isDisconnected}
           onSend={(cmd) => sendCommand(cmd)}
           onInterrupt={() => sendRaw('\x03')}
           onClear={() => sendRaw('\x0c')}
+          modeBadge={
+            <span
+              className="text-[10px] font-mono px-2 py-1 rounded cursor-pointer font-semibold"
+              onClick={toggleTerminalMode}
+              title="Click to toggle mode"
+              style={{
+                color: terminalMode === 'block' ? '#28C840' : '#F97316',
+                background: terminalMode === 'block' ? 'rgba(40,200,64,0.08)' : 'rgba(249,115,22,0.08)',
+                border: `0.5px solid ${terminalMode === 'block' ? 'rgba(40,200,64,0.15)' : 'rgba(249,115,22,0.15)'}`,
+              }}
+            >
+              {terminalMode === 'block' ? 'BLOCK' : 'RAW'}
+            </span>
+          }
         />
       )}
 
-      {/* Mode badge — small indicator */}
-      {warpInputEnabled && tab.connected && !isDisconnected && (
-        <div
-          className="absolute bottom-1 right-2 cursor-pointer select-none"
-          style={{ zIndex: 5 }}
-          onClick={toggleTerminalMode}
-          title="Click to toggle mode (⌘⇧R)"
-        >
-          <span className="text-[7px] font-mono px-1.5 py-0.5 rounded" style={{
-            color: terminalMode === 'block' ? '#28C840' : '#F97316',
-            background: terminalMode === 'block' ? 'rgba(40,200,64,0.08)' : 'rgba(249,115,22,0.08)',
-            border: `0.5px solid ${terminalMode === 'block' ? 'rgba(40,200,64,0.15)' : 'rgba(249,115,22,0.15)'}`,
-          }}>
-            {terminalMode === 'block' ? 'BLOCK' : 'RAW'}
+      {/* RAW mode badge — shown when WarpInputBar is hidden (raw mode) */}
+      {warpInputEnabled && terminalMode === 'raw' && tab.connected && !isDisconnected && (
+        <div className="absolute bottom-3 right-3 z-10">
+          <span
+            className="text-[10px] font-mono px-2 py-1 rounded cursor-pointer font-semibold"
+            onClick={toggleTerminalMode}
+            title="Click to switch to Block mode"
+            style={{
+              color: '#F97316',
+              background: 'rgba(249,115,22,0.08)',
+              border: '0.5px solid rgba(249,115,22,0.15)',
+            }}
+          >
+            RAW — click for Block
           </span>
         </div>
       )}
@@ -530,12 +556,13 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
       {isScrolledUp && !isDisconnected && (
         <button
           onClick={(e) => { e.stopPropagation(); scrollToBottom(); }}
-          className="absolute bottom-3 right-4 w-7 h-7 flex items-center justify-center
+          className="absolute right-4 w-9 h-9 flex items-center justify-center
                      bg-void-surface/90 border-[0.5px] border-void-border rounded-full
                      text-void-text-muted hover:text-accent hover:border-accent-dim
                      backdrop-blur-sm transition-all z-10"
+          style={{ bottom: warpInputEnabled && terminalMode === 'block' ? '48px' : '12px' }}
         >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <svg width="16" height="16" viewBox="0 0 12 12" fill="none">
             <path d="M6 2.5V9.5M6 9.5L2.5 6M6 9.5L9.5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>

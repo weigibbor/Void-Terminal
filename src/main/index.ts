@@ -739,8 +739,8 @@ app.whenReady().then(async () => {
   // Auto-updater (checks GitHub Releases for new versions)
   initAutoUpdater(mainWindow);
 
-  // macOS notch helper (status pill + global hotkey)
-  if (isMac()) {
+  // macOS notch helper (status pill + global hotkey) — disabled until detection is stable
+  if (false && isMac()) {
     notchHelper = new NotchHelper(mainWindow);
     notchHelper.setToggleHandler(() => {
       if (!mainWindow || mainWindow.isDestroyed()) return;

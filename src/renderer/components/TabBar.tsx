@@ -23,6 +23,7 @@ function TabItem({ tab, isActive, onContextMenu, onReorder }: { tab: Tab; isActi
     : tab.type === 'browser' ? 'WEB'
     : tab.type === 'settings' ? '⚙'
     : tab.type === 'editor' ? 'FILE'
+    : tab.type === 'tunnels' ? 'TUN'
     : '';
 
   return (

@@ -1,24 +1,36 @@
-import { useRef, useState, useCallback, useEffect, KeyboardEvent } from 'react';
+import { useRef, useState, useCallback, useEffect, useImperativeHandle, forwardRef, KeyboardEvent } from 'react';
 import { useCommandHistory } from '../hooks/useCommandHistory';
+
+export interface WarpInputBarHandle {
+  focus: () => void;
+}
 
 interface WarpInputBarProps {
   sessionId?: string;
-  promptLabel?: string; // e.g., "root@server:~$"
+  promptLabel?: string;
   onSend: (command: string) => void;
-  onInterrupt: () => void; // Ctrl+C
-  onClear: () => void; // Ctrl+L
+  onInterrupt: () => void;
+  onClear: () => void;
   visible: boolean;
+  modeBadge?: React.ReactNode;
 }
 
-export function WarpInputBar({ sessionId, promptLabel, onSend, onInterrupt, onClear, visible }: WarpInputBarProps) {
+export const WarpInputBar = forwardRef<WarpInputBarHandle, WarpInputBarProps>(function WarpInputBar({ sessionId, promptLabel, onSend, onInterrupt, onClear, visible, modeBadge }, ref) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [value, setValue] = useState('');
   const { addCommand, navigateUp, navigateDown, resetNavigation } = useCommandHistory(sessionId);
 
-  // Auto-focus when visible
+  useImperativeHandle(ref, () => ({
+    focus: () => textareaRef.current?.focus(),
+  }), []);
+
+  // Auto-focus when visible — with retry to handle race conditions
   useEffect(() => {
     if (visible && textareaRef.current) {
       textareaRef.current.focus();
+      // Retry focus after a short delay in case xterm steals it
+      const t = setTimeout(() => textareaRef.current?.focus(), 100);
+      return () => clearTimeout(t);
     }
   }, [visible]);
 
@@ -167,17 +179,18 @@ export function WarpInputBar({ sessionId, promptLabel, onSend, onInterrupt, onCl
         }}
       />
 
-      {/* Hints */}
-      <div className="shrink-0 flex items-center gap-2 mt-[4px]">
+      {/* Hints + mode badge */}
+      <div className="shrink-0 flex items-center gap-3 mt-[2px]">
         {isMultiline && (
-          <span style={{ fontSize: '8px', color: '#444', fontFamily: "'JetBrains Mono', monospace" }}>
+          <span style={{ fontSize: '10px', color: '#555', fontFamily: "'JetBrains Mono', monospace" }}>
             Shift+↵ new line
           </span>
         )}
-        <span style={{ fontSize: '8px', color: '#333', fontFamily: "'JetBrains Mono', monospace" }}>
+        <span style={{ fontSize: '10px', color: '#444', fontFamily: "'JetBrains Mono', monospace" }}>
           ↵ run
         </span>
+        {modeBadge}
       </div>
     </div>
   );
-}
+});

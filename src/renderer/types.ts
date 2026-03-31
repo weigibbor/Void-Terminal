@@ -1,4 +1,4 @@
-export type TabType = 'ssh' | 'local' | 'browser' | 'new-connection' | 'settings' | 'editor';
+export type TabType = 'ssh' | 'local' | 'browser' | 'new-connection' | 'settings' | 'editor' | 'tunnels';
 export type SplitLayout = 'single' | '2-col' | '3-col' | '2+1-grid' | '1+2-grid';
 export type NoteType = 'pinned' | 'note' | 'warning' | 'quickref';
 export type PanePosition = 'L' | 'R' | 'C' | 'TL' | 'TR' | 'B' | 'T' | 'BL' | 'BR';

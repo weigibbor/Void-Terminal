@@ -124,7 +124,10 @@ export function CommandPalette() {
         id: 'tunnels',
         label: 'SSH tunnel manager',
         category: 'Pro',
-        action: () => store.setActiveModal('tunnels'),
+        action: () => {
+          const tabId = store.addTab('tunnels', { title: 'SSH Tunnels' });
+          store.setActiveTab(tabId);
+        },
       },
       {
         id: 'watch-rules',

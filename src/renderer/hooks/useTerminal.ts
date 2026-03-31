@@ -89,6 +89,9 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter, onMu
 
     // Handle user input — zero overhead, send immediately like native terminal
     terminal.onData((data) => {
+      // Skip all input when disableStdin is active (block mode — WarpInputBar handles input)
+      if (terminal.options.disableStdin) return;
+
       // Detect multi-line paste (has newlines and more than 1 char)
       if (data.length > 1 && (data.includes('\n') || data.includes('\r\n'))) {
         const dontAsk = localStorage.getItem('void-paste-dont-ask');

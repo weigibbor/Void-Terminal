@@ -6,6 +6,7 @@ import { ConnectionProgress } from './ConnectionProgress';
 import { BrowserPane } from './BrowserPane';
 import { SettingsPanel } from './SettingsPanel';
 import EditorPane from './EditorPane';
+import { TunnelPanel } from './TunnelPanel';
 import { SPLIT_MIN_WIDTH, SPLIT_MIN_HEIGHT } from '../utils/constants';
 
 function PaneContent({ tabId, paneIndex }: { tabId: string | null; paneIndex: number }) {
@@ -33,6 +34,9 @@ function PaneContent({ tabId, paneIndex }: { tabId: string | null; paneIndex: nu
     }
     if (activeTab?.type === 'editor') {
       return <EditorPane tab={activeTab} />;
+    }
+    if (activeTab?.type === 'tunnels') {
+      return <TunnelPanel />;
     }
     // Fallback: if tab exists but type is unexpected, or tab not found — show ConnectionPanel
     // This handles the case when a tab ID is in paneTabIds but the tab was removed
@@ -76,6 +80,12 @@ function PaneContent({ tabId, paneIndex }: { tabId: string | null; paneIndex: nu
       {activeTab?.type === 'editor' && (
         <div className="absolute inset-0 z-10 flex flex-col">
           <EditorPane tab={activeTab} />
+        </div>
+      )}
+
+      {activeTab?.type === 'tunnels' && (
+        <div className="absolute inset-0 z-10 flex flex-col">
+          <TunnelPanel />
         </div>
       )}
 

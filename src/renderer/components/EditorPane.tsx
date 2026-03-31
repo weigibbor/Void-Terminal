@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection, rectangularSelection, crosshairCursor, dropCursor } from '@codemirror/view';
-import { EditorState } from '@codemirror/state';
+import { EditorState, Compartment } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 import { autocompletion, closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
@@ -72,6 +72,8 @@ export default function EditorPane({ tab }: EditorPaneProps) {
   const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved' | 'error'>('saved');
+  const [locked, setLocked] = useState(true); // Read-only by default
+  const readOnlyCompartment = useRef(new Compartment());
   const contentRef = useRef(tab.fileContent || '');
 
   const filePath = tab.filePath || 'untitled';
@@ -140,6 +142,7 @@ export default function EditorPane({ tab }: EditorPaneProps) {
         autocompletion(),
         highlightSelectionMatches(),
         EditorState.tabSize.of(2),
+        readOnlyCompartment.current.of(EditorState.readOnly.of(true)),
         lang,
         oneDark,
         voidTheme,
@@ -169,6 +172,16 @@ export default function EditorPane({ tab }: EditorPaneProps) {
     };
   }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Toggle readOnly when locked state changes
+  useEffect(() => {
+    if (!viewRef.current) return;
+    viewRef.current.dispatch({
+      effects: readOnlyCompartment.current.reconfigure(
+        EditorState.readOnly.of(locked)
+      ),
+    });
+  }, [locked]);
+
   // Update content when tab.fileContent changes externally (e.g., AI edit detected)
   useEffect(() => {
     if (!viewRef.current || !tab.fileContent) return;
@@ -192,16 +205,16 @@ export default function EditorPane({ tab }: EditorPaneProps) {
   return (
     <div className="flex flex-col h-full overflow-hidden" style={{ background: '#0E0E12' }}>
       {/* Header bar */}
-      <div className="flex items-center justify-between px-3 py-1 shrink-0" style={{ background: '#0A0A0D', borderBottom: '0.5px solid #2A2A30' }}>
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between px-3 py-1.5 shrink-0" style={{ background: '#0A0A0D', borderBottom: '0.5px solid #2A2A30' }}>
+        <div className="flex items-center gap-3">
           <button
             onClick={() => useAppStore.getState().closeTab(tab.id)}
-            className="flex items-center gap-1 px-2 py-0.5 rounded text-[8px] cursor-pointer transition-all"
+            className="flex items-center gap-1 px-3 py-1 rounded text-[11px] cursor-pointer transition-all font-medium"
             style={{ color: '#F97316', border: '0.5px solid rgba(249,115,22,0.15)', background: 'rgba(249,115,22,0.08)' }}
           >
             ← Files
           </button>
-          <span className="text-[8px] font-mono" style={{ color: '#555' }}>
+          <span className="text-[11px] font-mono" style={{ color: '#555' }}>
             {dirParts.map((p, i) => (
               <span key={i}>
                 <span style={{ color: '#5B9BD5' }}>{p}</span>
@@ -210,12 +223,12 @@ export default function EditorPane({ tab }: EditorPaneProps) {
             ))}
             <span style={{ color: '#E8E6E0' }}>{fileName}</span>
           </span>
-          {tab.unsaved && <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#F97316' }} />}
+          {tab.unsaved && <span className="w-2 h-2 rounded-full" style={{ background: '#F97316' }} />}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[7px] px-1.5 py-0.5 rounded font-mono font-semibold" style={{ color: '#28C840', background: 'rgba(40,200,64,0.06)' }}>SFTP</span>
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] px-2 py-0.5 rounded font-mono font-semibold" style={{ color: '#28C840', background: 'rgba(40,200,64,0.06)' }}>SFTP</span>
           <span
-            className="text-[9px] cursor-pointer transition-colors"
+            className="text-[14px] cursor-pointer transition-colors"
             style={{ color: '#555' }}
             onClick={() => useAppStore.getState().closeTab(tab.id)}
           >×</span>
@@ -223,26 +236,41 @@ export default function EditorPane({ tab }: EditorPaneProps) {
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center px-2.5 py-0.5 gap-1 shrink-0" style={{ borderBottom: '0.5px solid #2A2A30', background: '#111115' }}>
-        <button onClick={saveFile} className="px-2 py-0.5 rounded text-[8px] cursor-pointer border-none transition-all hover:bg-void-elevated" style={{ background: 'transparent', color: '#F97316', fontFamily: 'DM Sans, sans-serif' }}>
+      <div className="flex items-center px-3 py-1.5 gap-2 shrink-0" style={{ borderBottom: '0.5px solid #2A2A30', background: '#111115' }}>
+        {/* Lock/Unlock toggle */}
+        <button
+          onClick={() => setLocked(!locked)}
+          className="px-3 py-1 rounded text-[11px] cursor-pointer border-none transition-all hover:bg-void-elevated font-medium"
+          style={{
+            background: locked ? 'rgba(255,95,87,0.06)' : 'rgba(40,200,64,0.06)',
+            color: locked ? '#FF5F57' : '#28C840',
+            fontFamily: 'DM Sans, sans-serif',
+            border: `0.5px solid ${locked ? 'rgba(255,95,87,0.15)' : 'rgba(40,200,64,0.15)'}`,
+          }}
+          title={locked ? 'Click to unlock editing' : 'Click to lock (read-only)'}
+        >
+          {locked ? '🔒 Read Only' : '🔓 Editing'}
+        </button>
+        <div className="mx-1" style={{ width: 1, height: 16, background: '#2A2A30' }} />
+        <button onClick={saveFile} disabled={locked} className="px-3 py-1 rounded text-[11px] cursor-pointer border-none transition-all hover:bg-void-elevated disabled:opacity-30 font-medium" style={{ background: 'transparent', color: '#F97316', fontFamily: 'DM Sans, sans-serif' }}>
           ⌘S Save
         </button>
-        <button onClick={() => viewRef.current?.dispatch({ effects: [] })} className="px-2 py-0.5 rounded text-[8px] cursor-pointer border-none transition-all hover:bg-void-elevated" style={{ background: 'transparent', color: '#555', fontFamily: 'DM Sans, sans-serif' }}>↩</button>
-        <button className="px-2 py-0.5 rounded text-[8px] cursor-pointer border-none transition-all hover:bg-void-elevated" style={{ background: 'transparent', color: '#555', fontFamily: 'DM Sans, sans-serif' }}>↪</button>
-        <div className="mx-0.5" style={{ width: 1, height: 12, background: '#2A2A30' }} />
-        <button className="px-2 py-0.5 rounded text-[8px] cursor-pointer border-none transition-all hover:bg-void-elevated" style={{ background: 'transparent', color: '#555', fontFamily: 'DM Sans, sans-serif' }}>⌘F</button>
-        <button className="px-2 py-0.5 rounded text-[8px] cursor-pointer border-none transition-all hover:bg-void-elevated" style={{ background: 'transparent', color: '#555', fontFamily: 'DM Sans, sans-serif' }}>⌘H</button>
-        <div className="ml-auto flex gap-1">
+        <button onClick={() => viewRef.current?.dispatch({ effects: [] })} className="px-2 py-1 rounded text-[11px] cursor-pointer border-none transition-all hover:bg-void-elevated" style={{ background: 'transparent', color: '#666', fontFamily: 'DM Sans, sans-serif' }}>↩</button>
+        <button className="px-2 py-1 rounded text-[11px] cursor-pointer border-none transition-all hover:bg-void-elevated" style={{ background: 'transparent', color: '#666', fontFamily: 'DM Sans, sans-serif' }}>↪</button>
+        <div className="mx-1" style={{ width: 1, height: 16, background: '#2A2A30' }} />
+        <button className="px-2 py-1 rounded text-[11px] cursor-pointer border-none transition-all hover:bg-void-elevated" style={{ background: 'transparent', color: '#666', fontFamily: 'DM Sans, sans-serif' }}>⌘F</button>
+        <button className="px-2 py-1 rounded text-[11px] cursor-pointer border-none transition-all hover:bg-void-elevated" style={{ background: 'transparent', color: '#666', fontFamily: 'DM Sans, sans-serif' }}>⌘H</button>
+        <div className="ml-auto flex gap-2">
           {tab.unsaved && (
-            <span className="text-[7px] px-1.5 py-0.5 rounded font-mono font-semibold" style={{ color: '#F97316', background: 'rgba(249,115,22,0.08)' }}>Unsaved</span>
+            <span className="text-[10px] px-2 py-0.5 rounded font-mono font-semibold" style={{ color: '#F97316', background: 'rgba(249,115,22,0.08)' }}>Unsaved</span>
           )}
           {saveStatus === 'saving' && (
-            <span className="text-[7px] px-1.5 py-0.5 rounded font-mono font-semibold" style={{ color: '#5B9BD5', background: 'rgba(91,155,213,0.06)' }}>Saving...</span>
+            <span className="text-[10px] px-2 py-0.5 rounded font-mono font-semibold" style={{ color: '#5B9BD5', background: 'rgba(91,155,213,0.06)' }}>Saving...</span>
           )}
           {saveStatus === 'error' && (
-            <span className="text-[7px] px-1.5 py-0.5 rounded font-mono font-semibold" style={{ color: '#FF5F57', background: 'rgba(255,95,87,0.06)' }}>Error</span>
+            <span className="text-[10px] px-2 py-0.5 rounded font-mono font-semibold" style={{ color: '#FF5F57', background: 'rgba(255,95,87,0.06)' }}>Error</span>
           )}
-          <span className="text-[7px] px-1.5 py-0.5 rounded font-mono font-semibold" style={{ color: '#5B9BD5', background: 'rgba(91,155,213,0.06)' }}>{getLangLabel(filePath)}</span>
+          <span className="text-[10px] px-2 py-0.5 rounded font-mono font-semibold" style={{ color: '#5B9BD5', background: 'rgba(91,155,213,0.06)' }}>{getLangLabel(filePath)}</span>
         </div>
       </div>
 
@@ -250,7 +278,7 @@ export default function EditorPane({ tab }: EditorPaneProps) {
       <div ref={editorRef} className="flex-1 overflow-hidden" />
 
       {/* Status bar */}
-      <div className="flex items-center justify-between px-2.5 py-1 shrink-0 text-[8px] font-mono" style={{ background: '#0A0A0D', borderTop: '0.5px solid rgba(42,42,48,0.3)', color: '#444' }}>
+      <div className="flex items-center justify-between px-3 py-1.5 shrink-0 text-[10px] font-mono" style={{ background: '#0A0A0D', borderTop: '0.5px solid rgba(42,42,48,0.3)', color: '#555' }}>
         <span>Ln {cursorPos.line}, Col {cursorPos.col}</span>
         <span>UTF-8 · Spaces: 2 · {lineCount} lines · {sizeLabel}</span>
       </div>
