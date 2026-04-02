@@ -1,40 +1,56 @@
 // ═══════════════════════════════════════════
-// VOID TERMINAL — ANIMATION CONSTANTS
-// Import this in every component that animates
+// VOID TERMINAL — PLATFORM-AWARE ANIMATION CONSTANTS
+// macOS: slower, spring-like (matches system animations)
+// Windows: faster, snappy (matches Fluent Motion)
 // ═══════════════════════════════════════════
 
-export const easing = {
-  // Standard — most transitions (panels, tabs, content)
-  standard: [0.2, 0, 0, 1] as [number, number, number, number],
+const isMac = navigator.userAgent.includes('Macintosh');
 
-  // Enter — things appearing (overlays, modals, new elements)
-  enter: [0, 0, 0.2, 1] as [number, number, number, number],
+export const easing = {
+  // Standard — most transitions
+  standard: (isMac
+    ? [0.2, 0, 0, 1]
+    : [0.1, 0.9, 0.2, 1]  // Fluent "FastIn"
+  ) as [number, number, number, number],
+
+  // Enter — things appearing
+  enter: (isMac
+    ? [0, 0, 0.2, 1]
+    : [0.1, 0.9, 0.2, 1]
+  ) as [number, number, number, number],
 
   // Exit — things disappearing
-  exit: [0.4, 0, 1, 1] as [number, number, number, number],
+  exit: (isMac
+    ? [0.4, 0, 1, 1]
+    : [0.2, 0, 0.7, 0.1]  // Fluent "FastOut"
+  ) as [number, number, number, number],
 
-  // Spring — bouncy (toggles, success checkmarks, badges)
-  spring: { type: "spring" as const, stiffness: 400, damping: 17 },
+  // Spring — bouncy (toggles, success checkmarks)
+  spring: isMac
+    ? { type: "spring" as const, stiffness: 350, damping: 20 }  // macOS: softer bounce
+    : { type: "spring" as const, stiffness: 500, damping: 25 },  // Windows: snappier
 
-  // Gentle spring — less bounce (wizard steps, cards)
-  gentleSpring: { type: "spring" as const, stiffness: 300, damping: 24 },
+  // Gentle spring
+  gentleSpring: isMac
+    ? { type: "spring" as const, stiffness: 280, damping: 22 }
+    : { type: "spring" as const, stiffness: 400, damping: 28 },
 };
 
-// Duration presets (seconds)
+// Duration presets (seconds) — macOS slightly longer for natural feel
 export const duration = {
-  instant: 0.1,    // 100ms — button press, ghost text dismiss
-  fast: 0.15,      // 150ms — hover states, tab highlight, divider
-  normal: 0.2,     // 200ms — most transitions
-  smooth: 0.25,    // 250ms — panels sliding, overlays
-  slow: 0.3,       // 300ms — layout changes, split resize
-  emphasis: 0.5,   // 500ms — celebration, auto-dismiss fade
+  instant: isMac ? 0.12 : 0.08,
+  fast: isMac ? 0.18 : 0.12,
+  normal: isMac ? 0.25 : 0.15,
+  smooth: isMac ? 0.3 : 0.2,
+  slow: isMac ? 0.4 : 0.25,
+  emphasis: isMac ? 0.6 : 0.4,
 };
 
-// Stagger delay for lists (seconds per item)
+// Stagger delay for lists
 export const stagger = {
-  fast: 0.03,     // 30ms — command palette rows, quick lists
-  normal: 0.05,   // 50ms — feature cards, badges, timeline events
-  slow: 0.1,      // 100ms — wizard steps, workspace restore tabs
+  fast: isMac ? 0.03 : 0.02,
+  normal: isMac ? 0.05 : 0.03,
+  slow: isMac ? 0.1 : 0.06,
 };
 
 // Reusable Framer Motion variants

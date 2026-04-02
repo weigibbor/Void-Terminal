@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { useTerminal } from '../hooks/useTerminal';
 import { useTerminalMode } from '../hooks/useTerminalMode';
 import { useAppStore, getPaneLabel } from '../stores/app-store';
@@ -25,7 +25,7 @@ interface TerminalPaneProps {
   showHeader: boolean;
 }
 
-export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) {
+export const TerminalPane = memo(function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) {
   const focusedPaneIndex = useAppStore((s) => s.focusedPaneIndex);
   const setFocusedPane = useAppStore((s) => s.setFocusedPane);
   const swapPanes = useAppStore((s) => s.swapPanes);
@@ -116,18 +116,23 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
     }
   }, [activeTabId, tab.id, terminalMode, warpInputEnabled]);
 
+  // Scroll detection — debounced to prevent jank during heavy output
   useEffect(() => {
     const terminal = terminalRef.current;
     if (!terminal) return;
-    const onScroll = terminal.onScroll(() => {
-      const buf = terminal.buffer.active;
-      setIsScrolledUp(buf.baseY > buf.viewportY + 1);
-    });
-    const onWrite = terminal.onWriteParsed(() => {
-      const buf = terminal.buffer.active;
-      if (buf.baseY <= buf.viewportY + 1) setIsScrolledUp(false);
-    });
-    return () => { onScroll.dispose(); onWrite.dispose(); };
+    let scrollRaf: number | null = null;
+    const checkScroll = () => {
+      if (scrollRaf) return;
+      scrollRaf = requestAnimationFrame(() => {
+        scrollRaf = null;
+        const buf = terminal.buffer.active;
+        const atBottom = buf.baseY <= buf.viewportY + 1;
+        setIsScrolledUp(!atBottom);
+      });
+    };
+    const onScroll = terminal.onScroll(checkScroll);
+    const onWrite = terminal.onWriteParsed(checkScroll);
+    return () => { onScroll.dispose(); onWrite.dispose(); if (scrollRaf) cancelAnimationFrame(scrollRaf); };
   }, [terminalRef.current]);
 
   // AI error explainer removed — energy optimization
@@ -621,4 +626,4 @@ export function TerminalPane({ tab, paneIndex, showHeader }: TerminalPaneProps) 
       />
     </div>
   );
-}
+});

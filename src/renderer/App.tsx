@@ -50,11 +50,77 @@ import { ThemeMarketplace } from './components/pro/ThemeMarketplace';
 import { KeyboardOverlay } from './components/KeyboardOverlay';
 import { TipOfTheDay } from './components/TipOfTheDay';
 
+// Pro modal dispatcher — only renders the one active modal
+function ProModal({ modal, onClose }: { modal: string; onClose: () => void }) {
+  const modalMap: Record<string, () => React.ReactElement> = {
+    'memory-timeline': () => <MemoryTimeline onClose={onClose} />,
+    'audit-log': () => <AuditLogPanel onClose={onClose} />,
+    'workspaces': () => <WorkspaceManager onClose={onClose} />,
+    'security-scan': () => <SecurityReport issues={[]} server="scan" onClose={onClose} />,
+    'server-dashboard': () => <ServerDashboard onClose={onClose} />,
+    'cron-viewer': () => <CronViewer onClose={onClose} />,
+    'command-runner': () => <CommandRunner onClose={onClose} />,
+    'health-dashboard': () => <HealthDashboard onClose={onClose} />,
+    'docker': () => (
+      <div className="fixed inset-0 z-40 flex items-end justify-end" style={{ background: 'rgba(0,0,0,0.3)' }} onClick={onClose}>
+        <div className="h-full" style={{ width: '380px' }} onClick={e => e.stopPropagation()}>
+          <DockerPanel onClose={onClose} />
+        </div>
+      </div>
+    ),
+    'services': () => <ServiceViewer onClose={onClose} />,
+    'git-status': () => <GitWidget onClose={onClose} />,
+    'env-diff': () => <EnvDiffViewer onClose={onClose} />,
+    'process-monitor': () => <ProcessMonitor onClose={onClose} />,
+    'log-viewer': () => <LogViewer onClose={onClose} />,
+    'network-monitor': () => <NetworkMonitor onClose={onClose} />,
+    'ssl-checker': () => <SSLChecker onClose={onClose} />,
+    'webhooks': () => <AlertWebhooks onClose={onClose} />,
+    'command-timeline': () => <CommandTimeline onClose={onClose} />,
+    'kubernetes': () => <KubernetesPanel onClose={onClose} />,
+    'disk-usage': () => <DiskUsageMap onClose={onClose} />,
+    'file-diff': () => <FileDiffViewer onClose={onClose} />,
+    'nginx': () => <NginxViewer onClose={onClose} />,
+    'collab': () => <CollaborativeTerminal onClose={onClose} />,
+    'team-activity': () => <TeamActivityFeed onClose={onClose} />,
+    'analytics': () => <AnalyticsDashboard onClose={onClose} />,
+    'migration': () => <MigrationWizard onClose={onClose} />,
+    'tutorial': () => <InteractiveTutorial onClose={onClose} />,
+    'theme-marketplace': () => <ThemeMarketplace onClose={onClose} />,
+  };
+  const render = modalMap[modal];
+  return render ? render() : null;
+}
+
 export function App() {
   useKeyboard();
   // useAutoEditor(); // TODO: re-enable once file edit detection is reliable
 
-  const tabs = useAppStore((s) => s.tabs);
+  // Handle native menu actions
+  useEffect(() => {
+    const unsub = (window as any).void.app.onMenuAction?.((action: string) => {
+      const store = useAppStore.getState();
+      const actions: Record<string, () => void> = {
+        'new-tab': () => store.addTab('new-connection'),
+        'new-local': () => window.void.pty.create().then((r: any) => r.success && store.addTab('local', { title: 'Local Shell', sessionId: r.sessionId, connected: true })),
+        'close-tab': () => { const id = store.activeTabId; if (id) store.closeTab(id); },
+        'settings': () => store.toggleSettings(),
+        'command-palette': () => store.toggleCommandPalette(),
+        'toggle-sftp': () => store.toggleSFTP(),
+        'toggle-notes': () => store.toggleNotesSidebar(),
+        'toggle-ai': () => store.toggleAIChatSidebar(),
+        'split-h': () => store.cycleSplitHorizontal(),
+        'split-v': () => store.cycleSplitVertical(),
+        'disconnect': () => { const id = store.activeTabId; if (id) store.disconnectTab(id); },
+        'reconnect': () => { const id = store.activeTabId; if (id) store.reconnectTab(id); },
+        'broadcast': () => useAppStore.setState({ broadcastMode: !store.broadcastMode }),
+      };
+      actions[action]?.();
+    });
+    return () => unsub?.();
+  }, []);
+
+  const hasNoTabs = useAppStore((s) => s.tabs.length === 0);
   const notesSidebarOpen = useAppStore((s) => s.notesSidebarOpen);
   const aiChatSidebarOpen = useAppStore((s) => s.aiChatSidebarOpen);
   const commandPaletteOpen = useAppStore((s) => s.commandPaletteOpen);
@@ -318,7 +384,7 @@ export function App() {
         )}
 
         <div className="flex-1 flex min-h-0 overflow-hidden">
-          {tabs.length === 0 ? (
+          {hasNoTabs ? (
             <WelcomeScreen />
           ) : (
             <SplitView />
@@ -383,103 +449,8 @@ export function App() {
         {commandPaletteOpen && <CommandPalette />}
       </AnimatePresence>
 
-      {/* Pro modals */}
-      <AnimatePresence>
-        {activeModal === 'memory-timeline' && (
-          <MemoryTimeline onClose={() => setActiveModal(null)} />
-        )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {activeModal === 'audit-log' && (
-          <AuditLogPanel onClose={() => setActiveModal(null)} />
-        )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {activeModal === 'workspaces' && (
-          <WorkspaceManager onClose={() => setActiveModal(null)} />
-        )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {activeModal === 'security-scan' && (
-          <SecurityReport issues={[]} server="scan" onClose={() => setActiveModal(null)} />
-        )}
-        {activeModal === 'server-dashboard' && (
-          <ServerDashboard onClose={() => setActiveModal(null)} />
-        )}
-        {activeModal === 'cron-viewer' && (
-          <CronViewer onClose={() => setActiveModal(null)} />
-        )}
-        {activeModal === 'command-runner' && (
-          <CommandRunner onClose={() => setActiveModal(null)} />
-        )}
-        {activeModal === 'health-dashboard' && (
-          <HealthDashboard onClose={() => setActiveModal(null)} />
-        )}
-        {activeModal === 'docker' && (
-          <div className="fixed inset-0 z-40 flex items-end justify-end" style={{ background: 'rgba(0,0,0,0.3)' }} onClick={() => setActiveModal(null)}>
-            <div className="h-full" style={{ width: '380px' }} onClick={e => e.stopPropagation()}>
-              <DockerPanel onClose={() => setActiveModal(null)} />
-            </div>
-          </div>
-        )}
-        {activeModal === 'services' && (
-          <ServiceViewer onClose={() => setActiveModal(null)} />
-        )}
-        {activeModal === 'git-status' && (
-          <GitWidget onClose={() => setActiveModal(null)} />
-        )}
-        {activeModal === 'env-diff' && (
-          <EnvDiffViewer onClose={() => setActiveModal(null)} />
-        )}
-        {activeModal === 'process-monitor' && (
-          <ProcessMonitor onClose={() => setActiveModal(null)} />
-        )}
-        {activeModal === 'log-viewer' && (
-          <LogViewer onClose={() => setActiveModal(null)} />
-        )}
-        {activeModal === 'network-monitor' && (
-          <NetworkMonitor onClose={() => setActiveModal(null)} />
-        )}
-        {activeModal === 'ssl-checker' && (
-          <SSLChecker onClose={() => setActiveModal(null)} />
-        )}
-        {activeModal === 'webhooks' && (
-          <AlertWebhooks onClose={() => setActiveModal(null)} />
-        )}
-        {activeModal === 'command-timeline' && (
-          <CommandTimeline onClose={() => setActiveModal(null)} />
-        )}
-        {activeModal === 'kubernetes' && (
-          <KubernetesPanel onClose={() => setActiveModal(null)} />
-        )}
-        {activeModal === 'disk-usage' && (
-          <DiskUsageMap onClose={() => setActiveModal(null)} />
-        )}
-        {activeModal === 'file-diff' && (
-          <FileDiffViewer onClose={() => setActiveModal(null)} />
-        )}
-        {activeModal === 'nginx' && (
-          <NginxViewer onClose={() => setActiveModal(null)} />
-        )}
-        {activeModal === 'collab' && (
-          <CollaborativeTerminal onClose={() => setActiveModal(null)} />
-        )}
-        {activeModal === 'team-activity' && (
-          <TeamActivityFeed onClose={() => setActiveModal(null)} />
-        )}
-        {activeModal === 'analytics' && (
-          <AnalyticsDashboard onClose={() => setActiveModal(null)} />
-        )}
-        {activeModal === 'migration' && (
-          <MigrationWizard onClose={() => setActiveModal(null)} />
-        )}
-        {activeModal === 'tutorial' && (
-          <InteractiveTutorial onClose={() => setActiveModal(null)} />
-        )}
-        {activeModal === 'theme-marketplace' && (
-          <ThemeMarketplace onClose={() => setActiveModal(null)} />
-        )}
-      </AnimatePresence>
+      {/* Pro modals — single AnimatePresence, only active modal renders */}
+      {activeModal && <ProModal modal={activeModal} onClose={() => setActiveModal(null)} />}
 
       {/* Patch notes modal */}
       <PatchNotesModal />

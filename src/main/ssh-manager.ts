@@ -248,7 +248,17 @@ export class SSHManager {
         dataBuffer: '',
       };
 
+      // TCP_NODELAY — disable Nagle's algorithm for lowest latency
+      client.on('tcp connection', (details, accept) => {
+        const stream = accept();
+        if (stream?.socket) stream.socket.setNoDelay(true);
+      });
+
       client.on('ready', () => {
+        // Set TCP_NODELAY on the underlying socket
+        const sock = (client as any)._sock || (client as any)._sshstream?._sock;
+        if (sock?.setNoDelay) sock.setNoDelay(true);
+
         client.shell({ term: 'xterm-256color' }, (err, stream) => {
           if (err) {
             console.error(`[SSH] Shell error for ${config.host}:`, err.message);
@@ -501,10 +511,40 @@ export class SSHManager {
     return buffered;
   }
 
+  // Write coalescing — batch rapid keystrokes within 3ms into a single write
+  private writeBuffers = new Map<string, { data: string; timer: ReturnType<typeof setTimeout> }>();
+
   write(sessionId: string, data: string): void {
     const session = this.sessions.get(sessionId);
-    if (session?.stream) {
-      (session.stream as NodeJS.WritableStream).write(data);
+    if (!session?.stream) return;
+
+    // For single characters (normal typing), coalesce
+    if (data.length === 1) {
+      const existing = this.writeBuffers.get(sessionId);
+      if (existing) {
+        existing.data += data;
+        return; // Timer already set, will flush soon
+      }
+      this.writeBuffers.set(sessionId, {
+        data,
+        timer: setTimeout(() => {
+          const buf = this.writeBuffers.get(sessionId);
+          if (buf && session.stream) {
+            (session.stream as NodeJS.WritableStream).write(buf.data);
+          }
+          this.writeBuffers.delete(sessionId);
+        }, 3),
+      });
+    } else {
+      // Multi-char data (paste, control sequences) — flush any pending buffer + send immediately
+      const pending = this.writeBuffers.get(sessionId);
+      if (pending) {
+        clearTimeout(pending.timer);
+        (session.stream as NodeJS.WritableStream).write(pending.data + data);
+        this.writeBuffers.delete(sessionId);
+      } else {
+        (session.stream as NodeJS.WritableStream).write(data);
+      }
     }
   }
 
@@ -519,6 +559,9 @@ export class SSHManager {
     const session = this.sessions.get(sessionId);
     if (session) {
       if (session.reconnectTimer) clearTimeout(session.reconnectTimer);
+      // Clean up write buffer for this session
+      const wb = this.writeBuffers.get(sessionId);
+      if (wb) { clearTimeout(wb.timer); this.writeBuffers.delete(sessionId); }
       // Clean up file edit debounce timers for this session
       for (const [key, timer] of this.fileEditDebounce) {
         if (key.startsWith(sessionId + ':')) {
@@ -539,6 +582,8 @@ export class SSHManager {
     if (this.aiDetectTimer) clearTimeout(this.aiDetectTimer);
     for (const timer of this.fileEditDebounce.values()) clearTimeout(timer);
     this.fileEditDebounce.clear();
+    for (const wb of this.writeBuffers.values()) clearTimeout(wb.timer);
+    this.writeBuffers.clear();
     for (const session of this.sessions.values()) {
       if (session.reconnectTimer) clearTimeout(session.reconnectTimer);
       session.client.destroy();

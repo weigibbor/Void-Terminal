@@ -33,6 +33,8 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter, onMu
   const onShiftEnterRef = useRef(onShiftEnter);
   const onMultiLinePasteRef = useRef(onMultiLinePaste);
   const sendDataRef = useRef<((data: string) => void) | null>(null);
+  // Local echo prediction state
+  const localEchoRef = useRef({ enabled: true, altScreen: false, suppress: new Set<string>() });
   sessionIdRef.current = sessionId;
   sessionTypeRef.current = sessionType;
   onDataRef.current = onData;
@@ -87,7 +89,7 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter, onMu
 
     sendDataRef.current = sendData;
 
-    // Handle user input — zero overhead, send immediately like native terminal
+    // Handle user input — with local echo prediction for lowest latency
     terminal.onData((data) => {
       // Skip all input when disableStdin is active (block mode — WarpInputBar handles input)
       if (terminal.options.disableStdin) return;
@@ -101,11 +103,11 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter, onMu
         }
       }
 
-      // Send to SSH/PTY immediately — no processing before this
-      sendData(data);
+      // Local echo disabled — suppression parser corrupts ANSI sequences in output
+      // TCP_NODELAY + write coalescing handle the latency instead
 
-      // Local echo disabled — needs proper terminal mode detection to work with TUI apps
-      // (vim, Claude Code, htop, etc. manage their own cursor, local echo writes to wrong position)
+      // Send to SSH/PTY immediately
+      sendData(data);
 
       // Lightweight buffer tracking (no API calls, no timers)
       if (data === '\r') {
@@ -306,13 +308,16 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter, onMu
       w.__voidTerminalContext = (existing + data).split('\n').slice(-50).join('\n');
     };
 
+    // Process incoming data — clean passthrough
+    const processIncoming = (data: string) => {
+      batchWrite(data);
+      checkWatchRules(data);
+      checkCommandDone(data);
+      captureForAI(data);
+    };
+
     if (sessionType === 'ssh') {
-      unsub = window.void.ssh.onData(sessionId, (data) => {
-        batchWrite(data);
-        checkWatchRules(data);
-        checkCommandDone(data);
-        captureForAI(data);
-      });
+      unsub = window.void.ssh.onData(sessionId, processIncoming);
       // Replay buffered data — watch rules suppressed during replay
       window.void.ssh.getBuffer(sessionId).then((buffered) => {
         if (buffered && terminalRef.current) {
@@ -320,12 +325,7 @@ export function useTerminal({ sessionId, sessionType, onData, onShiftEnter, onMu
         }
       });
     } else {
-      unsub = window.void.pty.onData(sessionId, (data) => {
-        batchWrite(data);
-        checkWatchRules(data);
-        checkCommandDone(data);
-        captureForAI(data);
-      });
+      unsub = window.void.pty.onData(sessionId, processIncoming);
     }
 
     // Focus + resize

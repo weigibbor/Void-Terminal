@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, session } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, session, Menu, shell } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { SSHManager } from './ssh-manager';
@@ -148,6 +148,24 @@ function registerIPCHandlers(): void {
   });
 
   // --- Tunnels ---
+  // Native context menus
+  ipcMain.handle('context-menu:show', async (_event, items: { id: string; label: string; type?: string; enabled?: boolean; checked?: boolean }[]) => {
+    return new Promise<string | null>((resolve) => {
+      const template = items.map((item): Electron.MenuItemConstructorOptions => {
+        if (item.type === 'separator') return { type: 'separator' };
+        return {
+          label: item.label,
+          enabled: item.enabled !== false,
+          type: item.type === 'checkbox' ? 'checkbox' : 'normal',
+          checked: item.checked,
+          click: () => resolve(item.id),
+        };
+      });
+      const menu = Menu.buildFromTemplate(template);
+      menu.popup({ callback: () => resolve(null) });
+    });
+  });
+
   ipcMain.handle('tunnel:create', async (_event, sessionId: string, type: string, localPort: number, remoteHost: string, remotePort: number) => {
     const client = sshManager?.getClient(sessionId);
     if (!client) return { success: false, error: 'No SSH session' };
@@ -702,6 +720,113 @@ function registerIPCHandlers(): void {
   });
 }
 
+// Native application menu
+function buildAppMenu(win: BrowserWindow) {
+  const send = (action: string) => win.webContents.send('menu:action', action);
+  const mac = process.platform === 'darwin';
+
+  const template: Electron.MenuItemConstructorOptions[] = [
+    ...(mac ? [{
+      label: app.name,
+      submenu: [
+        { role: 'about' as const },
+        { type: 'separator' as const },
+        { label: 'Settings...', accelerator: 'CmdOrCtrl+,', click: () => send('settings') },
+        { type: 'separator' as const },
+        { role: 'services' as const },
+        { type: 'separator' as const },
+        { role: 'hide' as const },
+        { role: 'hideOthers' as const },
+        { role: 'unhide' as const },
+        { type: 'separator' as const },
+        { role: 'quit' as const },
+      ],
+    }] : []),
+    {
+      label: 'File',
+      submenu: [
+        { label: 'New Tab', accelerator: 'CmdOrCtrl+T', click: () => send('new-tab') },
+        { label: 'New Local Shell', click: () => send('new-local') },
+        { type: 'separator' },
+        { label: 'Close Tab', accelerator: 'CmdOrCtrl+W', click: () => send('close-tab') },
+        ...(!mac ? [
+          { type: 'separator' as const },
+          { label: 'Settings...', accelerator: 'CmdOrCtrl+,', click: () => send('settings') },
+          { type: 'separator' as const },
+          { role: 'quit' as const },
+        ] : []),
+      ],
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectAll' },
+      ],
+    },
+    {
+      label: 'View',
+      submenu: [
+        { label: 'Command Palette', accelerator: 'CmdOrCtrl+K', click: () => send('command-palette') },
+        { type: 'separator' },
+        { label: 'SFTP Sidebar', accelerator: 'CmdOrCtrl+Shift+F', click: () => send('toggle-sftp') },
+        { label: 'Notes', accelerator: 'CmdOrCtrl+Shift+N', click: () => send('toggle-notes') },
+        { label: 'AI Chat', accelerator: 'CmdOrCtrl+L', click: () => send('toggle-ai') },
+        { type: 'separator' },
+        { label: 'Split Horizontal', accelerator: 'CmdOrCtrl+D', click: () => send('split-h') },
+        { label: 'Split Vertical', accelerator: 'CmdOrCtrl+Shift+D', click: () => send('split-v') },
+        { type: 'separator' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' },
+      ],
+    },
+    {
+      label: 'Terminal',
+      submenu: [
+        { label: 'Disconnect', accelerator: 'CmdOrCtrl+Shift+X', click: () => send('disconnect') },
+        { label: 'Reconnect', click: () => send('reconnect') },
+        { type: 'separator' },
+        { label: 'Find', accelerator: 'CmdOrCtrl+F', click: () => send('find') },
+        { label: 'Clear', click: () => send('clear') },
+        { type: 'separator' },
+        { label: 'Broadcast Mode', accelerator: 'CmdOrCtrl+Shift+B', click: () => send('broadcast') },
+      ],
+    },
+    {
+      label: 'Window',
+      submenu: [
+        { role: 'minimize' },
+        { role: 'zoom' },
+        ...(mac ? [
+          { type: 'separator' as const },
+          { role: 'front' as const },
+        ] : [
+          { role: 'close' as const },
+        ]),
+      ],
+    },
+    {
+      label: 'Help',
+      submenu: [
+        { label: 'Documentation', click: () => shell.openExternal('https://voidterminal.dev/docs') },
+        { label: 'Report Issue', click: () => shell.openExternal('https://github.com/weigibbor/Void-Terminal/issues') },
+        { type: 'separator' },
+        { label: `About Void Terminal v${app.getVersion()}`, enabled: false },
+      ],
+    },
+  ];
+
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
 app.whenReady().then(async () => {
   // Set up browser webview partition — allow all URLs including IPs
   const browserSession = session.fromPartition('persist:browser');
@@ -738,6 +863,7 @@ app.whenReady().then(async () => {
   sshManager.setAllWindows(allWindows);
   // Auto-updater (checks GitHub Releases for new versions)
   initAutoUpdater(mainWindow);
+  buildAppMenu(mainWindow);
 
   // macOS notch helper (status pill + global hotkey) — disabled until detection is stable
   if (false && isMac()) {

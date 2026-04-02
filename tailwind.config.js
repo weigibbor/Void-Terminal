@@ -32,8 +32,8 @@ module.exports = {
         'nlp-glow-border': 'rgba(197, 134, 192, 0.15)',
       },
       fontFamily: {
-        mono: ['JetBrains Mono', 'SF Mono', 'Fira Code', 'monospace'],
-        sans: ['DM Sans', 'Inter', 'system-ui', 'sans-serif'],
+        mono: ['SF Mono', 'Cascadia Code', 'Consolas', 'JetBrains Mono', 'monospace'],
+        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'system-ui', 'sans-serif'],
       },
       fontSize: {
         '2xs': ['10px', '14px'],

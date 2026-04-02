@@ -194,6 +194,10 @@ contextBridge.exposeInMainWorld('void', {
     close: () => ipcRenderer.send('window:close'),
   },
 
+  contextMenu: {
+    show: (items: { id: string; label: string; type?: string; enabled?: boolean }[]) =>
+      ipcRenderer.invoke('context-menu:show', items) as Promise<string | null>,
+  },
   app: {
     getVersion: () => ipcRenderer.invoke('app:getVersion'),
     getPlatform: () => ipcRenderer.invoke('app:getPlatform'),
@@ -209,6 +213,11 @@ contextBridge.exposeInMainWorld('void', {
     onUpdaterProgress: (cb: (data: any) => void) => { const h = (_e: unknown, d: any) => cb(d); ipcRenderer.on('updater:progress', h); return () => ipcRenderer.removeListener('updater:progress', h); },
     onUpdaterDownloaded: (cb: (data: any) => void) => { const h = (_e: unknown, d: any) => cb(d); ipcRenderer.on('updater:downloaded', h); return () => ipcRenderer.removeListener('updater:downloaded', h); },
     onUpdaterError: (cb: (data: any) => void) => { const h = (_e: unknown, d: any) => cb(d); ipcRenderer.on('updater:error', h); return () => ipcRenderer.removeListener('updater:error', h); },
+    onMenuAction: (cb: (action: string) => void) => {
+      const h = (_e: unknown, action: string) => cb(action);
+      ipcRenderer.on('menu:action', h);
+      return () => ipcRenderer.removeListener('menu:action', h);
+    },
     detachTab: (tabData: any, screenX: number, screenY: number) => ipcRenderer.invoke('app:detachTab', tabData, screenX, screenY),
     onReceiveTab: (cb: (tabData: any) => void) => {
       const handler = (_e: unknown, data: any) => cb(data);

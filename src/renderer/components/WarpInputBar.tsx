@@ -121,6 +121,17 @@ export const WarpInputBar = forwardRef<WarpInputBarHandle, WarpInputBarProps>(fu
       return;
     }
 
+    // Ctrl+A = select all
+    if (e.key === 'a' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      const el = textareaRef.current;
+      if (el) {
+        el.selectionStart = 0;
+        el.selectionEnd = value.length;
+      }
+      return;
+    }
+
     // Escape = clear input
     if (e.key === 'Escape') {
       setValue('');
