@@ -32,6 +32,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Checkout pro repo
+        uses: actions/checkout@v4
+        with:
+          repository: weigibbor/Void-Terminal-Pro
+          token: ${{ secrets.PRO_REPO_TOKEN }}
+          path: void-terminal-pro
+
+      - name: Build pro package
+        shell: bash
+        run: |
+          cd void-terminal-pro
+          npm install
+          npx tsc
+
       - name: Build app
         run: npm run build
 
